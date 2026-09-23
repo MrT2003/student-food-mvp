@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "update-types": "npx supabase gen types typescript --project-id \"bksoeaqqfugewimdmtka\" --schema public > types/database.types.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
