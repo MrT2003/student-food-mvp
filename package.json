@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "update-types": "npx supabase gen types typescript --project-id \"bksoeaqqfugewimdmtka\" --schema public > types/database.types.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
@@ -18,7 +19,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^20.19.43",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
