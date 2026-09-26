@@ -2,6 +2,7 @@ import { ArrowRight, LoaderCircle } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 type Props = {
+  mode?: "register" | "login";
   pending: boolean;
   error: string | null;
   onGoogle: () => void;
@@ -35,30 +36,50 @@ function GoogleIcon() {
 }
 
 export default function SocialAuthButtons({
+  mode = "register",
   pending,
   error,
   onGoogle,
 }: Props) {
+  const isLogin = mode === "login";
+
   return (
     <div>
-      <p className="mb-4 text-center text-[#526a9e]">
-        Tiếp tục nhanh với
-      </p>
+      {!isLogin && (
+        <p className="mb-4 text-center text-[#526a9e]">
+          Tiếp tục nhanh với
+        </p>
+      )}
 
       <button
         type="button"
         disabled
         aria-describedby="zalo-status"
-        className="flex min-h-16 w-full cursor-not-allowed items-center justify-center gap-5 rounded-2xl bg-gradient-to-r from-[#19a4ff] to-[#2478ff] px-5 py-3 text-lg font-semibold text-white"
+        className="flex min-h-[72px] w-full cursor-not-allowed items-center gap-3 rounded-2xl bg-gradient-to-r from-[#2998ff] to-[#2478ef] px-4 py-3 text-base font-semibold text-white sm:gap-5 sm:px-7 sm:text-xl"
       >
         <span
           aria-hidden="true"
-          className="flex size-10 items-center justify-center rounded-2xl bg-white text-sm font-bold text-[#168aff]"
+          className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white text-sm font-bold text-[#168aff]"
         >
           Zalo
         </span>
-        Tiếp tục với Zalo
-        <ArrowRight size={24} aria-hidden="true" />
+
+        {isLogin && (
+          <span
+            aria-hidden="true"
+            className="h-8 w-px shrink-0 bg-white/40"
+          />
+        )}
+
+        <span className="flex-1 text-center">
+          Tiếp tục với Zalo
+        </span>
+
+        <ArrowRight
+          size={24}
+          className="shrink-0"
+          aria-hidden="true"
+        />
       </button>
 
       <p
@@ -79,22 +100,39 @@ export default function SocialAuthButtons({
         onClick={onGoogle}
         disabled={pending}
         aria-busy={pending}
-        className="min-h-16 w-full gap-5 text-lg"
+        className="w-full"
       >
-        {pending ? (
-          <LoaderCircle
-            className="size-7 animate-spin"
+        <span className="flex min-h-11 w-full items-center gap-3 sm:gap-5">
+          <span className="flex size-10 shrink-0 items-center justify-center">
+            {pending ? (
+              <LoaderCircle
+                className="size-7 animate-spin"
+                aria-hidden="true"
+              />
+            ) : (
+              <GoogleIcon />
+            )}
+          </span>
+
+          {isLogin && (
+            <span
+              aria-hidden="true"
+              className="h-8 w-px shrink-0 bg-[#dce2ed]"
+            />
+          )}
+
+          <span className="flex-1 text-center text-base sm:text-xl">
+            {pending
+              ? "Đang chuyển hướng..."
+              : "Tiếp tục với Google"}
+          </span>
+
+          <ArrowRight
+            size={24}
+            className="shrink-0"
             aria-hidden="true"
           />
-        ) : (
-          <GoogleIcon />
-        )}
-
-        <span>
-          {pending ? "Đang chuyển hướng..." : "Tiếp tục với Google"}
         </span>
-
-        {!pending && <ArrowRight size={24} aria-hidden="true" />}
       </Button>
 
       {error && (

@@ -1,6 +1,10 @@
 import { Heart, ShieldCheck, Users } from "lucide-react";
 
-const benefits = [
+type Props = {
+  mode?: "register" | "login";
+};
+
+const registerBenefits = [
   {
     icon: ShieldCheck,
     title: "Đăng ký nhanh chóng",
@@ -18,7 +22,31 @@ const benefits = [
   },
 ];
 
-export default function AuthBenefits() {
+const loginBenefits = [
+  {
+    icon: ShieldCheck,
+    title: "Thanh toán an toàn",
+    description:
+      "Bảo mật thông tin, giao dịch an tâm với nhiều phương thức thanh toán.",
+  },
+  {
+    icon: Users,
+    title: "Hàng ngàn sinh viên tin dùng",
+    description:
+      "Đồng hành cùng cộng đồng sinh viên trên toàn quốc.",
+  },
+  {
+    icon: Heart,
+    title: "Hỗ trợ quán sinh viên",
+    description:
+      "Giúp các quán ăn sinh viên tiếp cận nhiều khách hàng hơn.",
+  },
+];
+
+export default function AuthBenefits({ mode = "register" }: Props) {
+  const benefits =
+    mode === "login" ? loginBenefits : registerBenefits;
+
   return (
     <section
       aria-label="Lợi ích khi sử dụng StudentFood"
@@ -34,8 +62,8 @@ export default function AuthBenefits() {
               : "",
           ].join(" ")}
         >
-          <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-[#ffede3] text-[#ff531b]">
-            <Icon size={30} aria-hidden="true" />
+          <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-[#ffede3] text-[#ff531b]">
+            <Icon size={32} aria-hidden="true" />
           </span>
 
           <div>

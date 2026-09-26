@@ -1,0 +1,401 @@
+.accountPage {
+  width: 100%;
+  max-width: 994px;
+  margin: 0 auto;
+  color: var(--sf-ink);
+}
+
+.pageHeading {
+  margin-bottom: 18px;
+}
+
+.pageHeading h1 {
+  margin: 0;
+  font-size: 42px;
+  line-height: 1.2;
+  font-weight: 750;
+  letter-spacing: -1.3px;
+}
+
+.pageHeading h1 span {
+  color: #ff4815;
+}
+
+.pageHeading > p {
+  margin: 5px 0 0;
+  color: var(--sf-muted);
+  font-size: 20px;
+  line-height: 28px;
+}
+
+.card {
+  padding: 18px 20px 20px;
+  border: 1px solid #efefef;
+  border-radius: 15px;
+  background: var(--sf-card);
+}
+
+.card + .card {
+  margin-top: 18px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+}
+
+.sectionIcon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border: 1px solid #ff8150;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff8429, #ff3815);
+  color: #fff;
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.sectionHeading p {
+  margin: 3px 0 0;
+  color: var(--sf-muted);
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.personalContent {
+  display: grid;
+  grid-template-columns: 279px minmax(0, 1fr);
+  margin-top: 24px;
+}
+
+.avatarColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 32px 0 0;
+  border-right: 1px solid #e7eaf1;
+}
+
+.avatarWrapper {
+  position: relative;
+  width: 134px;
+  height: 134px;
+}
+
+.avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffb39c, #ffc3ad);
+  color: #fff;
+  font-size: 62px;
+  font-weight: 400;
+}
+
+.avatarImage {
+  object-fit: cover;
+}
+
+.cameraBadge {
+  position: absolute;
+  right: 0;
+  bottom: 5px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #edf0f4;
+  color: #385780;
+}
+
+.profileForm {
+  padding-left: 50px;
+}
+
+.field + .field {
+  margin-top: 17px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 15px;
+  line-height: 19px;
+  font-weight: 700;
+}
+
+.field input {
+  display: block;
+  width: 100%;
+  height: 46px;
+  padding: 0 15px;
+  border: 1px solid #dfe4ed;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--sf-ink);
+}
+
+.field input[type="tel"] {
+  color: #536fa2;
+}
+
+.field input:focus {
+  border-color: #ff9e78;
+}
+
+.hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 9px 0 0;
+  color: var(--sf-muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.hint svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.primaryButton,
+.outlineButton {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  min-height: 47px;
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 16px;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+.primaryButton {
+  width: 249px;
+  max-width: 100%;
+  margin-top: 21px;
+  border: 1px solid #ff6526;
+  background: linear-gradient(110deg, #ff8429, #ff321b);
+  color: #fff;
+}
+
+.outlineButton {
+  border: 1px solid #ff573d;
+  background: #fff;
+  color: #ff381d;
+}
+
+.outlineButton:hover {
+  background: #fff6f0;
+}
+
+.primaryButton:hover {
+  filter: brightness(0.97);
+}
+
+.securityRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 25px;
+  margin-top: 13px;
+  padding: 18px 3px 10px 23px;
+  border: 1px solid #f0f1f4;
+  border-radius: 12px;
+}
+
+.lockIcon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 57px;
+  height: 53px;
+  border-radius: 12px;
+  background: #f6f6f8;
+}
+
+.securityCopy {
+  flex: 1;
+  min-width: 0;
+}
+
+.securityCopy h3 {
+  margin: 1px 0 0;
+  font-size: 17px;
+  line-height: 23px;
+  font-weight: 700;
+}
+
+.passwordMask {
+  margin: 2px 0 8px;
+  font-size: 18px;
+  line-height: 22px;
+  letter-spacing: 2px;
+}
+
+.securityHint {
+  margin: 0;
+  color: var(--sf-muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.securityRow > .outlineButton {
+  min-width: 220px;
+}
+
+.managementCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 99px;
+}
+
+.managementCard > .outlineButton {
+  min-width: 193px;
+}
+
+.feedback,
+.error {
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  border: 1px solid var(--sf-border);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.feedback {
+  color: #536fa2;
+}
+
+.error {
+  border-color: #ffc6bd;
+  color: #b42318;
+}
+
+@media (max-width: 900px) {
+  .personalContent {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .avatarColumn {
+    padding-right: 24px;
+  }
+
+  .profileForm {
+    padding-left: 28px;
+  }
+
+  .securityRow {
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 18px;
+  }
+
+  .securityRow > .outlineButton {
+    margin-left: 73px;
+  }
+}
+
+@media (max-width: 600px) {
+  .pageHeading h1 {
+    font-size: 32px;
+  }
+
+  .pageHeading > p {
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .card {
+    padding: 18px 16px;
+  }
+
+  .sectionHeading {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .sectionIcon {
+    width: 43px;
+    height: 43px;
+  }
+
+  .sectionHeading h2 {
+    font-size: 19px;
+    line-height: 25px;
+  }
+
+  .sectionHeading p {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .personalContent {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .avatarColumn {
+    padding: 0 0 24px;
+    border-right: 0;
+    border-bottom: 1px solid #e7eaf1;
+  }
+
+  .profileForm {
+    padding: 0;
+  }
+
+  .primaryButton {
+    width: 100%;
+  }
+
+  .securityRow {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .lockIcon {
+    width: 44px;
+    height: 48px;
+  }
+
+  .securityRow > .outlineButton {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .managementCard {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+  }
+
+  .managementCard > .outlineButton {
+    width: 100%;
+    min-width: 0;
+  }
+}

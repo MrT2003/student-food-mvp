@@ -3,6 +3,15 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --sf-page: #f8f4ee;
+  --sf-section: #f5efe8;
+  --sf-card: #ffffff;
+  --sf-decoration: #f3e8dd;
+  --sf-panel: #fafaf8;
+  --sf-border: #e9e3da;
+  --sf-ink: #081447;
+  --sf-muted: #657fb1;
+  --sf-orange: #ff4d12;
 }
 
 @theme inline {
