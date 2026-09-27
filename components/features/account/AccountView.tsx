@@ -19,6 +19,7 @@ import {
   UserRound,
 } from "lucide-react";
 import styles from "@/styles/account.module.css";
+import AccountSuccessModal from "./AccountSuccessModal";
 
 const initialProfile = {
   name: "Nguyễn Văn A",
@@ -31,6 +32,7 @@ export default function AccountView() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   // Giải phóng ảnh xem trước khi đổi ảnh hoặc rời trang.
@@ -68,24 +70,24 @@ export default function AccountView() {
     setError("");
     setMessage("");
 
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    const normalizedPhone = phone.replace(/\s/g, "");
+
+    if (!trimmedName) {
       setError("Vui lòng nhập họ và tên.");
       return;
     }
-
-    const normalizedPhone = phone.replace(/\s/g, "");
 
     if (!/^(0\d{9}|\+84\d{9})$/.test(normalizedPhone)) {
       setError("Vui lòng nhập số điện thoại hợp lệ.");
       return;
     }
 
-    setName(name.trim());
+    setName(trimmedName);
 
-    // Sau này thay bằng lời gọi service cập nhật thông tin.
-    setMessage(
-      "Thông tin hợp lệ. Đây là bản giao diện mẫu, chưa lưu vào hệ thống.",
-    );
+    // UI demo: chưa gọi API, chưa lưu dữ liệu vào Supabase.
+    // Khi có API, chỉ mở popup sau khi cập nhật thành công.
+    setShowSuccessModal(true);
   }
 
   function showPendingMessage(action: string) {
@@ -284,6 +286,11 @@ export default function AccountView() {
           {message}
         </p>
       )}
+
+      <AccountSuccessModal
+        open={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+      />
     </div>
   );
 }
