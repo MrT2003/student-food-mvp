@@ -708,3 +708,289 @@
     padding: 18px;
   }
 }
+/* Responsive confirmation */
+@media (min-width: 1024px) {
+  :global(main):has(> .page) {
+    width: min(1480px, calc(100% - 48px));
+    max-width: none;
+    margin-inline: auto;
+    padding: 18px 0 24px;
+  }
+
+  .page {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1.75fr) minmax(310px, 1fr);
+    align-items: start;
+    gap: clamp(16px, 1.4vw, 24px);
+  }
+
+  .backIcon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .steps {
+    margin-top: 52px;
+  }
+
+  .steps li {
+    min-height: 160px;
+  }
+
+  .steps li:first-child::after {
+    top: 82px;
+  }
+
+  .steps li > span {
+    width: 44px;
+    height: 44px;
+    font-size: 19px;
+  }
+
+  .steps a,
+  .steps p {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .pageHeading {
+    margin-bottom: 16px;
+  }
+
+  .pageHeading h1 {
+    font-size: clamp(29px, 2.2vw, 36px);
+    line-height: 1.2;
+  }
+
+  .pageHeading p {
+    margin-top: 6px;
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  .banner {
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+  }
+
+  .banner p {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .restaurantCard {
+    padding: clamp(14px, 1.6vh, 18px);
+    border-radius: 16px;
+  }
+
+  .restaurantCard + .restaurantCard {
+    margin-top: 16px;
+  }
+
+  .restaurantHeader {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .restaurantImage {
+    width: 54px;
+    height: 54px;
+    flex-shrink: 0;
+  }
+
+  .restaurantTitle {
+    gap: 8px;
+  }
+
+  .restaurantTitle h2 {
+    font-size: clamp(18px, 1.4vw, 22px);
+    line-height: 1.3;
+  }
+
+  .openBadge {
+    padding: 5px 9px;
+    font-size: 12px;
+  }
+
+  .restaurantIdentity p {
+    margin-top: 5px;
+    font-size: 14px;
+  }
+
+  .restaurantTotal {
+    gap: 4px;
+  }
+
+  .restaurantTotal span {
+    font-size: 14px;
+  }
+
+  .restaurantTotal strong {
+    font-size: 21px;
+  }
+
+  .table {
+    font-size: 14px;
+  }
+
+  .table th {
+    padding: 9px 8px;
+  }
+
+  .table th:first-child {
+    width: 47%;
+  }
+
+  .table td {
+    padding: clamp(10px, 1.3vh, 14px) 4px;
+  }
+
+  .dish {
+    gap: 10px;
+  }
+
+  .dishImage {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .dish h3 {
+    margin-bottom: 3px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .dish p {
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .restaurantFooter {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding-top: 12px;
+  }
+
+  .footerField {
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .footerField + .footerField {
+    padding-left: 14px;
+  }
+
+  .footerField label {
+    font-size: 13px;
+    line-height: 20px;
+    margin-bottom: 4px;
+  }
+
+  .footerField select,
+  .footerField textarea {
+    font-size: 13px;
+    line-height: 19px;
+  }
+
+  .footerField textarea {
+    min-height: 38px;
+  }
+
+  .sidebar {
+    grid-column: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 0;
+    min-width: 0;
+  }
+
+  .sideCard {
+    padding: clamp(16px, 1.8vh, 22px);
+    border-radius: 16px;
+  }
+
+  .sideHeading {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .sideHeading h2 {
+    font-size: 20px;
+    line-height: 27px;
+  }
+
+  .sideHeading p {
+    font-size: 14px;
+  }
+
+  .editButton {
+    font-size: 13px;
+  }
+
+  .field + .field {
+    margin-top: 15px;
+  }
+
+  .field label {
+    font-size: 15px;
+  }
+
+  .field input,
+  .field select {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  .addressHint {
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 19px;
+  }
+
+  .summaryShop {
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .summaryImage {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+  }
+
+  .summaryShop h3 {
+    font-size: 15px;
+  }
+
+  .summaryShop p {
+    font-size: 13px;
+  }
+
+  .summaryShop strong {
+    font-size: 16px;
+  }
+
+  .totalRow {
+    padding: 18px 0;
+    font-size: 19px;
+  }
+
+  .totalRow output {
+    font-size: 27px;
+  }
+
+  .primaryButton,
+  .backButton {
+    min-height: 48px;
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  .backButton {
+    margin-top: 10px;
+  }
+}

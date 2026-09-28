@@ -10,6 +10,9 @@ export default function AppProviders({ children }: { children: ReactNode }) {
     pathname === "/" ||
     pathname === "/account" ||
     pathname === "/explore" ||
+    pathname === "/seller/register" ||
+    pathname === "/orders" ||
+    pathname.startsWith("/orders/") ||
     pathname === "/cart" ||
     pathname === "/cart/confirm" ||
     pathname === "/cart/success" ||
