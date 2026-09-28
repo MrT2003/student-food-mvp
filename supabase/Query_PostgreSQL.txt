@@ -1,0 +1,377 @@
+-- =========================================================
+-- STUDENT FOOD ORDERING PLATFORM
+-- MVP DATABASE SCHEMA
+-- PostgreSQL / Supabase
+-- =========================================================
+
+-- =========================================================
+-- EXTENSIONS
+-- =========================================================
+
+create extension if not exists pgcrypto;
+
+-- =========================================================
+-- ENUMS
+-- =========================================================
+
+create type public.user_role as enum (
+  'student',
+  'seller'
+);
+
+create type public.order_status as enum (
+  'pending',
+  'accepted',
+  'rejected',
+  'cancelled',
+  'completed'
+);
+
+create type public.payment_method_type as enum (
+  'cash',
+  'bank_transfer'
+);
+
+
+-- =========================================================
+-- USERS
+-- =========================================================
+
+create table public.users (
+  id uuid primary key
+    references auth.users(id)
+    on delete restrict,
+  role public.user_role not null default 'student',
+  phone varchar unique,    -- Đã gỡ NOT NULL để dùng Google Auth
+  status varchar not null default 'active'
+    check (status in ('active', 'inactive')),
+  name varchar not null,
+  avatar_url text,                               
+  app_lock_pin varchar(4),                        
+  work_for_restaurant_id uuid,                     
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+
+-- =========================================================
+-- RESTAURANTS
+-- =========================================================
+
+create table public.restaurants (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null
+    references public.users(id)
+    on delete restrict,
+  name varchar not null,
+  slug varchar not null unique,
+  description text,
+  location text,
+  avatar_url text,
+  status varchar not null default 'active'
+    check (status in ('active', 'inactive')),
+  operating_status varchar not null default 'closed'
+    check (operating_status in ('open', 'paused', 'closed')),
+  operating_hours jsonb,
+  delivery_token uuid not null
+    default gen_random_uuid()
+    unique,
+  delivery_token_updated_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+
+-- =========================================================
+-- RESTAURANT BANKS
+-- =========================================================
+
+create table public.restaurant_banks (
+  id uuid primary key default gen_random_uuid(),
+  restaurant_id uuid not null
+    references public.restaurants(id)
+    on delete cascade,
+  bank_name varchar not null,
+  account_no varchar not null,
+  account_name varchar not null,
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint uq_restaurant_banks_account
+    unique (restaurant_id, account_no)
+);
+
+
+-- =========================================================
+-- MENU ITEMS
+-- =========================================================
+
+create table public.menu_items (
+  id uuid primary key default gen_random_uuid(),
+  restaurant_id uuid not null
+    references public.restaurants(id)
+    on delete restrict,
+  name varchar not null,
+  slug varchar not null unique,    -- Đã cập nhật
+  description text,
+  price numeric(12,2) not null
+    check (price >= 0),
+  image_url text,
+  category varchar,
+  is_available boolean not null default true,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  unique (id, restaurant_id)
+);
+
+
+-- =========================================================
+-- MENU ITEM OPTION GROUPS (TẦNG 2)
+-- =========================================================
+
+create table public.menu_item_option_groups (
+  id uuid primary key default gen_random_uuid(),
+  menu_item_id uuid not null
+    references public.menu_items(id)
+    on delete cascade,
+  name varchar not null,
+  is_multiple boolean not null default false,
+  is_required boolean not null default false,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+
+-- =========================================================
+-- MENU ITEM OPTIONS (TẦNG 3)
+-- =========================================================
+
+create table public.menu_item_options (
+  id uuid primary key default gen_random_uuid(),
+  group_id uuid not null
+    references public.menu_item_option_groups(id)
+    on delete cascade,
+  option_name varchar not null,
+  additional_price numeric(12,2) not null default 0
+    check (additional_price >= 0),
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+
+-- =========================================================
+-- CARTS
+-- =========================================================
+
+create table public.carts (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null unique
+    references public.users(id)
+    on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+
+-- =========================================================
+-- CART ITEMS
+-- =========================================================
+
+create table public.cart_items (
+  id uuid primary key default gen_random_uuid(),
+  cart_id uuid not null
+    references public.carts(id)
+    on delete cascade,
+  menu_item_id uuid not null,
+  restaurant_id uuid not null
+    references public.restaurants(id)
+    on delete restrict,
+  quantity integer not null
+    check (quantity > 0),
+  selected_options jsonb,   
+  option_hash varchar not null default 'no_option',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint fk_cart_item_menu_restaurant
+    foreign key (menu_item_id, restaurant_id)
+    references public.menu_items(id, restaurant_id)
+    on delete restrict
+  
+  -- Đã XÓA unique (cart_id, menu_item_id) để cho phép stack topping khác nhau
+);
+
+
+-- =========================================================
+-- ORDERS
+-- =========================================================
+
+create table public.orders (
+  id uuid primary key default gen_random_uuid(),
+  session_checkout_id uuid not null,
+  order_code varchar not null unique,
+  student_id uuid not null
+    references public.users(id)
+    on delete restrict,
+  restaurant_id uuid not null
+    references public.restaurants(id)
+    on delete restrict,
+  order_status public.order_status not null
+    default 'pending',
+  payment_method public.payment_method_type,
+  payment_confirmed_by uuid
+    references public.users(id)
+    on delete set null,
+  payment_confirmed_at timestamptz,
+  subtotal numeric(12,2) not null
+    check (subtotal >= 0),
+  total numeric(12,2) not null
+    check (total >= 0),
+  delivery_address text,    -- Đội Frontend sẽ gửi dạng chuỗi JSON: {"zone": "KTX_A", "room": "A1"}
+  customer_notes text,      -- Tờ Note dùng chung cho cả Quán
+  created_at timestamptz not null default now(),
+  accepted_at timestamptz,
+  completed_at timestamptz,
+
+  constraint uq_order_checkout_restaurant
+    unique (session_checkout_id, restaurant_id)
+);
+
+
+-- =========================================================
+-- ORDER ITEMS
+-- =========================================================
+
+create table public.order_items (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null
+    references public.orders(id)
+    on delete cascade,
+  menu_item_id uuid
+    references public.menu_items(id)
+    on delete set null,
+  item_name_snapshot varchar not null,
+  unit_price_snapshot numeric(12,2) not null
+    check (unit_price_snapshot >= 0),
+  quantity integer not null
+    check (quantity > 0),
+  selected_options jsonb,
+  img_url text
+);
+
+
+-- =========================================================
+-- NOTIFICATIONS
+-- =========================================================
+
+create table public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null
+    references public.users(id)
+    on delete cascade,
+  type varchar not null,
+  related_order_id uuid
+    references public.orders(id)
+    on delete set null,
+  title varchar,
+  content text,
+  is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+
+-- =========================================================
+-- REPORTS
+-- =========================================================
+
+create table public.reports (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null
+    references public.users(id)
+    on delete restrict,
+  restaurant_id uuid not null
+    references public.restaurants(id)
+    on delete restrict,
+  order_id uuid
+    references public.orders(id)
+    on delete set null,
+  type varchar not null,
+  description text,
+  image_urls text[],
+  status varchar not null default 'pending',
+  created_at timestamptz not null default now(),
+  resolved_at timestamptz,
+  resolved_by uuid
+    references public.users(id)
+    on delete set null
+);
+
+-- =========================================================
+-- ALTER TABLES (Giải quyết Phụ thuộc vòng)
+-- =========================================================
+
+-- Thêm khóa ngoại cho Staff sau khi bảng restaurants đã được tạo
+alter table public.users
+  add constraint fk_users_work_for_restaurant
+  foreign key (work_for_restaurant_id)
+  references public.restaurants(id)
+  on delete set null;
+
+
+-- =========================================================
+-- INDEXES
+-- =========================================================
+
+create index idx_restaurants_owner_id on public.restaurants(owner_id);
+create index idx_restaurant_banks_restaurant_id on public.restaurant_banks(restaurant_id);
+create unique index uq_restaurant_banks_one_default on public.restaurant_banks(restaurant_id) where is_default = true;
+
+create index idx_menu_items_restaurant_available on public.menu_items(restaurant_id, is_active, is_available);
+
+-- Indexes mới cho hệ thống Topping
+create index idx_menu_item_option_groups_item on public.menu_item_option_groups(menu_item_id);
+create unique index uq_menu_item_option_group_name on public.menu_item_option_groups (menu_item_id, lower(name));
+
+create index idx_menu_item_options_group on public.menu_item_options(group_id);
+create unique index uq_menu_item_option_name on public.menu_item_options (group_id, lower(option_name));
+
+create index idx_cart_items_cart_restaurant on public.cart_items(cart_id, restaurant_id);
+create index idx_cart_items_menu_item on public.cart_items(menu_item_id);
+create unique index uq_cart_item_hash on public.cart_items (cart_id, menu_item_id, option_hash);
+
+create index idx_orders_student_created on public.orders(student_id, created_at desc);
+create index idx_orders_restaurant_status_created on public.orders(restaurant_id, order_status, created_at desc);
+
+create index idx_order_items_order on public.order_items(order_id);
+create index idx_order_items_menu_item on public.order_items(menu_item_id);
+
+create index idx_notifications_user_created on public.notifications(user_id, created_at desc);
+create index idx_notifications_related_order on public.notifications(related_order_id);
+create index idx_notifications_unread on public.notifications(user_id) where is_read = false;
+
+create index idx_reports_student on public.reports(student_id, created_at desc);
+create index idx_reports_restaurant on public.reports(restaurant_id, created_at desc);
+create index idx_reports_order on public.reports(order_id);
+
+
+-- =========================================================
+-- ENABLE ROW LEVEL SECURITY (RLS)
+-- =========================================================
+
+alter table public.users enable row level security;
+alter table public.restaurants enable row level security;
+alter table public.restaurant_banks enable row level security;
+alter table public.menu_items enable row level security;
+alter table public.menu_item_option_groups enable row level security;
+alter table public.menu_item_options enable row level security;
+alter table public.carts enable row level security;
+alter table public.cart_items enable row level security;
+alter table public.orders enable row level security;
+alter table public.order_items enable row level security;
+alter table public.notifications enable row level security;
+alter table public.reports enable row level security;
