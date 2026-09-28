@@ -77,7 +77,17 @@ export default function StudentHeader() {
           >
             Khám phá
           </Link>
-          <Link href="/#reorder">Đơn hàng</Link>
+          <Link
+            href="/orders"
+            aria-current={
+              pathname === "/orders" || pathname.startsWith("/orders/")
+                ? "page"
+                : undefined
+            }
+            onClick={() => setPanel(null)}
+          >
+            Đơn hàng
+          </Link>
         </nav>
         <div ref={actions} className={styles.headerActions}>
           <Link

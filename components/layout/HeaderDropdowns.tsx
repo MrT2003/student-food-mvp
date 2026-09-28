@@ -95,14 +95,10 @@ export function AccountDropdown({
           <UserRound aria-hidden="true" />
           Tài khoản của tôi
         </Link>
-        <button
-          type="button"
-          disabled
-          title="Chưa kết nối trang đăng ký bán hàng"
-        >
+        <Link href="/seller/register" onClick={onNavigate}>
           <Store aria-hidden="true" />
           Đăng ký bán hàng
-        </button>
+        </Link>
       </div>
       <button
         type="button"
