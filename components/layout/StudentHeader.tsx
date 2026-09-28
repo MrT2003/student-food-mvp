@@ -9,7 +9,6 @@ import {
   headerNotifications,
   type HeaderNotification,
 } from "./header-preview-data";
-import dropdownStyles from "./header-dropdowns.module.css";
 import styles from "@/components/features/home/home.module.css";
 import { usePathname } from "next/navigation";
 
@@ -67,19 +66,29 @@ export default function StudentHeader() {
           <Link href="/" aria-current={pathname === "/" ? "page" : undefined}>
             Trang chủ
           </Link>
-          <Link href="/#restaurants">Khám phá</Link>
+          <Link
+            href="/explore"
+            aria-current={
+              pathname === "/explore" || pathname.startsWith("/restaurants/")
+                ? "page"
+                : undefined
+            }
+            onClick={() => setPanel(null)}
+          >
+            Khám phá
+          </Link>
           <Link href="/#reorder">Đơn hàng</Link>
         </nav>
         <div ref={actions} className={styles.headerActions}>
-          <button
-            type="button"
-            className={`${styles.iconButton} ${dropdownStyles.cartDisabled}`}
-            aria-label="Giỏ hàng — chưa có trang giỏ hàng"
-            title="Trang giỏ hàng sẽ được bổ sung sau"
-            disabled
+          <Link
+            href="/cart"
+            className={styles.iconButton}
+            aria-label="Giỏ hàng"
+            aria-current={pathname === "/cart" ? "page" : undefined}
+            onClick={() => setPanel(null)}
           >
             <ShoppingCart size={28} strokeWidth={1.6} aria-hidden="true" />
-          </button>
+          </Link>
           <button
             type="button"
             className={styles.iconButton}
