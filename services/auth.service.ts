@@ -1,6 +1,7 @@
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database.types';
 import * as crypto from 'crypto';
+import 'server-only';
 
 interface ZaloTokenReponse {
 	access_token?: string;
@@ -54,7 +55,7 @@ export const ZaloAuthService = {
 	// Generate Authorization URL 
 	getAuthorizationUrl(codeChallenge: string, state: string): string {
 		const appID = process.env.ZALO_APP_ID;
-		const redirectUri = process.env.NEXT_PUBLIC_ZALO_CALLBACK_URL_DEV
+		const redirectUri = process.env.ZALO_CALLBACK_URL_DEV;
 		// Define available params in the url sent to user for account authorization 
 		const params = new URLSearchParams({
 			app_id: appID,
@@ -87,4 +88,8 @@ export const ZaloAuthService = {
 		console.log('--- ZALO RESPONSE DEBUG ---', data);
 		return data
 	}
+}
+
+export const GoogleAuthService = {
+	
 }
