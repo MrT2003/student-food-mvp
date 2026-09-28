@@ -1,0 +1,691 @@
+.page {
+  width: 100%;
+  margin: 0 auto;
+  padding-bottom: 12px;
+  color: var(--sf-ink);
+}
+
+.hero {
+  padding-top: 6px;
+  text-align: center;
+}
+
+.successArt {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(430px, 100%);
+  height: 150px;
+  margin: 0 auto 14px;
+}
+
+.checkCircle {
+  display: grid;
+  place-items: center;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: #d4f5d8;
+  color: #078b22;
+}
+
+.confettiLeft,
+.confettiRight {
+  position: absolute;
+  width: 10px;
+  height: 17px;
+  border-radius: 5px;
+  background: #8ae3a0;
+}
+
+.confettiLeft {
+  top: 30px;
+  left: 45px;
+  transform: rotate(-42deg);
+  box-shadow:
+    -48px 30px 0 -2px #57d276,
+    -3px 76px 0 -2px #bdeec8,
+    4px 111px 0 -2px #79dd93;
+}
+
+.confettiRight {
+  top: 22px;
+  right: 58px;
+  transform: rotate(42deg);
+  box-shadow:
+    59px 29px 0 -2px #57d276,
+    31px 80px 0 -1px #79dd93,
+    73px 94px 0 -3px #bdeec8;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 43px;
+  line-height: 54px;
+  font-weight: 750;
+  letter-spacing: -1.2px;
+}
+
+.hero > p {
+  margin: 10px 0 0;
+  color: #66758c;
+  font-size: 22px;
+  line-height: 31px;
+}
+
+.successBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  width: min(860px, 100%);
+  margin: 29px auto 33px;
+  padding: 23px 28px;
+  border-radius: 16px;
+  background: #e9faeb;
+  color: #247334;
+  text-align: left;
+}
+
+.successBanner > svg {
+  flex-shrink: 0;
+}
+
+.successBanner strong {
+  font-size: 19px;
+  line-height: 27px;
+}
+
+.successBanner p {
+  margin: 5px 0 0;
+  color: #6b7e8d;
+  font-size: 18px;
+  line-height: 25px;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.orderList,
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.orderCard,
+.addressCard,
+.timelineCard {
+  border: 1px solid #e8eaee;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.orderCard {
+  padding: 30px;
+}
+
+.orderMain {
+  display: flex;
+  align-items: center;
+  gap: 23px;
+}
+
+.restaurantImage {
+  width: 122px;
+  height: 122px;
+  flex-shrink: 0;
+}
+
+.placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 0 100%, #e9d9c7 0 20%, transparent 21%),
+    var(--sf-section);
+  color: #b59677;
+}
+
+.placeholder svg {
+  width: 48px;
+  height: 48px;
+}
+
+.orderInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.orderHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 13px;
+}
+
+.orderHeading h2 {
+  margin: 0;
+  font-size: 27px;
+  line-height: 34px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 13px;
+  border-radius: 12px;
+  background: #dff8df;
+  color: #32803a;
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+.orderCode {
+  margin: 9px 0 22px;
+  color: #7b889e;
+  font-size: 20px;
+}
+
+.orderMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 17px;
+  color: #65758c;
+  font-size: 17px;
+  line-height: 26px;
+}
+
+.orderMeta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.orderMeta > span + span {
+  padding-left: 20px;
+  border-left: 1px solid #e3e8f0;
+}
+
+.orderMeta svg {
+  flex-shrink: 0;
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  justify-content: center;
+  gap: 11px;
+  min-width: 160px;
+  padding-left: 26px;
+  border-left: 1px solid #e3e8f0;
+  white-space: nowrap;
+}
+
+.total > span {
+  color: #7b889e;
+  font-size: 18px;
+}
+
+.total > strong {
+  font-size: 29px;
+  line-height: 37px;
+}
+
+.details {
+  margin-top: 10px;
+}
+
+.details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  color: #ff541c;
+  font-size: 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.details[open] > summary svg {
+  transform: rotate(90deg);
+}
+
+.details > summary:focus-visible {
+  outline: 2px solid #ff986d;
+  outline-offset: 4px;
+}
+
+.detailsContent {
+  margin-top: 18px;
+  padding-top: 4px;
+  border-top: 1px solid #e8edf3;
+}
+
+.detailsContent ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detailsContent li {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f2f6;
+  font-size: 14px;
+}
+
+.detailsContent li > strong {
+  flex-shrink: 0;
+}
+
+.detailsContent li p {
+  margin: 4px 0 0;
+  color: #7b889e;
+  line-height: 20px;
+}
+
+.orderNote {
+  margin: 14px 0 0;
+  color: #65758c;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.addressCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 23px;
+  padding: 30px 27px;
+}
+
+.locationIcon {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #f1f7ff;
+}
+
+.addressCard h2,
+.timelineCard > h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 31px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.addressCard p {
+  margin: 9px 0 0;
+  color: #758298;
+  font-size: 20px;
+  line-height: 27px;
+  overflow-wrap: anywhere;
+}
+
+.addressCard p + p {
+  margin-top: 3px;
+}
+
+.timelineCard {
+  padding: 27px;
+}
+
+.timeline {
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline li {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 27px;
+  min-height: 90px;
+  padding-bottom: 23px;
+}
+
+.timeline li:last-child {
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+.timeline li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50px;
+  bottom: 3px;
+  left: 24px;
+  width: 3px;
+  background: #e8eaee;
+}
+
+.stepIcon {
+  display: grid;
+  place-items: center;
+  width: 49px;
+  height: 49px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #caced3;
+  color: #fff;
+}
+
+.currentStep .stepIcon {
+  background: linear-gradient(135deg, #ff8429, #ff4218);
+  box-shadow: 0 0 0 4px #fff0e8;
+}
+
+.timeline h3 {
+  margin: 3px 0 5px;
+  font-size: 19px;
+  line-height: 25px;
+  font-weight: 700;
+}
+
+.currentStep h3 {
+  color: #ff4b18;
+}
+
+.timeline p {
+  margin: 0;
+  color: #7b889e;
+  font-size: 17px;
+  line-height: 24px;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 19px;
+  margin-top: 29px;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 17px;
+  width: 380px;
+  max-width: 100%;
+  min-height: 67px;
+  padding: 15px 22px;
+  border-radius: 13px;
+  text-decoration: none;
+  font-size: 21px;
+  font-weight: 600;
+}
+
+.primaryButton {
+  border: 1px solid #ff6526;
+  background: linear-gradient(110deg, #ff8429, #ff351b);
+  color: #fff;
+}
+
+.secondaryButton {
+  border: 1px solid #aeb8c9;
+  background: #fff;
+  color: var(--sf-ink);
+}
+
+.notice,
+.demoNote {
+  margin: 15px auto 0;
+  max-width: 860px;
+  color: #7b889e;
+  text-align: center;
+  font-size: 13px;
+  line-height: 21px;
+}
+
+.empty {
+  max-width: 620px;
+  margin: 50px auto;
+  text-align: center;
+}
+
+.empty > svg {
+  margin: 0 auto 20px;
+  color: #ff6427;
+}
+
+.empty h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.empty p {
+  margin: 15px 0 24px;
+  color: #7b889e;
+  line-height: 25px;
+}
+
+@media (max-width: 1399px) {
+  .contentGrid {
+    grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr);
+  }
+
+  .orderCard {
+    padding: 22px;
+  }
+
+  .orderMain {
+    flex-wrap: wrap;
+    gap: 17px;
+  }
+
+  .restaurantImage {
+    width: 90px;
+    height: 95px;
+  }
+
+  .orderHeading h2 {
+    font-size: 23px;
+  }
+
+  .orderCode {
+    margin-bottom: 14px;
+    font-size: 17px;
+  }
+
+  .orderMeta {
+    font-size: 15px;
+  }
+
+  .total {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    padding: 15px 0 0;
+    border-top: 1px solid #e3e8f0;
+    border-left: 0;
+  }
+
+  .total > strong {
+    font-size: 25px;
+  }
+
+  .addressCard {
+    padding: 22px;
+    gap: 14px;
+  }
+
+  .locationIcon {
+    width: 55px;
+    height: 55px;
+  }
+
+  .addressCard h2,
+  .timelineCard > h2 {
+    font-size: 21px;
+  }
+
+  .addressCard p {
+    font-size: 17px;
+  }
+
+  .timelineCard {
+    padding: 22px;
+  }
+
+  .timeline li {
+    gap: 17px;
+  }
+
+  .timeline h3 {
+    font-size: 17px;
+  }
+
+  .timeline p {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 900px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .hero h1 {
+    font-size: 36px;
+    line-height: 45px;
+  }
+
+  .hero > p {
+    font-size: 18px;
+    line-height: 27px;
+  }
+}
+
+@media (max-width: 600px) {
+  .successArt {
+    height: 125px;
+  }
+
+  .checkCircle {
+    width: 108px;
+    height: 108px;
+  }
+
+  .checkCircle svg {
+    width: 59px;
+  }
+
+  .hero h1 {
+    font-size: 29px;
+    line-height: 38px;
+  }
+
+  .hero > p {
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .successBanner {
+    gap: 14px;
+    margin: 23px auto;
+    padding: 17px;
+  }
+
+  .successBanner strong {
+    font-size: 16px;
+    line-height: 23px;
+  }
+
+  .successBanner p {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .successBanner > svg {
+    width: 32px;
+  }
+
+  .orderCard {
+    padding: 17px;
+  }
+
+  .restaurantImage {
+    width: 70px;
+    height: 80px;
+  }
+
+  .orderHeading h2 {
+    font-size: 21px;
+    line-height: 27px;
+  }
+
+  .status {
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+
+  .orderCode {
+    font-size: 15px;
+  }
+
+  .orderMeta {
+    gap: 9px;
+    font-size: 14px;
+  }
+
+  .orderMeta > span + span {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .orderMeta svg {
+    width: 20px;
+  }
+
+  .details > summary {
+    font-size: 16px;
+  }
+
+  .sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+    min-height: 55px;
+    font-size: 18px;
+  }
+}
