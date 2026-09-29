@@ -713,3 +713,323 @@
     font-size: 13px !important;
   }
 }
+
+/* Orders: bố trí gọn hơn trên laptop và desktop */
+@media (min-width: 1024px) {
+  /* Chỉ tác động layout đang chứa trang Đơn hàng */
+  :global(main):has(> .page) {
+    width: min(1480px, calc(100% - 48px));
+    max-width: none;
+    margin-inline: auto;
+    padding: 18px 0;
+  }
+
+  .page {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Tiêu đề và bộ lọc */
+  .heading h1 {
+    font-size: clamp(30px, 2.2vw, 36px);
+    line-height: 1.2;
+  }
+
+  .heading p {
+    margin-top: 6px;
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .filters {
+    margin: 14px 0 16px;
+    gap: 10px;
+  }
+
+  .scopeFilters,
+  .statusFilters {
+    gap: 10px;
+  }
+
+  .page .scopeButton,
+  .page .statusButton {
+    min-height: 38px;
+    padding: 8px 16px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .filterDivider {
+    height: 26px;
+    margin-inline: 6px;
+  }
+
+  /* Tiêu đề các nhóm đơn hàng */
+  .section {
+    margin-top: 14px;
+  }
+
+  .sectionHeading {
+    margin-bottom: 10px;
+  }
+
+  .sectionHeading h2 {
+    font-size: 23px;
+    line-height: 30px;
+  }
+
+  .sectionIcon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .sectionIcon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Card đơn hàng hiện tại */
+  .currentList {
+    gap: 12px;
+  }
+
+  .currentCard {
+    grid-template-columns: 104px minmax(0, 1fr) minmax(260px, 29%);
+    align-items: center;
+    gap: 20px;
+    padding: 14px 18px;
+  }
+
+  .currentCard > .foodPlaceholder {
+    width: 104px;
+    height: 104px;
+    align-self: center;
+  }
+
+  .orderTitle {
+    gap: 8px 14px;
+  }
+
+  .orderTitle h3 {
+    font-size: 22px;
+    line-height: 28px;
+  }
+
+  .badge {
+    padding: 6px 9px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .badge svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .orderCode {
+    margin-top: 5px;
+    font-size: 15px;
+    line-height: 21px;
+  }
+
+  .metadata {
+    margin-top: 12px;
+    gap: 8px 0;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .metadata > span {
+    gap: 6px;
+  }
+
+  .metadata > span + span {
+    margin-left: 12px;
+    padding-left: 12px;
+  }
+
+  .metadata svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .itemPreview {
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .smallPlaceholder {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .itemPreview strong {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .itemPreview p {
+    margin-top: 2px;
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  /* Tổng tiền và nút thao tác */
+  .orderActions {
+    justify-content: center;
+    gap: 5px;
+    padding-left: 20px;
+  }
+
+  .muted {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .total {
+    font-size: 25px;
+    line-height: 30px;
+  }
+
+  .orderDate {
+    margin: 0 0 3px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .page .primaryButton,
+  .page .outlineButton {
+    min-height: 36px;
+    padding: 7px 12px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  /* Banner hướng dẫn */
+  .infoBanner {
+    gap: 14px;
+    margin: 12px 0;
+    padding: 10px 14px;
+  }
+
+  .bulbIcon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .bulbIcon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .infoBanner h3 {
+    margin-bottom: 3px;
+    font-size: 16px;
+    line-height: 22px;
+  }
+
+  .infoBanner p {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  /* Lịch sử đơn hàng */
+  .historyGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .historyCard {
+    padding: 12px;
+  }
+
+  .historyTop {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .historyTitle {
+    gap: 6px;
+  }
+
+  .historyTitle h3 {
+    font-size: 16px;
+    line-height: 21px;
+  }
+
+  .historyTitle .badge {
+    padding: 5px 7px;
+    font-size: 12px;
+  }
+
+  .historyContent .orderCode {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 19px;
+  }
+
+  .historyMetadata {
+    margin-top: 8px;
+    gap: 6px 12px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .historyMetadata > span {
+    gap: 6px;
+  }
+
+  .historyMetadata svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .historyBottom {
+    grid-template-columns: minmax(80px, 1fr) auto auto;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .historyAmount {
+    gap: 2px;
+  }
+
+  .historyAmount strong {
+    font-size: 22px;
+    line-height: 27px;
+  }
+
+  .page .textButton {
+    font-size: 14px;
+  }
+
+  .demoNote {
+    margin-top: 12px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+}
+
+/* Cửa sổ hẹp: tránh ép ba card lịch sử quá chật */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .currentCard {
+    grid-template-columns: 80px minmax(0, 1fr) 240px;
+    gap: 14px;
+  }
+
+  .currentCard > .foodPlaceholder {
+    width: 80px;
+    height: 80px;
+  }
+
+  .orderActions {
+    padding-left: 14px;
+  }
+
+  .historyGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

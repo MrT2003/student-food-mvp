@@ -647,3 +647,298 @@
     font-size: 17px;
   }
 }
+
+/* Chi tiết đơn hàng: cân đối trên laptop / desktop */
+@media (min-width: 1024px) {
+  /* Bỏ khoảng cách bị cộng hai lần giữa layout và page */
+  :global(main):has(> .page) {
+    width: min(1480px, calc(100% - 48px));
+    max-width: none;
+    margin-inline: auto;
+    padding: 18px 0;
+  }
+
+  .page {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Tiêu đề trang */
+  .heading {
+    margin-bottom: 16px;
+  }
+
+  .heading h1 {
+    font-size: clamp(30px, 2.2vw, 36px);
+    line-height: 1.2;
+  }
+
+  .heading p {
+    margin-top: 6px;
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  /* Thẻ tổng quan đơn hàng */
+  .summary {
+    grid-template-columns: 96px minmax(0, 1fr) 190px;
+    gap: 20px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+
+  .restaurantImage {
+    width: 96px;
+  }
+
+  .restaurantTitle {
+    gap: 8px 16px;
+  }
+
+  .restaurantTitle h2 {
+    font-size: 24px;
+    line-height: 30px;
+  }
+
+  .badge {
+    gap: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    line-height: 19px;
+  }
+
+  .badge svg {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+  }
+
+  .orderCode {
+    margin-top: 5px;
+    font-size: 16px;
+    line-height: 22px;
+  }
+
+  .metadata {
+    margin-top: 12px;
+    gap: 8px 0;
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .metadata > span {
+    gap: 7px;
+  }
+
+  .metadata > span + span {
+    margin-left: 12px;
+    padding-left: 12px;
+  }
+
+  .metadata svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .summaryTotal {
+    gap: 5px;
+    padding-left: 24px;
+  }
+
+  .summaryTotal span {
+    font-size: 15px;
+  }
+
+  .summaryTotal strong {
+    font-size: 28px;
+    line-height: 34px;
+  }
+
+  /* Hai cột nội dung */
+  .columns {
+    grid-template-columns: minmax(0, 1.6fr) minmax(360px, 1fr);
+    gap: 18px;
+  }
+
+  .leftColumn,
+  .rightColumn {
+    gap: 14px;
+  }
+
+  .sectionTitle,
+  .sideCard .sectionTitle {
+    gap: 10px;
+    font-size: 21px;
+    line-height: 28px;
+  }
+
+  .sectionIcon,
+  .sideCard .sectionIcon {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .sectionIcon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Danh sách món */
+  .itemsHeading {
+    padding: 12px 18px;
+  }
+
+  .itemList {
+    padding: 0 18px;
+  }
+
+  .item {
+    grid-template-columns: 80px minmax(0, 1fr) 34px 106px;
+    align-items: start;
+    gap: 16px;
+    padding: 16px 0;
+  }
+
+  .itemImage {
+    width: 80px;
+  }
+
+  .itemContent h3 {
+    margin: 0 0 5px;
+    font-size: 18px;
+    line-height: 25px;
+  }
+
+  .itemContent p {
+    margin-top: 3px;
+    font-size: 15px;
+    line-height: 21px;
+  }
+
+  .quantity {
+    padding-top: 2px;
+    font-size: 17px;
+    line-height: 25px;
+  }
+
+  .itemPrice {
+    padding-top: 2px;
+    font-size: 19px;
+    line-height: 25px;
+  }
+
+  /* Ghi chú */
+  .noteCard {
+    padding: 14px 18px;
+  }
+
+  .note {
+    margin: 10px 0 0;
+    padding: 14px;
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  /* Các thẻ bên phải */
+  .sideCard {
+    padding: 14px 18px;
+  }
+
+  .details {
+    margin-top: 8px;
+  }
+
+  .detailRow {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 12px;
+    padding: 7px 0;
+    font-size: 15px;
+    line-height: 22px;
+  }
+
+  .detailRow .badge {
+    padding: 5px 8px;
+    font-size: 13px;
+    line-height: 19px;
+  }
+
+  .grandTotal {
+    margin-top: 3px;
+    padding-top: 10px;
+    font-size: 18px;
+    line-height: 26px;
+  }
+
+  .grandTotal dd {
+    font-size: 25px;
+    line-height: 32px;
+  }
+
+  .address {
+    margin-top: 10px;
+    font-size: 16px;
+    line-height: 23px;
+  }
+
+  .address p {
+    margin-top: 4px;
+    font-size: 15px;
+  }
+
+  /* Hai nút cuối cột trái */
+  .actions {
+    gap: 14px;
+    margin-top: 0;
+  }
+
+  .outlineButton,
+  .primaryButton {
+    min-height: 46px;
+    padding: 10px 16px;
+    gap: 10px;
+    font-size: 17px;
+    line-height: 24px;
+  }
+
+  .actions svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* Cửa sổ hẹp: dành thêm không gian cho tên món */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .summary {
+    grid-template-columns: 80px minmax(0, 1fr) 150px;
+    gap: 14px;
+  }
+
+  .restaurantImage {
+    width: 80px;
+  }
+
+  .summaryTotal {
+    padding-left: 16px;
+  }
+
+  .columns {
+    grid-template-columns: minmax(0, 1.4fr) minmax(340px, 1fr);
+    gap: 14px;
+  }
+
+  .item {
+    grid-template-columns: 64px minmax(0, 1fr) 28px 90px;
+    gap: 10px;
+  }
+
+  .itemImage {
+    width: 64px;
+  }
+
+  .itemContent h3,
+  .itemPrice {
+    font-size: 17px;
+  }
+}
