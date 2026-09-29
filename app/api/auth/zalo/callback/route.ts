@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
         // Logic lưu token / thông tin người dùng vào database / Supabase ở đây...
 
-        // Chuyển hướng về trang chính sau khi đăng nhập thành công
+        // Redirect to main page after successfully sign up
         return NextResponse.redirect(new URL('/', request.url));
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
