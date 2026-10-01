@@ -2,6 +2,8 @@ import { ArrowRight, Clock3, RotateCcw } from "lucide-react";
 import type { PreviewRestaurant } from "@/lib/home/mock-data";
 import FoodPlaceholder from "./FoodPlaceholder";
 import styles from "@/styles/home.module.css";
+import Link from "next/link";
+
 export default function ReorderSection({
   restaurants,
   onSelect,
@@ -22,10 +24,10 @@ export default function ReorderSection({
           </span>
           Đặt lại nhanh
         </h2>
-        <a className={styles.seeAll} href="#reorder-list">
+        <Link className={styles.seeAll} href="/orders/history">
           Xem tất cả
           <ArrowRight size={21} aria-hidden="true" />
-        </a>
+        </Link>
       </div>
       <div id="reorder-list" className={styles.restaurantGrid}>
         {restaurants.map((restaurant) => (

@@ -399,3 +399,131 @@
     min-width: 0;
   }
 }
+
+.providerList {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.providerRow {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 16px;
+  border: 1px solid #e8ecf3;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.providerLogo {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.zaloLogo {
+  background: #edf6ff;
+  color: #087aff;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.7px;
+}
+
+.googleLogo {
+  background: #fff3f0;
+  color: #ea4335;
+}
+
+.providerCopy {
+  min-width: 0;
+}
+
+.providerCopy h3 {
+  margin: 0;
+  color: var(--sf-ink);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.providerCopy p {
+  margin: 3px 0 0;
+  color: var(--sf-muted);
+  font-size: 14px;
+  line-height: 21px;
+  overflow-wrap: anywhere;
+}
+
+.providerConnected,
+.providerPending {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.providerConnected {
+  background: #e1faec;
+  color: #07833e;
+  font-weight: 600;
+}
+
+.providerPending {
+  background: #f2f4f7;
+  color: #667085;
+}
+
+.providerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 9px 16px;
+  border: 1px solid #ff573d;
+  border-radius: 9px;
+  background: #fff;
+  color: #ff381d;
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  cursor: pointer;
+}
+
+.providerButton:hover:not(:disabled) {
+  background: #fff6f0;
+}
+
+.providerButton:focus-visible {
+  outline: 3px solid #ffb398;
+  outline-offset: 3px;
+}
+
+.providerButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .providerRow {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 10px 12px;
+    padding: 12px;
+  }
+
+  .providerRow > :last-child {
+    grid-column: 2;
+    justify-self: start;
+    max-width: 100%;
+    white-space: normal;
+  }
+}

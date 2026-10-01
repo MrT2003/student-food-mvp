@@ -8,18 +8,10 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import {
-  Camera,
-  Info,
-  LockKeyhole,
-  LogOut,
-  RotateCcw,
-  Settings,
-  ShieldCheck,
-  UserRound,
-} from "lucide-react";
+import { Camera, Info, LogOut, Settings, UserRound } from "lucide-react";
 import styles from "@/styles/account.module.css";
 import AccountSuccessModal from "./AccountSuccessModal";
+import AccountSecurity from "./AccountSecurity";
 
 const initialProfile = {
   name: "Nguyễn Văn A",
@@ -214,42 +206,7 @@ export default function AccountView() {
         </div>
       </section>
 
-      <section className={styles.card} aria-labelledby="security-title">
-        <div className={styles.sectionHeading}>
-          <span className={styles.sectionIcon}>
-            <ShieldCheck size={27} aria-hidden="true" />
-          </span>
-          <div>
-            <h2 id="security-title">Bảo mật tài khoản</h2>
-            <p>Đảm bảo tài khoản của bạn luôn được bảo mật.</p>
-          </div>
-        </div>
-
-        <div className={styles.securityRow}>
-          <span className={styles.lockIcon}>
-            <LockKeyhole size={28} aria-hidden="true" />
-          </span>
-
-          <div className={styles.securityCopy}>
-            <h3>Mật khẩu</h3>
-            <p className={styles.passwordMask} aria-label="Mật khẩu được ẩn">
-              •••••••••••
-            </p>
-            <p className={styles.securityHint}>
-              Bạn có thể thay đổi mật khẩu để tăng cường bảo mật cho tài khoản.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className={styles.outlineButton}
-            onClick={() => showPendingMessage("Chức năng đổi mật khẩu")}
-          >
-            <RotateCcw size={21} aria-hidden="true" />
-            Đổi mật khẩu
-          </button>
-        </div>
-      </section>
+      <AccountSecurity />
 
       <section
         className={`${styles.card} ${styles.managementCard}`}
