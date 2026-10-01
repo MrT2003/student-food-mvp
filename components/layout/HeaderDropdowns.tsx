@@ -7,7 +7,7 @@ import {
   UserRound,
 } from "lucide-react";
 import type { HeaderNotification } from "./header-preview-data";
-import styles from "./header-dropdowns.module.css";
+import styles from "@/styles/header-dropdowns.module.css";
 import Link from "next/link";
 
 const icons = { rice: CookingPot, tea: CupSoda, noodles: Soup, spicy: Soup };

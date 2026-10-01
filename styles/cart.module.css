@@ -774,32 +774,32 @@
   }
 
   .restaurantCard {
-    padding: clamp(14px, 1.8vh, 20px);
+    padding: 14px 16px;
     border-radius: 16px;
   }
 
   .restaurantCard + .restaurantCard {
-    margin-top: 16px;
+    margin-top: 14px;
   }
 
   .restaurantHeader {
-    gap: 14px;
-    padding-bottom: 12px;
+    gap: 12px;
+    padding-bottom: 10px;
   }
 
   .restaurantImage {
-    width: 60px;
-    height: 60px;
+    width: 48px;
+    height: 48px;
     flex-shrink: 0;
   }
 
   .restaurantTitle {
-    gap: 10px;
+    gap: 9px;
   }
 
   .restaurantTitle h2 {
-    font-size: clamp(19px, 1.45vw, 23px);
-    line-height: 1.3;
+    font-size: 21px;
+    line-height: 27px;
   }
 
   .openBadge {
@@ -809,21 +809,23 @@
   }
 
   .location {
-    margin-top: 5px;
-    font-size: 15px;
+    margin-top: 3px;
+    font-size: 14px;
+    line-height: 20px;
   }
 
   .itemRow {
-    grid-template-columns: 68px minmax(0, 1fr) auto;
-    gap: 14px;
-    padding: clamp(12px, 1.6vh, 18px) 0;
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
   }
 
   .itemImage {
     grid-row: auto;
     align-self: center;
-    width: 68px;
-    height: 68px;
+    width: 54px;
+    height: 54px;
     min-height: 0;
   }
 
@@ -833,17 +835,19 @@
   }
 
   .itemContent h3 {
-    margin-bottom: 4px;
+    margin: 0 0 3px;
     font-size: 17px;
-    line-height: 1.35;
+    line-height: 23px;
   }
 
   .itemPrice {
+    margin: 0 0 2px;
     font-size: 16px;
     line-height: 22px;
   }
 
   .itemNote {
+    margin: 0;
     font-size: 14px;
     line-height: 20px;
   }
@@ -875,12 +879,14 @@
   }
 
   .restaurantSubtotal {
-    padding-top: 12px;
-    font-size: 16px;
+    padding-top: 10px;
+    font-size: 15px;
+    line-height: 23px;
   }
 
   .restaurantSubtotal strong {
     font-size: 20px;
+    line-height: 26px;
   }
 
   .sidebar {
@@ -962,101 +968,10 @@
     font-size: 14px;
     line-height: 22px;
   }
-}
-
-/* Làm gọn riêng danh sách quán và món trong giỏ hàng */
-@media (min-width: 1024px) {
-  .restaurantCard {
-    padding: 14px 16px;
-  }
-
-  .restaurantCard + .restaurantCard {
-    margin-top: 14px;
-  }
-
-  /* Phần tên quán */
-  .restaurantHeader {
-    gap: 12px;
-    padding-bottom: 10px;
-  }
-
-  .restaurantImage {
-    width: 48px;
-    height: 48px;
-    flex-shrink: 0;
-  }
-
-  .restaurantTitle {
-    gap: 9px;
-  }
-
-  .restaurantTitle h2 {
-    font-size: 21px;
-    line-height: 27px;
-  }
-
-  .location {
-    margin-top: 3px;
-    font-size: 14px;
-    line-height: 20px;
-  }
-
-  /* Từng món: giảm ảnh và khoảng trống,
-     không giới hạn chiều cao nội dung */
-  .itemRow {
-    grid-template-columns: 54px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 0;
-  }
-
-  .itemImage {
-    grid-row: auto;
-    align-self: center;
-    width: 54px;
-    height: 54px;
-    min-height: 0;
-  }
 
   .restaurantImage .placeholder svg,
   .itemImage .placeholder svg {
     width: 27px;
     height: 27px;
-  }
-
-  .itemContent h3 {
-    margin: 0 0 3px;
-    font-size: 17px;
-    line-height: 23px;
-  }
-
-  .itemPrice {
-    margin: 0 0 2px;
-    font-size: 16px;
-    line-height: 22px;
-  }
-
-  .itemNote {
-    margin: 0;
-    font-size: 14px;
-    line-height: 20px;
-  }
-
-  /* Giữ kích thước nút tăng giảm hiện tại */
-  .itemActions {
-    grid-column: auto;
-    gap: 10px;
-  }
-
-  /* Tổng tiền của từng quán */
-  .restaurantSubtotal {
-    padding-top: 10px;
-    font-size: 15px;
-    line-height: 23px;
-  }
-
-  .restaurantSubtotal strong {
-    font-size: 20px;
-    line-height: 26px;
   }
 }

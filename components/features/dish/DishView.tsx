@@ -22,6 +22,9 @@ import {
 import type { MenuItem } from "@/lib/restaurant/mock-data";
 import type { DishOptions } from "@/lib/dish/options";
 import styles from "@/styles/dish.module.css";
+import { useCartStore } from "@/store/useCartStore";
+import { useFlyToCart } from "@/lib/cart/useFlyToCart";
+import { formatMoney as money } from "@/lib/format";
 
 type Props = {
   restaurant: {
@@ -34,10 +37,6 @@ type Props = {
   options: DishOptions;
 };
 
-function money(value: number) {
-  return `${new Intl.NumberFormat("vi-VN").format(value)}đ`;
-}
-
 function FoodPlaceholder({ drink }: { drink: boolean }) {
   const Icon = drink ? CupSoda : CookingPot;
 
@@ -49,6 +48,8 @@ function FoodPlaceholder({ drink }: { drink: boolean }) {
 }
 
 export default function DishView({ restaurant, item, options }: Props) {
+  const { sourceRef, flyToCart } = useFlyToCart();
+  const addItem = useCartStore((state) => state.addItem);
   const [toppingIds, setToppingIds] = useState<string[]>(
     options.defaultToppingIds,
   );
@@ -63,13 +64,9 @@ export default function DishView({ restaurant, item, options }: Props) {
     toppingIds.includes(topping.id),
   );
 
-  const selectedSugar = options.sugars.find(
-    (choice) => choice.id === sugarId,
-  );
+  const selectedSugar = options.sugars.find((choice) => choice.id === sugarId);
 
-  const selectedIce = options.iceLevels.find(
-    (choice) => choice.id === iceId,
-  );
+  const selectedIce = options.iceLevels.find((choice) => choice.id === iceId);
 
   const toppingsPrice = selectedToppings.reduce(
     (total, topping) => total + topping.price,
@@ -89,10 +86,58 @@ export default function DishView({ restaurant, item, options }: Props) {
   }
 
   function handleAddToCart() {
-    // Chưa ghi dữ liệu giỏ hàng hoặc gọi API.
-    setNotice(
-      "Bạn đang xem bản UI mẫu. Chức năng thêm vào giỏ hàng chưa được kết nối.",
+    if (!canAdd) {
+      setNotice("Món đã hết hoặc quán đang tạm đóng cửa.");
+      return;
+    }
+
+    const note = [
+      selectedIce?.label,
+      selectedSugar ? `${selectedSugar.label} đường` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    const result = addItem(
+      {
+        id: restaurant.slug,
+        name: restaurant.name,
+        location: restaurant.location,
+        isOpen: restaurant.isOpen,
+        kind: isDrink ? "drink" : "food",
+      },
+      {
+        menuItemId: item.id,
+        name: item.name,
+        basePrice: item.price,
+        quantity,
+        kind: isDrink ? "drink" : "food",
+
+        extras: selectedToppings.map((topping) => ({
+          id: topping.id,
+          name: topping.name,
+          price: topping.price,
+        })),
+
+        selection: {
+          toppingIds: selectedToppings.map((topping) => topping.id),
+          sugarId: selectedSugar?.id ?? "",
+          iceId: selectedIce?.id ?? "",
+        },
+
+        note,
+      },
     );
+
+    if (!result.ok) {
+      setNotice(result.message);
+      return;
+    }
+
+    // Chỉ chạy hiệu ứng sau khi đã thêm món thành công.
+    flyToCart();
+
+    setNotice(`Đã thêm ${quantity} × ${item.name} vào giỏ hàng.`);
   }
 
   return (
@@ -318,7 +363,7 @@ export default function DishView({ restaurant, item, options }: Props) {
         </div>
 
         <div className={styles.selectedDish}>
-          <div className={styles.thumbnail}>
+          <div ref={sourceRef} className={styles.thumbnail}>
             <FoodPlaceholder drink={isDrink} />
           </div>
 
@@ -395,16 +440,10 @@ export default function DishView({ restaurant, item, options }: Props) {
           <ArrowRight size={21} aria-hidden="true" />
         </button>
 
-        <button
-          type="button"
-          className={styles.cartButton}
-          onClick={() =>
-            setNotice("Trang giỏ hàng chưa được bổ sung trong bản UI này.")
-          }
-        >
+        <Link href="/cart" className={styles.cartButton}>
           <ShoppingCart size={25} aria-hidden="true" />
           Xem giỏ hàng
-        </button>
+        </Link>
 
         {notice && (
           <p className={styles.notice} role="status">

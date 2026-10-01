@@ -4,8 +4,6 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   ArrowLeft,
-  CircleCheck,
-  CircleX,
   ClipboardList,
   Clock3,
   CreditCard,
@@ -14,31 +12,21 @@ import {
   Milk,
   Utensils,
 } from "lucide-react";
-
-import { cartRestaurants } from "@/lib/cart/mock-data";
 import {
   formatOrderMoney,
-  findMockOrderDetail,
-  orderStatusLabels,
-  type OrderDetail,
   type OrderDetailStatus,
 } from "@/lib/orders/order-detail";
-import { useOrderPreviewStore } from "@/store/useOrderPreviewStore";
 import styles from "@/styles/order-detail.module.css";
+import { useOrderDetail } from "@/lib/orders/useOrderDetail";
+import OrderStatusBadge from "@/components/ui/OrderStatusBadge";
+import SectionHeading from "@/components/ui/SectionHeading";
 
 function StatusBadge({ status }: { status: OrderDetailStatus }) {
-  const Icon =
-    status === "pending"
-      ? Clock3
-      : status === "cancelled" || status === "rejected"
-        ? CircleX
-        : CircleCheck;
-
   return (
-    <span className={`${styles.badge} ${styles[status]}`}>
-      <Icon size={20} aria-hidden="true" />
-      {orderStatusLabels[status]}
-    </span>
+    <OrderStatusBadge
+      status={status}
+      className={`${styles.badge} ${styles[status]}`}
+    />
   );
 }
 
@@ -63,10 +51,13 @@ function SectionTitle({
   children: ReactNode;
 }) {
   return (
-    <h2 className={styles.sectionTitle}>
-      <span className={styles.sectionIcon}>{icon}</span>
+    <SectionHeading
+      icon={icon}
+      className={styles.sectionTitle}
+      iconClassName={styles.sectionIcon}
+    >
       {children}
-    </h2>
+    </SectionHeading>
   );
 }
 
@@ -86,47 +77,7 @@ function DetailRow({
 }
 
 export default function OrderDetailView({ orderId }: { orderId: string }) {
-  const checkout = useOrderPreviewStore((state) => state.checkout);
-  const previewOrder = checkout?.orders.find((order) => order.id === orderId);
-
-  let order: OrderDetail | undefined;
-
-  if (previewOrder && checkout) {
-    // Dùng bản sao đơn hàng đã lưu khi xác nhận.
-    // Không lấy lại từ giỏ hàng vì giỏ có thể đã thay đổi.
-    order = {
-      id: previewOrder.id,
-      restaurantName: previewOrder.restaurantName,
-      restaurantLocation:
-        cartRestaurants.find(
-          (restaurant) => restaurant.id === previewOrder.restaurantId,
-        )?.location ?? "Chưa có thông tin",
-      kind: previewOrder.kind,
-      status: "pending",
-      placedAt: "Vừa xác nhận (mẫu)",
-      payment:
-        previewOrder.payment === "bank"
-          ? "Chuyển khoản ngân hàng"
-          : "Thanh toán khi nhận món",
-      note: previewOrder.note,
-      deliveryLocation: checkout.location,
-      deliveryAddress: checkout.address,
-      deliveryFee: 0,
-      items: previewOrder.items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        kind: item.kind,
-        quantity: item.quantity,
-        unitPrice:
-          item.basePrice +
-          item.extras.reduce((sum, extra) => sum + extra.price, 0),
-        options: item.extras.map((extra) => extra.name),
-        note: item.note,
-      })),
-    };
-  } else {
-    order = findMockOrderDetail(orderId);
-  }
+  const order = useOrderDetail(orderId);
 
   if (!order) {
     return (

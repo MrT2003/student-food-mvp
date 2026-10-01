@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -16,13 +15,11 @@ import {
   Utensils,
 } from "lucide-react";
 import useExplore, { categories, type SortBy } from "@/lib/explore/useExplore";
-import {
-  exploreRestaurants,
-  popularDishes,
-  type FoodKind,
-} from "@/lib/explore/mock-data";
+import type { FoodKind } from "@/lib/explore/mock-data";
+import { popularDishCards } from "@/lib/explore/popular-data";
 import styles from "@/styles/explore.module.css";
 import Link from "next/link";
+import { formatMoney as formatPrice } from "@/lib/format";
 
 const foodIcons = {
   rice: CookingPot,
@@ -52,17 +49,8 @@ function FoodPlaceholder({ kind }: { kind: FoodKind }) {
   );
 }
 
-function formatPrice(price: number) {
-  return `${new Intl.NumberFormat("vi-VN").format(price)}đ`;
-}
-
 export default function ExploreView() {
   const explore = useExplore();
-  const [notice, setNotice] = useState("");
-
-  function showPreviewNotice(name: string) {
-    setNotice(`Bạn đã chọn ${name}. Trang chi tiết sẽ được bổ sung sau.`);
-  }
 
   return (
     <div className={styles.explorePage}>
@@ -262,63 +250,40 @@ export default function ExploreView() {
             Món phổ biến hôm nay
           </h2>
 
-          <button
-            type="button"
-            className={styles.seeAll}
-            onClick={() =>
-              setNotice(
-                "Bản mẫu hiện hiển thị đủ 6 món. Danh sách đầy đủ sẽ được bổ sung khi có API.",
-              )
-            }
-          >
+          <Link href="/explore/popular" className={styles.seeAll}>
             Xem tất cả
             <ArrowRight size={20} aria-hidden="true" />
-          </button>
+          </Link>
         </div>
 
         <div className={styles.dishGrid}>
-          {popularDishes.map((dish) => {
-            const restaurant = exploreRestaurants.find(
-              (item) => item.id === dish.restaurantId,
-            );
+          {popularDishCards.slice(0, 6).map((dish) => (
+            <article
+              key={`${dish.restaurantId}/${dish.id}`}
+              className={styles.dishCard}
+            >
+              <FoodPlaceholder kind={dish.kind} />
 
-            return (
-              <article key={dish.id} className={styles.dishCard}>
-                <FoodPlaceholder kind={dish.kind} />
+              <div className={styles.dishContent}>
+                <h3>{dish.name}</h3>
 
-                <div className={styles.dishContent}>
-                  <h3>{dish.name}</h3>
-                  <p className={styles.price}>{formatPrice(dish.price)}</p>
-                  <p className={styles.restaurantName}>{restaurant?.name}</p>
+                <p className={styles.price}>{formatPrice(dish.price)}</p>
 
-                  <button
-                    type="button"
-                    className={styles.outlineButton}
-                    aria-label={`Xem món ${dish.name}`}
-                    onClick={() => showPreviewNotice(dish.name)}
-                  >
-                    Xem món
-                    <ArrowRight size={16} aria-hidden="true" />
-                  </button>
-                </div>
-              </article>
-            );
-          })}
+                <p className={styles.restaurantName}>{dish.restaurantName}</p>
+
+                <Link
+                  href={dish.href}
+                  className={styles.outlineButton}
+                  aria-label={`Xem món ${dish.name} tại ${dish.restaurantName}`}
+                >
+                  Xem món
+                  <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
-
-      {notice && (
-        <div className={styles.notice} role="status">
-          <p>{notice}</p>
-          <button
-            type="button"
-            aria-label="Đóng thông báo"
-            onClick={() => setNotice("")}
-          >
-            Đóng
-          </button>
-        </div>
-      )}
     </div>
   );
 }

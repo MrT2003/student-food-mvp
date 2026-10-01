@@ -1012,3 +1012,11 @@
     border-left: 0;
   }
 }
+
+a.cartButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+}

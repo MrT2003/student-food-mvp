@@ -602,3 +602,16 @@
     border-left: 0;
   }
 }
+
+a.seeAll,
+a.outlineButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+a.outlineButton {
+  width: 100%;
+}

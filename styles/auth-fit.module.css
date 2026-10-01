@@ -16,37 +16,46 @@
 @media (min-width: 1024px) {
   /* Không ảnh hưởng onboarding hoặc các trang student */
   :global(.sf-auth):has(.page) {
+    --auth-header-height: 81px;
+    --auth-padding-top: 18px;
+    --auth-padding-bottom: 24px;
+    --auth-layout-gap: 24px;
+    --auth-panel-padding-y: clamp(28px, 4dvh, 40px);
+    --auth-panel-padding-x: 36px;
+
     min-height: 100dvh;
   }
 
   :global(.sf-auth):has(.page) > main {
-    padding: 16px 24px;
+    padding: var(--auth-padding-top) 24px var(--auth-padding-bottom);
   }
 
   .page {
-    /*
-      Header hiện tại: 80px + 1px border.
-      Main: padding trên/dưới tổng 32px.
-    */
-    min-height: calc(100dvh - 113px);
-    display: grid;
-    grid-template-rows: minmax(min-content, 1fr) auto;
-    align-content: start;
-    gap: 16px;
+    min-height: calc(
+      100dvh - var(--auth-header-height) - var(--auth-padding-top) -
+        var(--auth-padding-bottom)
+    );
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--auth-layout-gap);
   }
 
   .authCard {
+    flex: 0 0 auto;
     width: min(1200px, 100%);
+    height: auto;
     min-height: 0;
+    margin-block: auto;
+    margin-inline: auto;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  /* Cột giới thiệu */
   .introWrapper > section {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: clamp(22px, 3dvh, 34px) 36px;
+    padding: var(--auth-panel-padding-y) var(--auth-panel-padding-x);
   }
 
   .introWrapper > section > p:first-child {
@@ -106,10 +115,9 @@
     line-height: 21px;
   }
 
-  /* Cột đăng nhập / đăng ký */
   .formPanel {
-    padding: clamp(22px, 3dvh, 34px) 36px;
     justify-content: center;
+    padding: var(--auth-panel-padding-y) var(--auth-panel-padding-x);
   }
 
   .formHeading h1 {
@@ -197,8 +205,9 @@
     line-height: 20px;
   }
 
-  /* AuthBenefits: section trực tiếp ở cuối trang */
   .page > section {
+    flex: 0 0 auto;
+    width: 100%;
     margin-top: 0;
     padding: 10px 18px;
     border-radius: 20px;
@@ -231,20 +240,14 @@
   }
 }
 
-/* Laptop có vùng hiển thị thấp hơn */
+/* Laptop thấp: chỉ điều chỉnh biến và kích thước sau khối desktop. */
 @media (min-width: 1024px) and (max-height: 800px) {
-  :global(.sf-auth):has(.page) > main {
-    padding-block: 12px;
-  }
-
-  .page {
-    min-height: calc(100dvh - 105px);
-    gap: 12px;
-  }
-
-  .introWrapper > section,
-  .formPanel {
-    padding: 20px 28px;
+  :global(.sf-auth):has(.page) {
+    --auth-padding-top: 12px;
+    --auth-padding-bottom: 16px;
+    --auth-layout-gap: 16px;
+    --auth-panel-padding-y: 20px;
+    --auth-panel-padding-x: 28px;
   }
 
   .introWrapper h2,
@@ -291,65 +294,5 @@
 
   .page > section > div {
     padding: 6px 12px;
-  }
-}
-
-/* Login / Register: card ôm nội dung, không giãn đầy màn hình */
-@media (min-width: 1024px) {
-  .page {
-    min-height: 0;
-    grid-template-rows: auto auto;
-    align-content: start;
-    gap: 18px;
-  }
-
-  .authCard {
-    flex: 0 0 auto;
-    width: min(1200px, 100%);
-    height: auto;
-    min-height: 0;
-    margin-block: auto;
-    margin-inline: auto;
-  }
-
-  .introWrapper > section,
-  .formPanel {
-    padding-block: clamp(28px, 4dvh, 40px);
-    justify-content: center;
-  }
-}
-
-/* Card ôm nội dung, banner nằm gần đáy màn hình */
-@media (min-width: 1024px) {
-  :global(.sf-auth):has(.page) > main {
-    padding-top: 18px;
-    padding-bottom: 24px;
-  }
-
-  .page {
-    /*
-      Header: 81px
-      Padding main: 18px + 24px
-    */
-    min-height: calc(100dvh - 123px);
-
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-
-  .authCard {
-    flex: 0 0 auto;
-    width: min(1200px, 100%);
-    height: auto;
-    min-height: 0;
-    margin-inline: auto;
-  }
-
-  /* Banner lợi ích phía dưới */
-  .page > section {
-    flex: 0 0 auto;
-    width: 100%;
-    margin-top: 0;
   }
 }

@@ -1,3 +1,4 @@
+export { formatMoney as formatOrderMoney } from "@/lib/format";
 export type OrderDetailStatus =
   | "pending"
   | "accepted"
@@ -37,10 +38,6 @@ export const orderStatusLabels: Record<OrderDetailStatus, string> = {
   cancelled: "Đã hủy",
   rejected: "Bị từ chối",
 };
-
-export function formatOrderMoney(value: number) {
-  return `${value.toLocaleString("vi-VN")}đ`;
-}
 
 // Chỉ phục vụ UI. Sau này thay bằng dữ liệu từ API.
 export const mockOrderDetails: OrderDetail[] = [
@@ -202,7 +199,6 @@ export const mockOrderDetails: OrderDetail[] = [
   },
 ];
 
-
 type HistoryStatus = "completed" | "cancelled" | "rejected";
 
 type HistorySeed = {
@@ -227,9 +223,7 @@ function createHistoryOrder(seed: HistorySeed): OrderDetail {
     note: "",
     deliveryLocation: seed.location,
     deliveryAddress:
-      seed.location === "KTX A"
-        ? "Cổng B, Phòng 302"
-        : "Tòa B1, Phòng 101",
+      seed.location === "KTX A" ? "Cổng B, Phòng 302" : "Tòa B1, Phòng 101",
     deliveryFee: 0,
     items: seed.dishes.map((dish, index) => ({
       id: `${seed.id}-item-${index + 1}`,

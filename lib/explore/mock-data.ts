@@ -148,3 +148,60 @@ export const popularDishes: ExploreDish[] = [
     kind: "rice",
   },
 ];
+
+// Quán bổ sung cho trang món phổ biến.
+exploreRestaurants.push({
+  id: "ga-ran-campus",
+  name: "Gà Rán Campus",
+  location: "KTX A",
+  menuCount: 1,
+  categories: ["Ăn vặt", "Đồ chiên"],
+  isOpen: true,
+  popularity: 60,
+  kind: "snack",
+});
+
+popularDishes.push(
+  {
+    id: "tra-dao-cam-sa",
+    name: "Trà đào cam sả",
+    price: 20000,
+    restaurantId: "tra-sua-nha-lam",
+    kind: "tea",
+  },
+  {
+    id: "banh-mi-bo-nuong",
+    name: "Bánh mì bò nướng",
+    price: 22000,
+    restaurantId: "banh-mi-3t",
+    kind: "bread",
+  },
+  {
+    id: "ga-ran-campus",
+    name: "Gà rán Campus",
+    price: 26000,
+    restaurantId: "ga-ran-campus",
+    kind: "snack",
+  },
+  {
+    id: "com-chien-trung",
+    name: "Cơm chiên trứng",
+    price: 25000,
+    restaurantId: "com-co-ba",
+    kind: "rice",
+  },
+  {
+    id: "khoai-tay-chien",
+    name: "Khoai tây chiên",
+    price: 15000,
+    restaurantId: "an-vat-5k",
+    kind: "snack",
+  },
+  {
+    id: "banh-trang-tron",
+    name: "Bánh tráng trộn",
+    price: 15000,
+    restaurantId: "an-vat-5k",
+    kind: "snack",
+  },
+);

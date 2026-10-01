@@ -1,3 +1,5 @@
+// Giữ tương thích với các import hiện tại.
+export { getCartItemTotal } from "@/lib/cart/calculations";
 export type CartExtra = {
   id: string;
   name: string;
@@ -7,6 +9,11 @@ export type CartExtra = {
 export type CartItem = {
   id: string;
   restaurantId: string;
+
+  // ID món trong menu, khác với ID dòng trong giỏ.
+  menuItemId?: string;
+  selection?: CartSelection;
+
   name: string;
   basePrice: number;
   quantity: number;
@@ -14,7 +21,6 @@ export type CartItem = {
   note: string;
   kind: "food" | "drink";
 };
-
 export const cartRestaurants = [
   {
     id: "com-co-ba",
@@ -80,11 +86,16 @@ export const initialCartItems: CartItem[] = [
   },
 ];
 
-export function getCartItemTotal(item: CartItem) {
-  const extrasPrice = item.extras.reduce(
-    (total, extra) => total + extra.price,
-    0,
-  );
+export type CartRestaurant = {
+  id: string;
+  name: string;
+  location: string;
+  isOpen: boolean;
+  kind: "food" | "drink";
+};
 
-  return (item.basePrice + extrasPrice) * item.quantity;
-}
+export type CartSelection = {
+  toppingIds: string[];
+  sugarId: string;
+  iceId: string;
+};

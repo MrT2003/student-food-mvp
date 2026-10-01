@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -15,11 +15,14 @@ import {
   Milk,
   Utensils,
 } from "lucide-react";
-
-import { cartRestaurants } from "@/lib/cart/mock-data";
 import { useOrderPreviewStore } from "@/store/useOrderPreviewStore";
 import styles from "@/styles/orders.module.css";
 import Link from "next/link";
+import {
+  formatOrderDate,
+  formatOrderPayment,
+} from "@/lib/orders/order-mappers";
+import { formatMoney } from "@/lib/format";
 
 type OrderStatus =
   | "pending"
@@ -133,10 +136,6 @@ const statusOptions: {
   { value: "completed", label: "Hoàn thành" },
   { value: "cancelled", label: "Đã hủy" },
 ];
-
-function formatMoney(value: number) {
-  return `${value.toLocaleString("vi-VN")}đ`;
-}
 
 function StatusIcon({ status }: { status: OrderStatus }) {
   if (status === "pending") {
@@ -313,7 +312,8 @@ function HistoryOrderCard({ order, onAction }: OrderCardProps) {
 }
 
 export default function OrdersView() {
-  const checkout = useOrderPreviewStore((state) => state.checkout);
+  const ordersById = useOrderPreviewStore((state) => state.ordersById);
+  const orderIds = useOrderPreviewStore((state) => state.orderIds);
 
   const [scope, setScope] = useState<Scope>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -321,27 +321,33 @@ export default function OrdersView() {
 
   // Store hiện chỉ giữ lần xác nhận gần nhất.
   // Nếu chưa có, dùng dữ liệu mẫu để dựng UI.
-  const currentOrders: Order[] = checkout?.orders.length
-    ? checkout.orders.map((order) => ({
-        id: order.id,
-        restaurantName: order.restaurantName,
-        location:
-          cartRestaurants.find(
-            (restaurant) => restaurant.id === order.restaurantId,
-          )?.location ?? "Chưa có thông tin",
-        kind: order.kind,
-        status: "pending",
-        itemCount: order.items.length,
-        firstItem: order.items[0]?.name ?? "Món ăn",
-        payment:
-          order.payment === "bank"
-            ? "Chuyển khoản ngân hàng"
-            : "Thanh toán khi nhận món",
-        total: order.total,
-        date: "Vừa xác nhận (mẫu)",
-      }))
-    : currentSamples;
+  const currentOrders = useMemo<Order[]>(() => {
+    // Giữ dữ liệu mẫu khi chưa tạo đơn nào.
+    if (orderIds.length === 0) {
+      return currentSamples;
+    }
 
+    return orderIds.flatMap((id): Order[] => {
+      const order = ordersById[id];
+
+      if (!order) return [];
+
+      return [
+        {
+          id: order.id,
+          restaurantName: order.restaurantName,
+          location: order.restaurantLocation,
+          kind: order.kind,
+          status: "pending",
+          itemCount: order.quantity,
+          firstItem: order.items[0]?.name ?? "Món ăn",
+          payment: formatOrderPayment(order.payment),
+          total: order.total,
+          date: formatOrderDate(order.createdAt),
+        },
+      ];
+    });
+  }, [ordersById, orderIds]);
   function matchesStatus(order: Order) {
     if (status === "all") return true;
 

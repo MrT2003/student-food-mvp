@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { exploreRestaurants, popularDishes } from "./mock-data";
+import { normalizeSearchText as normalize } from "@/lib/format";
 
 export const categories = [
   "Cơm",
@@ -14,16 +15,6 @@ export const categories = [
 export type Category = (typeof categories)[number];
 export type Location = "all" | "KTX A" | "KTX B";
 export type SortBy = "popular" | "name" | "menu";
-
-function normalize(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[đĐ]/g, "d")
-    .toLowerCase()
-    .trim();
-}
-
 export default function useExplore() {
   const [searchInput, setSearchInput] = useState("");
   const [query, setQuery] = useState("");

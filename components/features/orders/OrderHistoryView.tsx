@@ -23,6 +23,7 @@ import {
   type OrderDetail,
 } from "@/lib/orders/order-detail";
 import styles from "@/styles/order-history.module.css";
+import { normalizeSearchText as normalize } from "@/lib/format";
 
 type Filter = "all" | "completed" | "cancelled" | "rejected";
 type Sort = "newest" | "oldest" | "highest" | "lowest";
@@ -36,21 +37,10 @@ const filters: { value: Filter; label: string }[] = [
   { value: "rejected", label: "Bị từ chối" },
 ];
 
-function normalize(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[đĐ]/g, "d")
-    .toLowerCase()
-    .trim();
-}
-
 function getTotal(order: OrderDetail) {
   return (
-    order.items.reduce(
-      (sum, item) => sum + item.unitPrice * item.quantity,
-      0,
-    ) + order.deliveryFee
+    order.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) +
+    order.deliveryFee
   );
 }
 
@@ -110,8 +100,7 @@ export default function OrderHistoryView() {
       if (sort === "highest") return getTotal(b) - getTotal(a);
       if (sort === "lowest") return getTotal(a) - getTotal(b);
 
-      const difference =
-        getDateValue(b.placedAt) - getDateValue(a.placedAt);
+      const difference = getDateValue(b.placedAt) - getDateValue(a.placedAt);
 
       return sort === "oldest" ? -difference : difference;
     });
@@ -160,9 +149,7 @@ export default function OrderHistoryView() {
                   setPage(1);
                 }}
               >
-                {option.value !== "all" && (
-                  <StatusIcon status={option.value} />
-                )}
+                {option.value !== "all" && <StatusIcon status={option.value} />}
                 {option.label} ({count})
               </button>
             );

@@ -6,9 +6,7 @@ import {
   Banknote,
   Check,
   ClipboardList,
-  CookingPot,
   CreditCard,
-  CupSoda,
   House,
   MapPin,
   ReceiptText,
@@ -19,19 +17,11 @@ import {
 import { useOrderPreviewStore } from "@/store/useOrderPreviewStore";
 import { getCartItemTotal } from "@/lib/cart/mock-data";
 import styles from "@/styles/order-success.module.css";
-
-function money(value: number) {
-  return `${new Intl.NumberFormat("vi-VN").format(value)}đ`;
-}
+import { formatMoney as money } from "@/lib/format";
+import FoodThumbnail from "@/components/ui/FoodThumbnail";
 
 function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
-  const Icon = kind === "drink" ? CupSoda : CookingPot;
-
-  return (
-    <div className={styles.placeholder} aria-hidden="true">
-      <Icon strokeWidth={1.4} />
-    </div>
-  );
+  return <FoodThumbnail kind={kind} className={styles.placeholder} />;
 }
 
 export default function OrderSuccessView() {

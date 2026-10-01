@@ -23,26 +23,16 @@ import {
   type RestaurantDetail,
 } from "@/lib/restaurant/mock-data";
 import styles from "@/styles/restaurant.module.css";
+import { formatMoney as formatPrice } from "@/lib/format";
+import { normalizeSearchText as normalize } from "@/lib/format";
 
 const categoryIcons = {
   Cơm: CookingPot,
   "Món thêm": Soup,
   "Nước uống": CupSoda,
   "Ăn vặt": Drumstick,
+  "Món chính": Utensils,
 };
-
-function normalize(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[đĐ]/g, "d")
-    .toLowerCase()
-    .trim();
-}
-
-function formatPrice(price: number) {
-  return `${new Intl.NumberFormat("vi-VN").format(price)}đ`;
-}
 
 function FoodPlaceholder({ category = "Cơm" }: { category?: MenuCategory }) {
   const Icon = categoryIcons[category];

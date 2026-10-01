@@ -7,8 +7,6 @@ import {
   ArrowRight,
   Banknote,
   Check,
-  CookingPot,
-  CupSoda,
   FileText,
   Info,
   Landmark,
@@ -17,23 +15,19 @@ import {
   ReceiptText,
 } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
-import { cartRestaurants, getCartItemTotal } from "@/lib/cart/mock-data";
 import styles from "@/styles/order-confirm.module.css";
 import { useRouter } from "next/navigation";
 import { useOrderPreviewStore } from "@/store/useOrderPreviewStore";
-
-function money(value: number) {
-  return `${new Intl.NumberFormat("vi-VN").format(value)}đ`;
-}
+import { formatMoney as money } from "@/lib/format";
+import { useCartSummary } from "@/lib/cart/useCartSummary";
+import FoodThumbnail from "@/components/ui/FoodThumbnail";
+import {
+  getCartItemTotal,
+  getCartItemUnitPrice,
+} from "@/lib/cart/calculations";
 
 function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
-  const Icon = kind === "drink" ? CupSoda : CookingPot;
-
-  return (
-    <div className={styles.placeholder} aria-hidden="true">
-      <Icon strokeWidth={1.4} />
-    </div>
-  );
+  return <FoodThumbnail kind={kind} className={styles.placeholder} />;
 }
 
 export default function OrderConfirmView() {
@@ -57,28 +51,12 @@ export default function OrderConfirmView() {
 
   const submitting = useRef(false);
 
-  const groups = cartRestaurants
-    .map((restaurant) => {
-      const restaurantItems = items.filter(
-        (item) => item.restaurantId === restaurant.id,
-      );
-
-      return {
-        restaurant,
-        items: restaurantItems,
-        quantity: restaurantItems.reduce((sum, item) => sum + item.quantity, 0),
-        subtotal: restaurantItems.reduce(
-          (sum, item) => sum + getCartItemTotal(item),
-          0,
-        ),
-      };
-    })
-    .filter((group) => group.items.length > 0);
-
-  const totalQuantity = groups.reduce((sum, group) => sum + group.quantity, 0);
-
-  // Phí giao hàng mẫu là 0đ, giống trang Cart.
-  const total = groups.reduce((sum, group) => sum + group.subtotal, 0);
+  const {
+    groups,
+    quantity: totalQuantity,
+    subtotal: total,
+    unknownRestaurantIds,
+  } = useCartSummary();
 
   function handleConfirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,11 +78,7 @@ export default function OrderConfirmView() {
       return;
     }
 
-    if (
-      groups.length === 0 ||
-      groups.reduce((sum, group) => sum + group.items.length, 0) !==
-        items.length
-    ) {
+    if (groups.length === 0 || unknownRestaurantIds.length > 0) {
       setError(
         "Có món chưa xác định được cửa hàng. Vui lòng kiểm tra giỏ hàng.",
       );
@@ -120,14 +94,13 @@ export default function OrderConfirmView() {
 
     submitting.current = true;
 
-    // Chỉ chụp lại dữ liệu để dựng màn hình thành công mẫu.
-    // Khi nối backend, chỉ thực hiện sau khi API tạo đơn trả về thành công.
     saveCheckoutPreview({
       location,
       address,
       orders: groups.map((group) => ({
         restaurantId: group.restaurant.id,
         restaurantName: group.restaurant.name,
+        restaurantLocation: group.restaurant.location,
         kind: group.restaurant.kind,
         quantity: group.quantity,
         total: group.subtotal,
@@ -136,7 +109,6 @@ export default function OrderConfirmView() {
         items: group.items,
       })),
     });
-
     router.replace("/cart/success");
   }
 
@@ -243,12 +215,7 @@ export default function OrderConfirmView() {
                       </thead>
                       <tbody>
                         {group.items.map((item) => {
-                          const unitPrice =
-                            item.basePrice +
-                            item.extras.reduce(
-                              (sum, extra) => sum + extra.price,
-                              0,
-                            );
+                          const unitPrice = getCartItemUnitPrice(item);
 
                           return (
                             <tr key={item.id}>

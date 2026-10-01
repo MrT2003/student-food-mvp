@@ -1,8 +1,9 @@
-import { exploreRestaurants } from "@/lib/explore/mock-data";
+import { exploreRestaurants, popularDishes } from "@/lib/explore/mock-data";
 import { previewRestaurants } from "@/lib/home/mock-data";
 
 export const menuCategories = [
   "Cơm",
+  "Món chính",
   "Món thêm",
   "Nước uống",
   "Ăn vặt",
@@ -143,16 +144,41 @@ const menus: Record<string, MenuItem[]> = {
   "tra-sua-nha-lam": traSuaNhaLamMenu,
 };
 
+// Bổ sung món phổ biến còn thiếu.
+// Món đã tồn tại giữ nguyên thông tin và giá trong menu.
+for (const dish of popularDishes) {
+  const restaurantMenu = (menus[dish.restaurantId] ??= []);
+
+  if (restaurantMenu.some((item) => item.id === dish.id)) {
+    continue;
+  }
+
+  const category: MenuCategory =
+    dish.kind === "tea"
+      ? "Nước uống"
+      : dish.kind === "rice"
+        ? "Cơm"
+        : dish.kind === "noodles"
+          ? "Món chính"
+          : "Ăn vặt";
+
+  restaurantMenu.push({
+    id: dish.id,
+    name: dish.name,
+    description: `${dish.name} — món ăn trong thực đơn của quán.`,
+    price: dish.price,
+    category,
+    available: true,
+    hasOptions: false,
+  });
+}
+
 export function getRestaurantDetail(
   slug: string,
 ): RestaurantDetail | undefined {
-  const exploreRestaurant = exploreRestaurants.find(
-    (item) => item.id === slug,
-  );
+  const exploreRestaurant = exploreRestaurants.find((item) => item.id === slug);
 
-  const homeRestaurant = previewRestaurants.find(
-    (item) => item.slug === slug,
-  );
+  const homeRestaurant = previewRestaurants.find((item) => item.slug === slug);
 
   if (!exploreRestaurant && !homeRestaurant) {
     return undefined;
@@ -167,8 +193,7 @@ export function getRestaurantDetail(
     exploreRestaurant?.categories ?? homeRestaurant?.categories ?? [];
 
   const isOpen =
-    exploreRestaurant?.isOpen ??
-    (homeRestaurant?.operating_status === "open");
+    exploreRestaurant?.isOpen ?? homeRestaurant?.operating_status === "open";
 
   return {
     slug,
