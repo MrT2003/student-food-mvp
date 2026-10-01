@@ -1,4 +1,5 @@
-// Giữ tương thích với các import hiện tại.
+import type { SelectedOption } from "@/types/cart.types";
+
 export { getCartItemTotal } from "@/lib/cart/calculations";
 export type CartExtra = {
   id: string;
@@ -20,6 +21,9 @@ export type CartItem = {
   extras: CartExtra[];
   note: string;
   kind: "food" | "drink";
+  // Dữ liệu chuẩn mới, dùng trong giai đoạn chuyển đổi.
+  selected_options?: SelectedOption[];
+  image_url?: string | null;
 };
 export const cartRestaurants = [
   {

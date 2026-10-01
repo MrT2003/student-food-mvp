@@ -1,6 +1,14 @@
 "use client";
 
 import { create } from "zustand";
+import type { AddCartItemInput } from "@/types/cart.types";
+
+import { mockRestaurants, mockMenuItemDetails } from "@/lib/mocks/catalog.mock";
+
+import {
+  normalizeSelectedOptions,
+  resolveSelectedOptions,
+} from "@/lib/cart/options";
 import type {
   CartItem,
   CartRestaurant,
@@ -31,6 +39,8 @@ type CartState = {
   address: string;
   preferences: Partial<Record<string, RestaurantPreference>>;
 
+  addCatalogItem: (input: AddCartItemInput) => AddResult;
+
   addItem: (restaurant: CartRestaurant, item: AddCartItem) => AddResult;
 
   setItems: (
@@ -53,6 +63,99 @@ export const useCartStore = create<CartState>((set, get) => ({
   location: "KTX A",
   address: "",
   preferences: {},
+
+  addCatalogItem: (input) => {
+    try {
+      const restaurant = mockRestaurants.find(
+        (entry) => entry.id === input.restaurant_id,
+      );
+
+      const menuItem = mockMenuItemDetails.find(
+        (entry) =>
+          entry.id === input.menu_item_id &&
+          entry.restaurant_id === input.restaurant_id,
+      );
+
+      if (
+        !restaurant ||
+        restaurant.status !== "active" ||
+        restaurant.operating_status !== "open"
+      ) {
+        return {
+          ok: false,
+          message: "Quán hiện không nhận đơn.",
+        };
+      }
+
+      if (!menuItem?.is_active || !menuItem.is_available) {
+        return {
+          ok: false,
+          message: "Món hiện không còn khả dụng.",
+        };
+      }
+
+      if (!Number.isFinite(menuItem.price) || menuItem.price < 0) {
+        return {
+          ok: false,
+          message: "Giá món không hợp lệ.",
+        };
+      }
+
+      const selected = normalizeSelectedOptions(input.selected_options);
+
+      // Kiểm tra nhóm bắt buộc, chọn một/chọn nhiều,
+      // và tùy chọn có thực sự thuộc món hay không.
+      const snapshots = resolveSelectedOptions(menuItem, selected);
+
+      const kind = menuItem.category === "Nước uống" ? "drink" : "food";
+
+      // Chuyển sang cấu trúc mà CartView hiện tại đang đọc.
+      // Giá và tên lấy từ catalog, không lấy từ payload UI.
+      return get().addItem(
+        {
+          id: restaurant.id,
+          name: restaurant.name,
+          location: restaurant.location ?? "",
+          isOpen: true,
+          kind,
+        },
+        {
+          menuItemId: menuItem.id,
+          name: menuItem.name,
+          basePrice: menuItem.price,
+          quantity: input.quantity,
+          kind,
+          image_url: menuItem.image_url,
+          selected_options: selected,
+
+          extras: snapshots.map((option) => ({
+            id: option.option_id,
+            name: `${option.group_name}: ${option.option_name}`,
+            price: option.additional_price,
+          })),
+
+          // Chỉ là cấu trúc tương thích với cơ chế gộp dòng cũ.
+          // Tất cả ID tùy chọn đều được đưa vào khóa gộp.
+          selection: {
+            toppingIds: selected.map((option) => option.option_id),
+            sugarId: "",
+            iceId: "",
+          },
+
+          // Không có ghi chú riêng cho món.
+          note: "",
+        },
+      );
+    } catch (error) {
+      return {
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Không thể thêm món vào giỏ hàng.",
+      };
+    }
+  },
 
   addItem: (restaurant, item) => {
     if (!restaurant.isOpen) {

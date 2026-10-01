@@ -3,7 +3,6 @@ import {
   popularDishes,
   type FoodKind,
 } from "@/lib/explore/mock-data";
-import { getRestaurantDetail } from "@/lib/restaurant/mock-data";
 
 export type PopularDishCard = {
   id: string;
@@ -17,32 +16,35 @@ export type PopularDishCard = {
   href: string;
 };
 
-export function dishHref(restaurantId: string, itemId: string) {
-  return `/restaurants/${encodeURIComponent(restaurantId)}/menu/${encodeURIComponent(itemId)}`;
+export function dishHref(restaurantSlug: string, itemSlug: string) {
+  return (
+    `/restaurants/${encodeURIComponent(restaurantSlug)}` +
+    `/menu/${encodeURIComponent(itemSlug)}`
+  );
 }
 
 export const popularDishCards: PopularDishCard[] = popularDishes.flatMap(
   (dish, index) => {
-    const restaurant = getRestaurantDetail(dish.restaurantId);
-    const item = restaurant?.menu.find((entry) => entry.id === dish.id);
-    const source = exploreRestaurants.find(
+    const restaurant = exploreRestaurants.find(
       (entry) => entry.id === dish.restaurantId,
     );
 
-    if (!restaurant || !item || !source) return [];
+    if (!restaurant) return [];
 
     return [
       {
-        id: item.id,
-        restaurantId: restaurant.slug,
+        id: dish.id,
+        restaurantId: restaurant.id,
         restaurantName: restaurant.name,
-        name: item.name,
-        price: item.price,
+        name: dish.name,
+        price: dish.price,
         kind: dish.kind,
-        categories: source.categories,
-        // Thứ tự demo, chưa phải thống kê số đơn thực tế hôm nay.
+        categories: [...restaurant.categories],
+
+        // Thứ tự demo, không phải thống kê đơn hôm nay.
         rank: index,
-        href: dishHref(restaurant.slug, item.id),
+
+        href: dishHref(restaurant.slug, dish.slug),
       },
     ];
   },

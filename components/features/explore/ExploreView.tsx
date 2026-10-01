@@ -217,7 +217,7 @@ export default function ExploreView() {
                   </div>
 
                   <Link
-                    href={`/restaurants/${restaurant.id}`}
+                    href={`/restaurants/${encodeURIComponent(restaurant.slug)}`}
                     className={styles.primaryButton}
                     aria-label={`Xem quán ${restaurant.name}`}
                   >

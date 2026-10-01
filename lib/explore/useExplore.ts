@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { exploreRestaurants, popularDishes } from "./mock-data";
 import { normalizeSearchText as normalize } from "@/lib/format";
+import { exploreRestaurants } from "./mock-data";
 
 export const categories = [
   "Cơm",
@@ -37,17 +37,12 @@ export default function useExplore() {
         return false;
       }
 
-      // Tìm được cả theo tên quán và tên món mẫu của quán.
-      const dishNames = popularDishes
-        .filter((dish) => dish.restaurantId === restaurant.id)
-        .map((dish) => dish.name);
-
       const searchableText = normalize(
         [
           restaurant.name,
           restaurant.location,
           ...restaurant.categories,
-          ...dishNames,
+          ...restaurant.searchTerms,
         ].join(" "),
       );
 

@@ -35,7 +35,7 @@ export default function ReorderSection({
             <FoodPlaceholder restaurant={restaurant} small />
             <div className={styles.reorderContent}>
               <h3>{restaurant.name}</h3>
-              <p>Đã đặt {restaurant.orderCount} lần</p>
+              <p>Đã đặt {restaurant.orderCount} lần (dữ liệu mẫu)</p>
               <p
                 className={styles.reorderCategories}
                 title={restaurant.categories.join(", ")}
