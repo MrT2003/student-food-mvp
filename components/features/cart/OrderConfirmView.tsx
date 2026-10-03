@@ -17,7 +17,6 @@ import {
 import { useCartStore } from "@/store/useCartStore";
 import styles from "@/styles/order-confirm.module.css";
 import { useRouter } from "next/navigation";
-import { useOrderPreviewStore } from "@/store/useOrderPreviewStore";
 import { formatMoney as money } from "@/lib/format";
 import { useCartSummary } from "@/lib/cart/useCartSummary";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
@@ -45,32 +44,18 @@ export default function OrderConfirmView() {
 
   const router = useRouter();
 
-  const saveCheckoutPreview = useOrderPreviewStore(
-    (state) => state.saveCheckoutPreview,
-  );
-
   const submitting = useRef(false);
+  const checkoutCart = useCartStore((state) => state.checkoutCart);
 
-  const {
-    groups,
-    quantity: totalQuantity,
-    subtotal: total,
-    unknownRestaurantIds,
-  } = useCartSummary();
+  const { groups, quantity: totalQuantity, subtotal: total } = useCartSummary();
 
   function handleConfirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Tránh tạo hai kết quả mẫu nếu bấm liên tiếp.
     if (submitting.current) return;
 
     setError("");
     setMessage("");
-
-    if (items.length === 0) {
-      setError("Giỏ hàng đang trống.");
-      return;
-    }
 
     if (!address.trim()) {
       setError("Vui lòng nhập chi tiết địa chỉ nhận hàng.");
@@ -78,37 +63,16 @@ export default function OrderConfirmView() {
       return;
     }
 
-    if (groups.length === 0 || unknownRestaurantIds.length > 0) {
-      setError(
-        "Có món chưa xác định được cửa hàng. Vui lòng kiểm tra giỏ hàng.",
-      );
-      return;
-    }
-
-    if (groups.some((group) => !group.restaurant.isOpen)) {
-      setError(
-        "Có cửa hàng đang tạm đóng cửa. Vui lòng kiểm tra lại giỏ hàng.",
-      );
-      return;
-    }
-
     submitting.current = true;
 
-    saveCheckoutPreview({
-      location,
-      address,
-      orders: groups.map((group) => ({
-        restaurantId: group.restaurant.id,
-        restaurantName: group.restaurant.name,
-        restaurantLocation: group.restaurant.location,
-        kind: group.restaurant.kind,
-        quantity: group.quantity,
-        total: group.subtotal,
-        payment: preferences[group.restaurant.id]?.payment ?? "cash",
-        note: preferences[group.restaurant.id]?.note ?? "",
-        items: group.items,
-      })),
-    });
+    const result = checkoutCart();
+
+    if (!result.ok) {
+      submitting.current = false;
+      setError(result.message);
+      return;
+    }
+
     router.replace("/cart/success");
   }
 

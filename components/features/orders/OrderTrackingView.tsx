@@ -23,6 +23,7 @@ import styles from "@/styles/order-tracking.module.css";
 import { useOrderDetail } from "@/lib/orders/useOrderDetail";
 import OrderStatusBadge from "@/components/ui/OrderStatusBadge";
 import SectionHeading from "@/components/ui/SectionHeading";
+import { formatOrderDate } from "@/lib/orders/order-mappers";
 
 type TimelineStep = {
   id: string;
@@ -31,12 +32,6 @@ type TimelineStep = {
   time?: string;
   state: "done" | "waiting" | "failed";
   current: boolean;
-};
-
-// Thời điểm giả lập theo ảnh thiết kế.
-// Không tự tạo thời gian xác nhận cho các đơn khác.
-const mockAcceptedTimes: Record<string, string> = {
-  SF0124: "09:48 - 10/09/2026",
 };
 
 function getTimeline(order: OrderDetail): TimelineStep[] {
@@ -86,7 +81,11 @@ function getTimeline(order: OrderDetail): TimelineStep[] {
       description: accepted
         ? "Cửa hàng đã xác nhận và bắt đầu chuẩn bị."
         : "Cửa hàng sẽ sớm kiểm tra và xác nhận đơn hàng.",
-      time: accepted ? mockAcceptedTimes[order.id] : undefined,
+
+      time:
+        accepted && order.acceptedAt
+          ? formatOrderDate(order.acceptedAt)
+          : undefined,
       state: accepted ? "done" : "waiting",
       current: order.status === "accepted",
     },
@@ -96,6 +95,10 @@ function getTimeline(order: OrderDetail): TimelineStep[] {
       description: completed
         ? "Đơn hàng đã hoàn thành. Chúc bạn ngon miệng!"
         : "Đơn hàng sẽ được hoàn thành trong thời gian sớm nhất.",
+      time:
+        completed && order.completedAt
+          ? formatOrderDate(order.completedAt)
+          : undefined,
       state: completed ? "done" : "waiting",
       current: completed,
     },
@@ -183,9 +186,7 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
   }
 
   const timeline = getTimeline(order);
-  const total =
-    order.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) +
-    order.deliveryFee;
+  const total = order.total;
 
   return (
     <div className={styles.page}>
@@ -210,7 +211,7 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
                 <StatusBadge status={order.status} />
               </div>
 
-              <p className={styles.orderCode}>Đơn hàng #{order.id}</p>
+              <p className={styles.orderCode}>Đơn hàng #{order.orderCode}</p>
 
               <div className={styles.metadata}>
                 <span>
@@ -219,7 +220,7 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
                 </span>
                 <span>
                   <Utensils size={21} aria-hidden="true" />
-                  {order.items.length} món
+                  {order.quantity} món
                 </span>
                 <span>
                   <CreditCard size={23} aria-hidden="true" />
@@ -330,7 +331,7 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
                 icon={<Utensils size={22} aria-hidden="true" />}
                 label="Số lượng món"
               >
-                {order.items.length} món
+                {order.quantity} món
               </InfoRow>
 
               <InfoRow

@@ -21,7 +21,7 @@ import {
   menuCategories,
   type MenuCategory,
   type RestaurantDetail,
-} from "@/lib/restaurant/mock-data";
+} from "@/lib/restaurant/view-model";
 import styles from "@/styles/restaurant.module.css";
 import { formatMoney as formatPrice } from "@/lib/format";
 import { normalizeSearchText as normalize } from "@/lib/format";
@@ -240,7 +240,7 @@ export default function RestaurantView({
                   )}
 
                   <Link
-                    href={`/restaurants/${restaurant.slug}/menu/${item.id}`}
+                    href={`/restaurants/${encodeURIComponent(restaurant.slug)}/menu/${encodeURIComponent(item.slug)}`}
                     className={styles.primaryButton}
                     aria-label={`Xem món ${item.name}`}
                   >

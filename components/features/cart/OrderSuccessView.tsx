@@ -96,7 +96,9 @@ export default function OrderSuccessView() {
                       <span className={styles.status}>Đang chờ xác nhận</span>
                     </div>
 
-                    <p className={styles.orderCode}>Đơn hàng #{order.id}</p>
+                    <p className={styles.orderCode}>
+                      Đơn hàng #{order.orderCode}
+                    </p>
 
                     <div className={styles.orderMeta}>
                       <span>

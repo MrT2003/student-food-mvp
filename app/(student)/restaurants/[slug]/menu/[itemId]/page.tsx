@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import DishView from "@/components/features/dish/DishView";
-import { getRestaurantDetail } from "@/lib/restaurant/mock-data";
-import { getDishOptions } from "@/lib/dish/options";
+import { restaurantService } from "@/services/restaurant.service";
 
 type Props = {
   params: Promise<{
@@ -12,25 +11,23 @@ type Props = {
 
 export default async function DishPage({ params }: Props) {
   const { slug, itemId } = await params;
-  const restaurant = getRestaurantDetail(slug);
 
-  if (!restaurant) notFound();
+  const [menu, item] = await Promise.all([
+    restaurantService.getRestaurantMenu(slug),
+    restaurantService.getMenuItem(slug, itemId),
+  ]);
 
-  const item = restaurant.menu.find((dish) => dish.id === itemId);
+  if (!menu || !item) notFound();
 
-  if (!item) notFound();
+  if (item.restaurant_id !== menu.restaurant.id) {
+    notFound();
+  }
 
   return (
     <DishView
-      key={`${slug}/${itemId}`}
-      restaurant={{
-        slug: restaurant.slug,
-        name: restaurant.name,
-        location: restaurant.location,
-        isOpen: restaurant.isOpen,
-      }}
+      key={`${menu.restaurant.id}/${item.id}`}
+      restaurant={menu.restaurant}
       item={item}
-      options={getDishOptions(slug, itemId)}
     />
   );
 }
