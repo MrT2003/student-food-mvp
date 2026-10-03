@@ -1,20 +1,19 @@
 "use client";
 
 import { useMemo } from "react";
-import { useOrderPreviewStore } from "@/store/useOrderPreviewStore";
-import { findMockOrderDetail } from "@/lib/orders/order-detail";
+import { useStudentMockStore } from "@/store/useStudentMockStore";
 import { toOrderDetail } from "@/lib/orders/order-mappers";
 
 export function useOrderDetail(orderId: string) {
-  // Chỉ đăng ký theo dõi đúng đơn đang mở.
-  const savedOrder = useOrderPreviewStore((state) => state.ordersById[orderId]);
+  const order = useStudentMockStore((state) => state.orderRecords[orderId]);
+
+  const customerId = useStudentMockStore((state) => state.cart.student_id);
 
   return useMemo(() => {
-    if (savedOrder) {
-      return toOrderDetail(savedOrder);
+    if (!order || order.student_id !== customerId) {
+      return undefined;
     }
 
-    // Giữ khả năng xem các đơn demo có sẵn.
-    return findMockOrderDetail(orderId);
-  }, [savedOrder, orderId]);
+    return toOrderDetail(order);
+  }, [order, customerId]);
 }
