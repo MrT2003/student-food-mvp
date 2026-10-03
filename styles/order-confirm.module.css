@@ -708,3 +708,319 @@
     padding: 18px;
   }
 }
+/* Responsive confirmation */
+@media (min-width: 1024px) {
+  :global(main):has(> .page) {
+    width: min(1480px, calc(100% - 48px));
+    max-width: none;
+    margin-inline: auto;
+    padding: 18px 0 24px;
+  }
+
+  .page {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1.75fr) minmax(310px, 1fr);
+    align-items: start;
+    gap: clamp(16px, 1.4vw, 24px);
+  }
+
+  .backIcon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .steps {
+    margin-top: 52px;
+  }
+
+  .steps li {
+    min-height: 160px;
+  }
+
+  .steps li:first-child::after {
+    top: 82px;
+  }
+
+  .steps li > span {
+    width: 44px;
+    height: 44px;
+    font-size: 19px;
+  }
+
+  .steps a,
+  .steps p {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .pageHeading {
+    margin-bottom: 16px;
+  }
+
+  .pageHeading h1 {
+    font-size: clamp(29px, 2.2vw, 36px);
+    line-height: 1.2;
+  }
+
+  .pageHeading p {
+    margin-top: 6px;
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  .banner {
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+  }
+
+  .banner p {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .restaurantCard {
+    border-radius: 16px;
+    padding: 12px 16px;
+  }
+
+  .restaurantCard + .restaurantCard {
+    margin-top: 12px;
+  }
+
+  .restaurantHeader {
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .restaurantImage {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .restaurantTitle {
+    gap: 8px;
+  }
+
+  .restaurantTitle h2 {
+    font-size: 21px;
+    line-height: 27px;
+  }
+
+  .restaurantIdentity p {
+    margin-top: 3px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .restaurantTotal {
+    gap: 3px;
+  }
+
+  .restaurantTotal span {
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .restaurantTotal strong {
+    font-size: 20px;
+    line-height: 26px;
+  }
+
+  .table {
+    font-size: 14px;
+  }
+
+  .table th {
+    padding: 7px 8px;
+    line-height: 20px;
+  }
+
+  .table th:first-child {
+    width: 47%;
+  }
+
+  .table td {
+    padding: 8px 4px;
+  }
+
+  .dish {
+    gap: 9px;
+  }
+
+  .dishImage {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+
+  .dish h3 {
+    font-size: 14px;
+    line-height: 20px;
+    margin-bottom: 2px;
+  }
+
+  .dish p {
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .restaurantFooter {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding-top: 8px;
+  }
+
+  .footerField {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .footerField + .footerField {
+    padding-left: 12px;
+  }
+
+  .footerField label {
+    font-size: 13px;
+    margin-bottom: 2px;
+    line-height: 19px;
+  }
+
+  .footerField select,
+  .footerField textarea {
+    box-sizing: border-box;
+    padding: 3px 0;
+    font-size: 13px;
+    line-height: 19px;
+  }
+
+  .footerField textarea {
+    height: 44px;
+    min-height: 44px;
+    resize: vertical;
+    overflow-y: auto;
+  }
+
+  .sidebar {
+    grid-column: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 0;
+    min-width: 0;
+  }
+
+  .sideCard {
+    padding: clamp(16px, 1.8vh, 22px);
+    border-radius: 16px;
+  }
+
+  .sideHeading {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .sideHeading h2 {
+    font-size: 20px;
+    line-height: 27px;
+  }
+
+  .sideHeading p {
+    font-size: 14px;
+  }
+
+  .editButton {
+    font-size: 13px;
+  }
+
+  .field + .field {
+    margin-top: 15px;
+  }
+
+  .field label {
+    font-size: 15px;
+  }
+
+  .field input,
+  .field select {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  .addressHint {
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 19px;
+  }
+
+  .summaryShop {
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .summaryImage {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+  }
+
+  .summaryShop h3 {
+    font-size: 15px;
+  }
+
+  .summaryShop p {
+    font-size: 13px;
+  }
+
+  .summaryShop strong {
+    font-size: 16px;
+  }
+
+  .totalRow {
+    padding: 18px 0;
+    font-size: 19px;
+  }
+
+  .totalRow output {
+    font-size: 27px;
+  }
+
+  .primaryButton,
+  .backButton {
+    min-height: 48px;
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  .backButton {
+    margin-top: 10px;
+  }
+
+  .restaurantImage .placeholder svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .restaurantTitle .badge {
+    padding: 4px 8px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .dishImage svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  .footerField > svg {
+    width: 23px;
+    height: 23px;
+    flex-shrink: 0;
+  }
+
+  .footerField select {
+    min-height: 32px;
+  }
+}

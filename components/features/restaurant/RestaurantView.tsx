@@ -21,28 +21,18 @@ import {
   menuCategories,
   type MenuCategory,
   type RestaurantDetail,
-} from "@/lib/restaurant/mock-data";
+} from "@/lib/restaurant/view-model";
 import styles from "@/styles/restaurant.module.css";
+import { formatMoney as formatPrice } from "@/lib/format";
+import { normalizeSearchText as normalize } from "@/lib/format";
 
 const categoryIcons = {
   Cơm: CookingPot,
   "Món thêm": Soup,
   "Nước uống": CupSoda,
   "Ăn vặt": Drumstick,
+  "Món chính": Utensils,
 };
-
-function normalize(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[đĐ]/g, "d")
-    .toLowerCase()
-    .trim();
-}
-
-function formatPrice(price: number) {
-  return `${new Intl.NumberFormat("vi-VN").format(price)}đ`;
-}
 
 function FoodPlaceholder({ category = "Cơm" }: { category?: MenuCategory }) {
   const Icon = categoryIcons[category];
@@ -250,7 +240,7 @@ export default function RestaurantView({
                   )}
 
                   <Link
-                    href={`/restaurants/${restaurant.slug}/menu/${item.id}`}
+                    href={`/restaurants/${encodeURIComponent(restaurant.slug)}/menu/${encodeURIComponent(item.slug)}`}
                     className={styles.primaryButton}
                     aria-label={`Xem món ${item.name}`}
                   >

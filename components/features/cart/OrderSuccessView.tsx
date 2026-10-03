@@ -1,15 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import {
   ArrowRight,
   Banknote,
   Check,
   ClipboardList,
-  CookingPot,
   CreditCard,
-  CupSoda,
   House,
   MapPin,
   ReceiptText,
@@ -20,24 +17,15 @@ import {
 import { useOrderPreviewStore } from "@/store/useOrderPreviewStore";
 import { getCartItemTotal } from "@/lib/cart/mock-data";
 import styles from "@/styles/order-success.module.css";
-
-function money(value: number) {
-  return `${new Intl.NumberFormat("vi-VN").format(value)}đ`;
-}
+import { formatMoney as money } from "@/lib/format";
+import FoodThumbnail from "@/components/ui/FoodThumbnail";
 
 function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
-  const Icon = kind === "drink" ? CupSoda : CookingPot;
-
-  return (
-    <div className={styles.placeholder} aria-hidden="true">
-      <Icon strokeWidth={1.4} />
-    </div>
-  );
+  return <FoodThumbnail kind={kind} className={styles.placeholder} />;
 }
 
 export default function OrderSuccessView() {
   const checkout = useOrderPreviewStore((state) => state.checkout);
-  const [notice, setNotice] = useState("");
 
   if (!checkout || checkout.orders.length === 0) {
     return (
@@ -45,8 +33,8 @@ export default function OrderSuccessView() {
         <ReceiptText size={48} aria-hidden="true" />
         <h1>Chưa có thông tin đơn hàng</h1>
         <p>
-          Kết quả mẫu chưa được tạo hoặc đã mất sau khi tải lại trang.
-          Vui lòng quay lại giỏ hàng để tiếp tục.
+          Kết quả mẫu chưa được tạo hoặc đã mất sau khi tải lại trang. Vui lòng
+          quay lại giỏ hàng để tiếp tục.
         </p>
         <Link href="/cart" className={styles.primaryButton}>
           Về giỏ hàng
@@ -70,9 +58,7 @@ export default function OrderSuccessView() {
         </div>
 
         <h1 id="success-title">Đặt hàng thành công!</h1>
-        <p>
-          Cảm ơn bạn đã đặt món. Các cửa hàng sẽ sớm xác nhận đơn hàng.
-        </p>
+        <p>Cảm ơn bạn đã đặt món. Các cửa hàng sẽ sớm xác nhận đơn hàng.</p>
 
         <div className={styles.successBanner}>
           <Truck size={42} strokeWidth={1.7} aria-hidden="true" />
@@ -107,13 +93,11 @@ export default function OrderSuccessView() {
                   <div className={styles.orderInfo}>
                     <div className={styles.orderHeading}>
                       <h2>{order.restaurantName}</h2>
-                      <span className={styles.status}>
-                        Đang chờ xác nhận
-                      </span>
+                      <span className={styles.status}>Đang chờ xác nhận</span>
                     </div>
 
                     <p className={styles.orderCode}>
-                      Đơn hàng #{order.id}
+                      Đơn hàng #{order.orderCode}
                     </p>
 
                     <div className={styles.orderMeta}>
@@ -233,29 +217,15 @@ export default function OrderSuccessView() {
           Về trang chủ
         </Link>
 
-        <button
-          type="button"
-          className={styles.secondaryButton}
-          onClick={() =>
-            setNotice(
-              "Trang Đơn hàng của tôi chưa được bổ sung. Bạn có thể xem chi tiết các đơn mẫu ngay phía trên.",
-            )
-          }
-        >
+        <Link href="/orders" className={styles.secondaryButton}>
           <ReceiptText size={27} aria-hidden="true" />
           Đơn hàng của tôi
-        </button>
+        </Link>
       </div>
 
-      {notice && (
-        <p className={styles.notice} role="status">
-          {notice}
-        </p>
-      )}
-
       <p className={styles.demoNote}>
-        Bản xem trước giao diện: chưa gửi đơn đến cửa hàng hoặc thực hiện
-        thanh toán.
+        Bản xem trước giao diện: chưa gửi đơn đến cửa hàng hoặc thực hiện thanh
+        toán.
       </p>
     </div>
   );

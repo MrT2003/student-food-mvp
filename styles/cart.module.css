@@ -711,3 +711,267 @@
     font-size: 19px;
   }
 }
+
+/* Responsive cart — giữ kích thước dễ đọc */
+@media (min-width: 1024px) {
+  :global(main):has(> .page) {
+    width: min(1480px, calc(100% - 48px));
+    max-width: none;
+    margin-inline: auto;
+    padding: 18px 0 24px;
+  }
+
+  .page {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1.65fr) minmax(310px, 1fr);
+    align-items: start;
+    gap: clamp(16px, 1.4vw, 24px);
+  }
+
+  .pageHeading {
+    padding-left: 0;
+    margin-bottom: 18px;
+  }
+
+  .pageHeading h1 {
+    font-size: clamp(30px, 2.3vw, 38px);
+    line-height: 1.2;
+  }
+
+  .pageHeading p {
+    margin-top: 6px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .backButton {
+    width: 42px;
+    height: 42px;
+  }
+
+  .steps {
+    margin-top: 38px;
+  }
+
+  .steps li {
+    min-height: 160px;
+  }
+
+  .steps li:not(:last-child)::after {
+    top: 78px;
+    bottom: 8px;
+  }
+
+  .steps li > span {
+    width: 44px;
+    height: 44px;
+    font-size: 19px;
+  }
+
+  .steps p {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .restaurantCard {
+    padding: 14px 16px;
+    border-radius: 16px;
+  }
+
+  .restaurantCard + .restaurantCard {
+    margin-top: 14px;
+  }
+
+  .restaurantHeader {
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+
+  .restaurantImage {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
+
+  .restaurantTitle {
+    gap: 9px;
+  }
+
+  .restaurantTitle h2 {
+    font-size: 21px;
+    line-height: 27px;
+  }
+
+  .openBadge {
+    min-height: 28px;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+
+  .location {
+    margin-top: 3px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .itemRow {
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+  }
+
+  .itemImage {
+    grid-row: auto;
+    align-self: center;
+    width: 54px;
+    height: 54px;
+    min-height: 0;
+  }
+
+  .placeholder svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .itemContent h3 {
+    margin: 0 0 3px;
+    font-size: 17px;
+    line-height: 23px;
+  }
+
+  .itemPrice {
+    margin: 0 0 2px;
+    font-size: 16px;
+    line-height: 22px;
+  }
+
+  .itemNote {
+    margin: 0;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .itemActions {
+    grid-column: auto;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .quantity {
+    min-height: 38px;
+    border-radius: 11px;
+  }
+
+  .quantity button {
+    width: 30px;
+    height: 38px;
+  }
+
+  .quantity output {
+    min-width: 26px;
+    font-size: 16px;
+  }
+
+  .removeButton {
+    width: 30px;
+    height: 38px;
+  }
+
+  .restaurantSubtotal {
+    padding-top: 10px;
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  .restaurantSubtotal strong {
+    font-size: 20px;
+    line-height: 26px;
+  }
+
+  .sidebar {
+    grid-column: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 0;
+    min-width: 0;
+  }
+
+  .sideCard {
+    padding: clamp(16px, 1.8vh, 22px);
+    border-radius: 16px;
+  }
+
+  .cardHeading {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .cardHeading h2 {
+    font-size: 20px;
+    line-height: 1.35;
+  }
+
+  .orangeIcon,
+  .blueIcon {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+  }
+
+  .field + .field {
+    margin-top: 16px;
+  }
+
+  .field label {
+    font-size: 15px;
+    margin-bottom: 7px;
+  }
+
+  .field input,
+  .field select {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  .addressHint {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .summaryRow {
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .totalRow {
+    margin-top: 14px;
+    padding-top: 14px;
+    font-size: 19px;
+  }
+
+  .totalRow output {
+    font-size: 27px;
+    line-height: 36px;
+  }
+
+  .primaryButton {
+    min-height: 48px;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+
+  .notes {
+    font-size: 14px;
+    line-height: 22px;
+  }
+
+  .restaurantImage .placeholder svg,
+  .itemImage .placeholder svg {
+    width: 27px;
+    height: 27px;
+  }
+}

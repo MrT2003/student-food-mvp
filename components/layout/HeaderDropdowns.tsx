@@ -7,7 +7,7 @@ import {
   UserRound,
 } from "lucide-react";
 import type { HeaderNotification } from "./header-preview-data";
-import styles from "./header-dropdowns.module.css";
+import styles from "@/styles/header-dropdowns.module.css";
 import Link from "next/link";
 
 const icons = { rice: CookingPot, tea: CupSoda, noodles: Soup, spicy: Soup };
@@ -95,14 +95,10 @@ export function AccountDropdown({
           <UserRound aria-hidden="true" />
           Tài khoản của tôi
         </Link>
-        <button
-          type="button"
-          disabled
-          title="Chưa kết nối trang đăng ký bán hàng"
-        >
+        <Link href="/seller/register" onClick={onNavigate}>
           <Store aria-hidden="true" />
           Đăng ký bán hàng
-        </button>
+        </Link>
       </div>
       <button
         type="button"

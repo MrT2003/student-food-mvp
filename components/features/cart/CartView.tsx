@@ -5,8 +5,6 @@ import { useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  CookingPot,
-  CupSoda,
   Info,
   MapPin,
   Minus,
@@ -15,29 +13,22 @@ import {
   ShoppingCart,
   Trash2,
 } from "lucide-react";
-import { cartRestaurants, getCartItemTotal } from "@/lib/cart/mock-data";
 import styles from "@/styles/cart.module.css";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/useCartStore";
-
-function money(value: number) {
-  return `${new Intl.NumberFormat("vi-VN").format(value)}đ`;
-}
+import { formatMoney as money } from "@/lib/format";
+import { useCartSummary } from "@/lib/cart/useCartSummary";
+import FoodThumbnail from "@/components/ui/FoodThumbnail";
 
 function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
-  const Icon = kind === "drink" ? CupSoda : CookingPot;
-
-  return (
-    <div className={styles.placeholder} aria-hidden="true">
-      <Icon strokeWidth={1.4} />
-    </div>
-  );
+  return <FoodThumbnail kind={kind} className={styles.placeholder} />;
 }
 
 export default function CartView() {
   const router = useRouter();
 
   const items = useCartStore((state) => state.items);
+
   const setItems = useCartStore((state) => state.setItems);
   const location = useCartStore((state) => state.location);
   const setLocation = useCartStore((state) => state.setLocation);
@@ -45,14 +36,7 @@ export default function CartView() {
   const setAddress = useCartStore((state) => state.setAddress);
   const [message, setMessage] = useState("");
   const [addressError, setAddressError] = useState("");
-
-  const quantity = items.reduce((total, item) => total + item.quantity, 0);
-  const subtotal = items.reduce(
-    (total, item) => total + getCartItemTotal(item),
-    0,
-  );
-
-  // Phí giao hàng mẫu theo thiết kế; chưa tính bằng API.
+  const { groups, quantity, subtotal, unknownRestaurantIds } = useCartSummary();
   const deliveryFee = 0;
   const total = subtotal + deliveryFee;
 
@@ -81,6 +65,13 @@ export default function CartView() {
     setAddressError("");
 
     if (items.length === 0) return;
+
+    if (unknownRestaurantIds.length > 0) {
+      setMessage(
+        "Có món chưa xác định được cửa hàng. Vui lòng kiểm tra lại giỏ hàng.",
+      );
+      return;
+    }
 
     if (!address.trim()) {
       setAddressError("Vui lòng nhập chi tiết địa chỉ nhận hàng.");
@@ -132,23 +123,13 @@ export default function CartView() {
             </Link>
           </section>
         ) : (
-          cartRestaurants.map((restaurant) => {
-            const restaurantItems = items.filter(
-              (item) => item.restaurantId === restaurant.id,
-            );
-
-            if (restaurantItems.length === 0) return null;
-
-            const restaurantQuantity = restaurantItems.reduce(
-              (sum, item) => sum + item.quantity,
-              0,
-            );
-
-            const restaurantTotal = restaurantItems.reduce(
-              (sum, item) => sum + getCartItemTotal(item),
-              0,
-            );
-
+          groups.map((group) => {
+            const {
+              restaurant,
+              items: restaurantItems,
+              quantity: restaurantQuantity,
+              subtotal: restaurantTotal,
+            } = group;
             return (
               <section
                 className={styles.restaurantCard}

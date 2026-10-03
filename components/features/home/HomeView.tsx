@@ -8,7 +8,7 @@ import HomeFilters from "./HomeFilters";
 import RestaurantSection from "./RestaurantSection";
 import ReorderSection from "./ReorderSection";
 import FoodPlaceholder from "./FoodPlaceholder";
-import styles from "./home.module.css";
+import styles from "@/styles/home.module.css";
 import { useRouter } from "next/navigation";
 
 export default function HomeView() {

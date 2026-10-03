@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { exploreRestaurants, popularDishes } from "./mock-data";
+import { normalizeSearchText as normalize } from "@/lib/format";
+import { exploreRestaurants } from "./mock-data";
 
 export const categories = [
   "Cơm",
@@ -14,16 +15,6 @@ export const categories = [
 export type Category = (typeof categories)[number];
 export type Location = "all" | "KTX A" | "KTX B";
 export type SortBy = "popular" | "name" | "menu";
-
-function normalize(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[đĐ]/g, "d")
-    .toLowerCase()
-    .trim();
-}
-
 export default function useExplore() {
   const [searchInput, setSearchInput] = useState("");
   const [query, setQuery] = useState("");
@@ -46,17 +37,12 @@ export default function useExplore() {
         return false;
       }
 
-      // Tìm được cả theo tên quán và tên món mẫu của quán.
-      const dishNames = popularDishes
-        .filter((dish) => dish.restaurantId === restaurant.id)
-        .map((dish) => dish.name);
-
       const searchableText = normalize(
         [
           restaurant.name,
           restaurant.location,
           ...restaurant.categories,
-          ...dishNames,
+          ...restaurant.searchTerms,
         ].join(" "),
       );
 

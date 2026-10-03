@@ -9,12 +9,21 @@ import {
   headerNotifications,
   type HeaderNotification,
 } from "./header-preview-data";
-import styles from "@/components/features/home/home.module.css";
+import styles from "@/styles/home.module.css";
 import { usePathname } from "next/navigation";
+import { useCartStore } from "@/store/useCartStore";
 
 type Panel = "notifications" | "account" | null;
 
 export default function StudentHeader() {
+  const restaurantCount = useCartStore(
+    (state) =>
+      new Set(
+        state.items
+          .filter((item) => item.quantity > 0)
+          .map((item) => item.restaurantId),
+      ).size,
+  );
   const pathname = usePathname();
   const [panel, setPanel] = useState<Panel>(null);
   const [notifications, setNotifications] = useState<HeaderNotification[]>(() =>
@@ -69,7 +78,9 @@ export default function StudentHeader() {
           <Link
             href="/explore"
             aria-current={
-              pathname === "/explore" || pathname.startsWith("/restaurants/")
+              pathname === "/explore" ||
+              pathname.startsWith("/explore/") ||
+              pathname.startsWith("/restaurants/")
                 ? "page"
                 : undefined
             }
@@ -77,17 +88,38 @@ export default function StudentHeader() {
           >
             Khám phá
           </Link>
-          <Link href="/#reorder">Đơn hàng</Link>
+          <Link
+            href="/orders"
+            aria-current={
+              pathname === "/orders" || pathname.startsWith("/orders/")
+                ? "page"
+                : undefined
+            }
+            onClick={() => setPanel(null)}
+          >
+            Đơn hàng
+          </Link>
         </nav>
         <div ref={actions} className={styles.headerActions}>
           <Link
             href="/cart"
+            data-cart-target
             className={styles.iconButton}
-            aria-label="Giỏ hàng"
-            aria-current={pathname === "/cart" ? "page" : undefined}
+            aria-label={`Giỏ hàng, ${restaurantCount} quán`}
+            aria-current={
+              pathname === "/cart" || pathname.startsWith("/cart/")
+                ? "page"
+                : undefined
+            }
             onClick={() => setPanel(null)}
           >
             <ShoppingCart size={28} strokeWidth={1.6} aria-hidden="true" />
+
+            {restaurantCount > 0 && (
+              <span className={styles.cartBadge} aria-hidden="true">
+                {restaurantCount > 99 ? "99+" : restaurantCount}
+              </span>
+            )}
           </Link>
           <button
             type="button"
