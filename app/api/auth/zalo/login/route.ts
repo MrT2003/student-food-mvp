@@ -29,5 +29,6 @@ export async function GET() {
 		path: '/',
 	});
 
+	// Open Zalo Panel and ask user to authorize account 
 	return NextResponse.redirect(authUrl);
 }

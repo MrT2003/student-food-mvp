@@ -18,12 +18,35 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+
+    if (!error && data?.user) {
+      const user = data.user
+
+      // 1. Trích xuất Tên và Avatar từ Google Metadata
+      const fullName = user.user_metadata?.full_name || user.user_metadata?.name || ''
+      const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || ''
+
+      // 2. Insert/Update vào bảng profiles trong Database của bạn
+      await supabase.from('users').upsert(
+        {
+          id: user.id, // Primary Key kết nối với auth.users
+          auth_uid: user.id,
+          email: user.email,
+          role: "student",
+          status:"active",
+          name: fullName,
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      )
+
+      // 3. Xử lý Redirect như bình thường
+      const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
+
       if (isLocalEnv) {
-        // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
         return NextResponse.redirect(`${origin}${next}`)
       } else if (forwardedHost) {
         return NextResponse.redirect(`https://${forwardedHost}${next}`)
@@ -31,7 +54,6 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`)
       }
     }
-  }
 
   // return the user to an error page with instructions
   return NextResponse.redirect(`${origin}/auth/auth-code-error`)
