@@ -1,41 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { ZaloAuthService } from '@/services/auth.service'; // Dùng từ services[cite: 1]
+import { ZaloAuthService, type ZaloProfile } from '@/services/auth.service';
+
+type CallbackResult = { error: string } | {
+  message: string;
+  profile: ZaloProfile;
+  applicationSessionCreated: false;
+};
+
+function finish(body: CallbackResult, status: number) {
+  const response = NextResponse.json(body, { status });
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('Referrer-Policy', 'no-referrer');
+  for (const name of ['zalo_code_verifier', 'zalo_auth_state']) {
+    response.cookies.set(name, '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0,
+    });
+  }
+  return response;
+}
 
 export async function GET(request: NextRequest) {
-    const searchParams = request.nextUrl.searchParams;
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
+  const params = request.nextUrl.searchParams;
+  const state = params.get('state');
+  const savedVerifier = request.cookies.get('zalo_code_verifier')?.value;
+  const savedState = request.cookies.get('zalo_auth_state')?.value;
 
-    const cookieStore = await cookies();
-    const savedVerifier = cookieStore.get('zalo_code_verifier')?.value;
-    const savedState = cookieStore.get('zalo_auth_state')?.value;
+  if (!state || !savedState || !savedVerifier || state !== savedState) {
+    console.info('[zalo-oauth]', JSON.stringify({ stage: 'callback_validation', kind: 'invalid_state_or_expired' }));
+    return finish({ error: 'ZALO_INVALID_STATE_OR_EXPIRED' }, 400);
+  }
+  if (params.has('error')) {
+    console.info('[zalo-oauth]', JSON.stringify({ stage: 'callback_validation', kind: 'authorization_denied' }));
+    return finish({ error: 'ZALO_AUTHORIZATION_DENIED' }, 400);
+  }
+  const code = params.get('code');
+  if (!code?.trim()) {
+    console.info('[zalo-oauth]', JSON.stringify({ stage: 'callback_validation', kind: 'missing_code' }));
+    return finish({ error: 'ZALO_MISSING_CODE' }, 400);
+  }
 
-    if (!code || !state) {
-        return NextResponse.json({ error: 'code or state params does not exist !' }, { status: 400 });
-    }
+  try {
+    console.info('[zalo-oauth]', JSON.stringify({ stage: 'callback_validation', kind: 'passed' }));
+    const { access_token } = await ZaloAuthService.getZaloAccessToken(code, savedVerifier);
+    console.info('[zalo-oauth]', JSON.stringify({ stage: 'token_exchange', kind: 'passed' }));
+    const profile = await ZaloAuthService.getZaloProfile(access_token);
+    console.info('[zalo-oauth]', JSON.stringify({ stage: 'profile_validation', kind: 'passed' }));
 
-    // Verify saved state in cookie with the cookie in the callback link 
-    // if it not similar then return error immediately --> Limit call to Zalo API ---> Reduce bottleneck and workload of server
-    if (!savedVerifier || !savedState || state !== savedState) {
-        return NextResponse.json({ error: 'Invalid state or session time out !' }, { status: 400 });
-    }
-
-    try {
-        // Extract access token from Zalo
-        const data = await ZaloAuthService.getZaloAccessToken(code, savedVerifier);
-        const access_token = data.access_token;
-        const refresh_token = data.refresh_token;
-
-        // Delet temporary cookie
-        cookieStore.delete('zalo_code_verifier');
-        cookieStore.delete('zalo_auth_state');
-
-        // Logic lưu token / thông tin người dùng vào database / Supabase ở đây...
-
-        // Redirect to main page after successfully sign up
-        return NextResponse.redirect(new URL('/', request.url));
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    // Return only the normalized profile to the browser that initiated OAuth.
+    // Retrieving a Zalo profile does not establish an application session.
+    return finish({
+      message: 'Lấy hồ sơ Zalo thành công',
+      profile,
+      applicationSessionCreated: false,
+    }, 200);
+  } catch {
+    return finish({ error: 'ZALO_AUTHENTICATION_FAILED' }, 502);
+  }
 }

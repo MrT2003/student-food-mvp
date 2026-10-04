@@ -6,7 +6,7 @@ import { ZaloAuthService } from "@/services/auth.service";
 export async function GET() {
 	const codeVerifier = ZaloAuthService.generateCodeVerifier();
 	const codeChallenge = ZaloAuthService.generateCodeChallenge(codeVerifier);
-	const state = crypto.randomBytes(16).toString();
+	const state = crypto.randomBytes(16).toString('hex');
 
 	const authUrl = ZaloAuthService.getAuthorizationUrl(codeChallenge, state)
 
