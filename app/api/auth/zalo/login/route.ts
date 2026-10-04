@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import crypto from 'crypto'
 import { ZaloAuthService } from "@/services/auth.service";
 
+
 export async function GET() {
 	const codeVerifier = ZaloAuthService.generateCodeVerifier();
 	const codeChallenge = ZaloAuthService.generateCodeChallenge(codeVerifier);
@@ -28,7 +29,6 @@ export async function GET() {
 		maxAge: 600,
 		path: '/',
 	});
-
 	// Open Zalo Panel and ask user to authorize account 
 	return NextResponse.redirect(authUrl);
 }

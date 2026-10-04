@@ -1,7 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { ZaloAuthService } from '@/services/auth.service'; // Dùng từ services[cite: 1]
 import { createClient } from '@/lib/supabase/server';
+import { ZaloAuthService } from '@/services/auth.service';
+import { createServerClient } from '@supabase/ssr';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { log } from 'console';
+import crypto from 'crypto';
+import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -38,8 +42,7 @@ export async function GET(request: NextRequest) {
             .update(profile.id)
             .digest('hex')
 
-        // Chuyển hướng về trang chính sau khi đăng nhập thành công
-        return NextResponse.redirect(new URL('/', request.url));
+
         // Init supabase admin client 
         const supabaseAdmin = createAdminClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -127,6 +130,7 @@ export async function GET(request: NextRequest) {
         
         // Redirect to main page after successfully sign up
         return NextResponse.redirect("http://localhost:3000");
+>>>>>>> Stashed changes
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

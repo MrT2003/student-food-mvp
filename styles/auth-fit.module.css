@@ -1,0 +1,298 @@
+/* Các class chỉ áp dụng cho Login và Register */
+.page {
+  width: 100%;
+}
+
+.authCard,
+.introWrapper,
+.formPanel,
+.formHeading,
+.providers,
+.switchAccount,
+.registerNotice {
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  /* Không ảnh hưởng onboarding hoặc các trang student */
+  :global(.sf-auth):has(.page) {
+    --auth-header-height: 81px;
+    --auth-padding-top: 18px;
+    --auth-padding-bottom: 24px;
+    --auth-layout-gap: 24px;
+    --auth-panel-padding-y: clamp(28px, 4dvh, 40px);
+    --auth-panel-padding-x: 36px;
+
+    min-height: 100dvh;
+  }
+
+  :global(.sf-auth):has(.page) > main {
+    padding: var(--auth-padding-top) 24px var(--auth-padding-bottom);
+  }
+
+  .page {
+    min-height: calc(
+      100dvh - var(--auth-header-height) - var(--auth-padding-top) -
+        var(--auth-padding-bottom)
+    );
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--auth-layout-gap);
+  }
+
+  .authCard {
+    flex: 0 0 auto;
+    width: min(1200px, 100%);
+    height: auto;
+    min-height: 0;
+    margin-block: auto;
+    margin-inline: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .introWrapper > section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--auth-panel-padding-y) var(--auth-panel-padding-x);
+  }
+
+  .introWrapper > section > p:first-child {
+    align-self: flex-start;
+    padding: 6px 14px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .introWrapper h2 {
+    margin-top: 18px;
+    font-size: clamp(32px, 4.3dvh, 42px);
+    line-height: 1.12;
+  }
+
+  .introWrapper > section > h2 + p {
+    margin-top: 14px;
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .introWrapper ul {
+    display: grid;
+    gap: clamp(12px, 2dvh, 20px);
+    margin-top: 22px;
+  }
+
+  /* Ghi đè khoảng cách space-y cũ */
+  .introWrapper ul > li {
+    margin-block: 0;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .introWrapper li > span {
+    width: 48px;
+    height: 48px;
+  }
+
+  .introWrapper li > span svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .introWrapper li > div {
+    padding-top: 0;
+  }
+
+  .introWrapper li h3 {
+    font-size: 16px;
+    line-height: 23px;
+  }
+
+  .introWrapper li p {
+    margin-top: 3px;
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .formPanel {
+    justify-content: center;
+    padding: var(--auth-panel-padding-y) var(--auth-panel-padding-x);
+  }
+
+  .formHeading h1 {
+    font-size: clamp(32px, 4.3dvh, 42px);
+    line-height: 1.15;
+  }
+
+  .formHeading p {
+    margin-top: 12px;
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  .providers {
+    max-width: 430px;
+    margin-top: clamp(18px, 3dvh, 30px);
+  }
+
+  /* Dòng “Tiếp tục nhanh với” */
+  .providers > div > p:first-child {
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  /* Hai nút social */
+  .providers button {
+    box-sizing: border-box;
+    min-height: 54px;
+    padding: 8px 18px;
+    border-radius: 12px;
+    font-size: 17px;
+    line-height: 24px;
+  }
+
+  /* Nội dung bên trong nút Google */
+  .providers button > span:only-child {
+    min-height: 36px;
+  }
+
+  .providers button > span:only-child > span {
+    font-size: 17px;
+  }
+
+  /* Logo Zalo và khung logo Google */
+  .providers button > span:first-child,
+  .providers button > span:only-child > span:first-child {
+    min-width: 0;
+  }
+
+  .providers button > span:first-child:not(:only-child),
+  .providers button > span:only-child > span:first-child {
+    width: 36px;
+    height: 36px;
+  }
+
+  .providers button > span:first-child:not(:only-child) {
+    font-size: 13px;
+  }
+
+  /* Dấu phân cách “Hoặc” */
+  .providers > div > div {
+    margin-block: 12px;
+  }
+
+  .switchAccount {
+    margin-top: 20px;
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  .registerNotice {
+    margin-top: 20px;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .registerNotice > svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .registerNotice p {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .page > section {
+    flex: 0 0 auto;
+    width: 100%;
+    margin-top: 0;
+    padding: 10px 18px;
+    border-radius: 20px;
+  }
+
+  .page > section > div {
+    gap: 12px;
+    padding: 10px 18px;
+  }
+
+  .page > section > div > span {
+    width: 46px;
+    height: 46px;
+  }
+
+  .page > section > div > span svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .page > section h3 {
+    font-size: 15px;
+    line-height: 21px;
+  }
+
+  .page > section p {
+    margin-top: 3px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+}
+
+/* Laptop thấp: chỉ điều chỉnh biến và kích thước sau khối desktop. */
+@media (min-width: 1024px) and (max-height: 800px) {
+  :global(.sf-auth):has(.page) {
+    --auth-padding-top: 12px;
+    --auth-padding-bottom: 16px;
+    --auth-layout-gap: 16px;
+    --auth-panel-padding-y: 20px;
+    --auth-panel-padding-x: 28px;
+  }
+
+  .introWrapper h2,
+  .formHeading h1 {
+    font-size: 32px;
+  }
+
+  .introWrapper h2 {
+    margin-top: 14px;
+  }
+
+  .introWrapper > section > h2 + p {
+    margin-top: 10px;
+    font-size: 15px;
+    line-height: 22px;
+  }
+
+  .introWrapper ul {
+    margin-top: 16px;
+    gap: 12px;
+  }
+
+  .introWrapper li > span {
+    width: 42px;
+    height: 42px;
+  }
+
+  .providers {
+    margin-top: 16px;
+  }
+
+  .providers button {
+    min-height: 50px;
+  }
+
+  .switchAccount,
+  .registerNotice {
+    margin-top: 14px;
+  }
+
+  .page > section {
+    padding: 8px 14px;
+  }
+
+  .page > section > div {
+    padding: 6px 12px;
+  }
+}

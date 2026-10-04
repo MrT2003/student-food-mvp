@@ -1,0 +1,175 @@
+.dialog {
+  position: fixed;
+  inset: 0;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid #ececec;
+  border-radius: 16px;
+  background: #fff;
+  color: #081447;
+  font-family: Arial, Helvetica, sans-serif;
+  box-shadow: 0 20px 70px rgb(0 0 0 / 15%);
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 46%);
+}
+
+.content {
+  position: relative;
+  padding: 38px 32px 28px;
+  text-align: center;
+}
+
+.closeButton {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #7d8795;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background: #f5f5f5;
+  color: #081447;
+}
+
+.illustration {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 180px;
+  height: 94px;
+  margin: 0 auto 15px;
+}
+
+.checkCircle {
+  display: grid;
+  place-items: center;
+  width: 94px;
+  height: 94px;
+  border-radius: 50%;
+  background: #ffe7df;
+  color: #ff5b23;
+}
+
+.leftRays,
+.rightRays {
+  position: absolute;
+  top: 23px;
+  width: 20px;
+  height: 30px;
+}
+
+.leftRays {
+  left: 3px;
+}
+
+.rightRays {
+  right: 3px;
+  transform: scaleX(-1);
+}
+
+.leftRays::before,
+.leftRays::after,
+.rightRays::before,
+.rightRays::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 4px;
+  border-radius: 4px;
+  background: #ff713d;
+}
+
+.leftRays::before,
+.rightRays::before {
+  top: 0;
+  left: 8px;
+  transform: rotate(45deg);
+}
+
+.leftRays::after,
+.rightRays::after {
+  bottom: 0;
+  left: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 750;
+  line-height: 34px;
+  letter-spacing: -0.7px;
+}
+
+.description {
+  margin: 8px 0 22px;
+  color: #7c8aa0;
+  font-size: 17px;
+  line-height: 25px;
+}
+
+.confirmButton {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 300px;
+  max-width: 100%;
+  min-height: 46px;
+  padding: 10px 24px;
+  border: 1px solid #ff6526;
+  border-radius: 9px;
+  background: linear-gradient(110deg, #ff8429, #ff291e);
+  color: #fff;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.confirmButton:hover {
+  filter: brightness(0.97);
+}
+
+.closeButton:focus-visible,
+.confirmButton:focus-visible {
+  outline: 2px solid #ff632a;
+  outline-offset: 4px;
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 36px 20px 24px;
+  }
+
+  .closeButton {
+    top: 12px;
+    right: 12px;
+  }
+
+  .title {
+    font-size: 23px;
+    line-height: 30px;
+  }
+
+  .description {
+    font-size: 15px;
+  }
+
+  .confirmButton {
+    width: 100%;
+  }
+}

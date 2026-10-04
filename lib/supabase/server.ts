@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { getLayoutOrPageModule } from 'next/dist/server/lib/app-dir-module'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
