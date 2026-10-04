@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { CircleCheck, LogIn, Mail, ShieldCheck } from "lucide-react";
-import { getSupabaseClient } from "@/lib/supabase/client";
-import { getAuthErrorMessage, signInWithGoogle } from "@/services/auth.service";
+import { createClient}  from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/useAuthStore";
 import styles from "@/styles/account.module.css";
+import { AuthClientService } from "@/services/auth.service";
 
 type IdentityState = {
   userId: string | null;
@@ -25,7 +25,8 @@ export default function AccountSecurity() {
 
     async function loadIdentity() {
       try {
-        const { data, error } = await getSupabaseClient().auth.getUser();
+        const supabase = createClient()
+        const { data, error } = await supabase.auth.getUser();
 
         if (error) throw error;
 
@@ -45,7 +46,7 @@ export default function AccountSecurity() {
           setIdentity({
             userId: null,
             googleLinked: false,
-            error: getAuthErrorMessage(error),
+            error: AuthClientService.getAuthErrorMessage(error),
           });
         }
       }
@@ -78,9 +79,9 @@ export default function AccountSecurity() {
     setActionError("");
 
     try {
-      await signInWithGoogle();
+      await AuthClientService.signInWithGoogle();
     } catch (error: unknown) {
-      setActionError(getAuthErrorMessage(error));
+      setActionError(AuthClientService.getAuthErrorMessage(error));
       setPending(false);
     }
   }

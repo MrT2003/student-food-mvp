@@ -34,9 +34,16 @@ yarn-error.log*
 .env*
 .env.local
 
+# Exception: Allow file .env.example push to git
+!.env.example
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes

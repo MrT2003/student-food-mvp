@@ -3,16 +3,12 @@
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  getAuthErrorMessage,
+  AuthClientService,
   subscribeAuthProfile,
 } from "@/services/auth.service";
 import { useAuthStore } from "@/store/useAuthStore";
 
-export default function AuthProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -21,40 +17,28 @@ export default function AuthProvider({
   const setUser = useAuthStore((state) => state.setUser);
   const setError = useAuthStore((state) => state.setError);
 
+  // 1. ALWAYS SYNCHRONIZE AUTH STATE (Run at every page)
   useEffect(() => {
     let active = true;
     let unsubscribe: (() => void) | undefined;
 
-    void Promise.resolve()
-      .then(() => {
-        if (!active) return;
+    const currentUrl = new URL(window.location.href);
 
-        const currentUrl = new URL(window.location.href);
-
-        if (
-          currentUrl.pathname === "/auth/callback" &&
-          currentUrl.searchParams.has("error")
-        ) {
-          setError(
-            "Đăng nhập chưa hoàn tất hoặc đã bị hủy. Vui lòng thử lại.",
-          );
-          return;
+    if (
+      currentUrl.pathname === "/auth/callback" &&
+      currentUrl.searchParams.has("error")
+    ) {
+      setError("Đăng nhập chưa hoàn tất hoặc đã bị hủy. Vui lòng thử lại.");
+    } else {
+      unsubscribe = subscribeAuthProfile(
+        (profile) => {
+          if (active) setUser(profile);
+        },
+        (message) => {
+          if (active) setError(message);
         }
-
-        unsubscribe = subscribeAuthProfile(
-          (profile) => {
-            if (active) setUser(profile);
-          },
-          (message) => {
-            if (active) setError(message);
-          },
-        );
-      })
-      .catch((error: unknown) => {
-        if (active) {
-          setError(getAuthErrorMessage(error));
-        }
-      });
+      );
+    }
 
     return () => {
       active = false;
@@ -62,16 +46,19 @@ export default function AuthProvider({
     };
   }, [setUser, setError]);
 
+  // 2. LOGIC ONBOARDING GUARD (Chỉ bắt buộc nhập SĐT khi cần)
   const needsOnboarding =
     status === "ready" &&
     user !== null &&
     !user.phone?.trim();
 
-  const isCompletionPage =
+  // Các trang không bắt buộc phải nhảy sang Onboarding ngay lập tức
+  const isBypassPage =
     pathname === "/auth/callback" ||
-    pathname === "/auth/onboarding";
+    pathname === "/auth/onboarding" ||
+    pathname === "/"; 
 
-  const mustRedirect = needsOnboarding && !isCompletionPage;
+  const mustRedirect = needsOnboarding && !isBypassPage;
 
   useEffect(() => {
     if (mustRedirect) {

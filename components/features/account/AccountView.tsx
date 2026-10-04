@@ -1,5 +1,9 @@
 "use client";
 
+import { useSignOut } from "@/lib/auth/useAuthFlow";
+import { createClient } from "@/lib/supabase/client";
+import styles from "@/styles/account.module.css";
+import { Camera, Info, LogOut, Settings, UserRound } from "lucide-react";
 import Image from "next/image";
 import {
   useEffect,
@@ -8,10 +12,8 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { Camera, Info, LogOut, Settings, UserRound } from "lucide-react";
-import styles from "@/styles/account.module.css";
-import AccountSuccessModal from "./AccountSuccessModal";
 import AccountSecurity from "./AccountSecurity";
+import AccountSuccessModal from "./AccountSuccessModal";
 
 const initialProfile = {
   name: "Nguyễn Văn A",
@@ -21,10 +23,12 @@ const initialProfile = {
 export default function AccountView() {
   const [name, setName] = useState(initialProfile.name);
   const [phone, setPhone] = useState(initialProfile.phone);
+  const [isLoading, setLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const { logout, pending, signOutError } = useSignOut()
   const fileInput = useRef<HTMLInputElement>(null);
 
   // Giải phóng ảnh xem trước khi đổi ảnh hoặc rời trang.
@@ -33,6 +37,40 @@ export default function AccountView() {
       if (avatarUrl) URL.revokeObjectURL(avatarUrl);
     };
   }, [avatarUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUserProfile() {
+      try {
+        let googleName, googleAvatar: string;
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user && !cancelled) {
+          const metadata = user.user_metadata;
+
+          // Google lưu tên ở `full_name` hoặc `name`
+          const googleName = metadata?.full_name || metadata?.name;
+          // Google lưu avatar ở `avatar_url` hoặc `picture`
+          const googleAvatar = metadata?.avatar_url || metadata?.picture;
+
+          if (googleName) setName(googleName);
+          if (googleAvatar) setAvatarUrl(googleAvatar);
+          if (user.phone) setPhone(user.phone);
+        }
+      } catch (err) {
+        console.error("Lỗi tải thông tin user:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+      loadUserProfile();
+
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, []);
 
   function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -114,14 +152,15 @@ export default function AccountView() {
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
-                    alt="Ảnh đại diện đang xem trước"
+                    alt="Ảnh đại diện"
                     fill
-                    unoptimized
+                    unoptimized // Dùng unoptimized nếu chưa config domain Google trong next.config.mjs
                     sizes="134px"
                     className={styles.avatarImage}
                   />
                 ) : (
-                  <span>N</span>
+                  /* Hiển thị chữ cái đầu tiên của Tên thay vì cố định chữ N */
+                  <span>{name ? name.charAt(0).toUpperCase() : "U"}</span>
                 )}
               </div>
 
@@ -225,7 +264,7 @@ export default function AccountView() {
         <button
           type="button"
           className={styles.outlineButton}
-          onClick={() => showPendingMessage("Chức năng đăng xuất")}
+          onClick={logout}
         >
           <LogOut size={21} aria-hidden="true" />
           Đăng xuất

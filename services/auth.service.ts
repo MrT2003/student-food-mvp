@@ -1,10 +1,11 @@
-import { getSupabaseClient, getSupabaseConfig } from "@/lib/supabase/client";
+'use-client'
+
+import { createClient } from "@/lib/supabase/client";
 import type { AuthProfile, UpdateProfileInput } from "@/types/auth.types";
+import { Database } from '@/types/database.types';
+import router from 'next/router';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
+// Define error message 
 const authErrorMessages: Record<string, string> = {
   UNAUTHORIZED: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
   NOT_ALLOWED: "Bạn không được phép thực hiện thao tác này.",
@@ -15,52 +16,99 @@ const authErrorMessages: Record<string, string> = {
   "23505": "Thông tin này đã được sử dụng bởi tài khoản khác.",
 };
 
-export function getAuthErrorMessage(error: unknown): string {
-  const outer = isRecord(error) ? error : null;
-  const detail = outer && isRecord(outer.error) ? outer.error : outer;
+// Create an AuthClientService module
+export const AuthClientService = {
+  isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+  },
 
-  const code = detail?.code;
+  // Sign out function 
+  async signOut(): Promise<void> {
+    const supabase = createClient()
+    const { error } = await supabase.auth.signOut();
 
-  if (typeof code === "string" && authErrorMessages[code]) {
-    return authErrorMessages[code];
-  }
+    if (error) {
+      throw error;
+    }
+  },
 
-  if (error instanceof TypeError) {
-    return "Không thể kết nối. Vui lòng kiểm tra mạng và thử lại.";
-  }
+  // Login with google function
+  async signInWithGoogle(next: string = "/"): Promise<void> {
+    const supabase = createClient();
 
-  // Giữ thông báo validation do ứng dụng chủ động tạo.
-  if (error instanceof Error && !("code" in error)) {
-    return error.message;
-  }
-
-  return "Không thể hoàn tất thao tác. Vui lòng thử lại.";
-}
-
-export async function signInWithGoogle(): Promise<void> {
-  const supabase = getSupabaseClient();
-
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${window.location.origin}/api/auth/callback`,
-      queryParams: {
-        prompt: "select_account",
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/google/callback?next=${encodeURIComponent(next)}`,
+        queryParams: {
+          prompt: "select_account",
+        },
       },
-    },
-  });
+    });
+    if (error) {
+      throw error;
+    }
+  },
 
-  if (error) {
-    throw error;
+  singInWithZalo(): void {
+    window.location.href = `auth/api/zalo/login`
+  },
+  
+  getAuthErrorMessage(error: unknown): string {
+    const outer = AuthClientService.isRecord(error) ? error : null;
+    const detail = outer && AuthClientService.isRecord(outer.error) ? outer.error : outer;
+
+    const code = detail?.code;
+
+    if (typeof code === "string" && authErrorMessages[code]) {
+      return authErrorMessages[code];
+    }
+
+    if (error instanceof TypeError) {
+      return "Không thể kết nối. Vui lòng kiểm tra mạng và thử lại.";
+    }
+
+    // Giữ thông báo validation do ứng dụng chủ động tạo.
+    if (error instanceof Error && !("code" in error)) {
+      return error.message;
+    }
+
+    return "Không thể hoàn tất thao tác. Vui lòng thử lại.";
+  },
+
+  async updateMyProfile(input: UpdateProfileInput): Promise<AuthProfile> {
+    const name = input.name.trim();
+    const phone = input.phone.replace(/[\s().-]/g, "");
+
+    if (!name) {
+      throw new Error("Vui lòng nhập tên của bạn.");
+    }
+
+    if (!/^\+?\d{9,15}$/.test(phone)) {
+      throw new Error("Số điện thoại cần có 9–15 chữ số.");
+    }
+
+    const supabase = createClient();
+
+    // Dùng trực tiếp hàm rpc() của SDK, không cần gọi fetch() thủ công
+    const { data, error } = await supabase.rpc("update_my_profile", {
+      p_name: name,
+      p_phone: phone,
+      p_avatar_url: input.avatarUrl ?? null,
+    });
+
+    if (error) {
+      throw error;
+    }
+    return data as AuthProfile;
   }
 }
 
 export async function getCurrentProfile(): Promise<AuthProfile | null> {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
 
-  // Chờ SDK khôi phục session hoặc xử lý code OAuth trong URL.
-  const { data: sessionData, error: sessionError } =
-    await supabase.auth.getSession();
+  // 1. Kiểm tra session
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
   if (sessionError) {
     throw sessionError;
@@ -70,114 +118,60 @@ export async function getCurrentProfile(): Promise<AuthProfile | null> {
     return null;
   }
 
+  // 2. Lấy thông tin User từ Supabase Auth Engine
   const { data: authData, error: authError } = await supabase.auth.getUser();
 
-  if (authError) {
-    throw authError;
+  if (authError || !authData.user) {
+    throw authError ?? new Error("Không tìm thấy thông tin xác thực.");
   }
 
+  const user = authData.user;
+  const meta = user.user_metadata;
+
+  // 3. Trích xuất thông tin Google Metadata làm dữ liệu dự phòng (Fallback)
+  const googleName = meta?.full_name || meta?.name || user.email?.split("@")[0] || "Người dùng";
+  const googleAvatar = meta?.avatar_url || meta?.picture || null;
+
+  // 4. Query thông tin từ bảng `users` trong Database
   const { data, error } = await supabase
     .from("users")
     .select("id,role,name,phone,avatar_url,status,work_for_restaurant_id")
-    .eq("id", authData.user.id)
+    .eq("id", user.id)
     .maybeSingle();
 
   if (error) {
     throw error;
   }
 
-  if (!data) {
-    throw new Error("Chưa thể tải hồ sơ tài khoản. Vui lòng thử lại sau.");
-  }
-
-  if (data.status !== "active") {
+  // 5. Nếu tài khoản đã có trong DB và bị khóa thì mới báo lỗi
+  if (data && data.status && data.status !== "active") {
     throw new Error("Tài khoản hiện không hoạt động.");
   }
 
-  return data;
+  // 6. Trả về Profile kết hợp (Ưu tiên dữ liệu trong DB, nếu rỗng thì dùng dữ liệu Google)
+  return {
+    id: user.id,
+    role: data?.role ?? "student",
+    name: data?.name || googleName,
+    phone: data?.phone || user.phone || "",
+    avatar_url: data?.avatar_url || googleAvatar,
+    status: data?.status ?? "active",
+    work_for_restaurant_id: data?.work_for_restaurant_id ?? null,
+  };
 }
 
-export async function updateMyProfile(
-  input: UpdateProfileInput,
-): Promise<AuthProfile> {
-  const name = input.name.trim();
-  const phone = input.phone.replace(/[\s().-]/g, "");
 
-  if (!name) {
-    throw new Error("Vui lòng nhập tên của bạn.");
-  }
 
-  if (!/^\+?\d{9,15}$/.test(phone)) {
-    throw new Error("Số điện thoại cần có 9–15 chữ số.");
-  }
-
-  const supabase = getSupabaseClient();
-  const { url, key } = getSupabaseConfig();
-
-  const { data, error } = await supabase.auth.getSession();
-
-  if (error) {
-    throw error;
-  }
-
-  if (!data.session) {
-    throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-  }
-
-  const response = await fetch(`${url}/rest/v1/rpc/update_my_profile`, {
-    method: "POST",
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${data.session.access_token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      p_name: name,
-      p_phone: phone,
-      p_avatar_url: input.avatarUrl,
-    }),
-  });
-
-  const payload: unknown = await response.json().catch(() => null);
-
-  if (response.status === 401) {
-    throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-  }
-
-  if (!response.ok || (isRecord(payload) && payload.success === false)) {
-    throw new Error(getAuthErrorMessage(payload));
-  }
-
-  if (!isRecord(payload) || payload.success !== true) {
-    throw new Error("Chưa xác nhận được kết quả lưu hồ sơ. Vui lòng thử lại.");
-  }
-
-  const profile = await getCurrentProfile();
-
-  if (!profile?.phone?.trim()) {
-    throw new Error("Chưa lưu được số điện thoại. Vui lòng thử lại.");
-  }
-
-  return profile;
-}
-
-export async function signOut(): Promise<void> {
-  const { error } = await getSupabaseClient().auth.signOut();
-
-  if (error) {
-    throw error;
-  }
-}
 
 export function subscribeAuthProfile(
   onProfile: (profile: AuthProfile | null) => void,
   onError: (message: string) => void,
 ): () => void {
-  const supabase = getSupabaseClient();
 
   let stopped = false;
   let revision = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const supabase = createClient()
 
   function scheduleReload() {
     const currentRevision = ++revision;
@@ -197,7 +191,7 @@ export function subscribeAuthProfile(
         })
         .catch((error: unknown) => {
           if (!stopped && currentRevision === revision) {
-            onError(getAuthErrorMessage(error));
+            onError(AuthClientService.getAuthErrorMessage(error));
           }
         });
     }, 0);
@@ -233,3 +227,9 @@ export function subscribeAuthProfile(
     data.subscription.unsubscribe();
   };
 }
+
+type userRow = Database['public']['Tables']['users']['Row']
+
+
+
+

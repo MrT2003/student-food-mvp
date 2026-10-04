@@ -2,14 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  getAuthErrorMessage,
-  signInWithGoogle,
-  signOut,
-  updateMyProfile,
-} from "@/services/auth.service";
 import { useAuthStore } from "@/store/useAuthStore";
+import { AuthClientService } from "@/services/auth.service";
 
+// useSignIn handle sign in process with Google and Zalo
 export function useSignIn() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,40 +17,55 @@ export function useSignIn() {
     setError(null);
 
     try {
-      await signInWithGoogle();
+      await AuthClientService.signInWithGoogle();
     } catch (error) {
-      setError(getAuthErrorMessage(error));
+      setError(AuthClientService.getAuthErrorMessage(error));
       setPending(false);
     }
   }
 
-  return { pending, error, continueWithGoogle };
+  async function continueWithZalo() {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+
+    try {
+      AuthClientService.singInWithZalo();
+    }catch(error){
+      setError(AuthClientService.getAuthErrorMessage(error));
+      setPending(false);
+    } 
+  }
+
+  return { pending, error, continueWithGoogle, continueWithZalo };
 }
 
+// useSignOut handle sign out process 
 export function useSignOut() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   async function logout() {
     if (pending) return;
 
     setPending(true);
-    setError(null);
+    setSignOutError(null);
 
     try {
-      await signOut();
+      await AuthClientService.signOut()
       setUser(null);
       router.replace("/auth/login");
+      // Clear the router cache of browser 
+      router.refresh() 
     } catch (error) {
-      setError(getAuthErrorMessage(error));
+      setSignOutError(AuthClientService.getAuthErrorMessage(error));
     } finally {
       setPending(false);
     }
   }
-
-  return { logout, pending, error };
+  return { logout, pending, signOutError };
 }
 
 export function useAuthCompletion(
@@ -100,7 +111,7 @@ export function useAuthCompletion(
     setLocalError(null);
 
     try {
-      const updated = await updateMyProfile({
+      const updated = await AuthClientService.updateMyProfile({
         name,
         phone,
         avatarUrl: profile.avatar_url,
@@ -109,7 +120,7 @@ export function useAuthCompletion(
       setUser(updated);
       router.replace("/");
     } catch (error) {
-      setLocalError(getAuthErrorMessage(error));
+      setLocalError(AuthClientService.getAuthErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -122,11 +133,11 @@ export function useAuthCompletion(
     setLocalError(null);
 
     try {
-      await signOut();
+      await AuthClientService.signOut();
       setUser(null);
       router.replace("/auth/login");
     } catch (error) {
-      setLocalError(getAuthErrorMessage(error));
+      setLocalError(AuthClientService.getAuthErrorMessage(error));
     } finally {
       setSaving(false);
     }
