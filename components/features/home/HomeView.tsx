@@ -42,10 +42,7 @@ export default function HomeView() {
         onReset={home.reset}
         searching={Boolean(home.filters.query)}
       />
-      <ReorderSection
-        restaurants={home.recentRestaurants}
-        onSelect={home.setSelected}
-      />
+      <ReorderSection />
       <dialog
         ref={dialog}
         className={styles.restaurantDialog}

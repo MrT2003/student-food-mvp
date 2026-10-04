@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useOrders } from "@/lib/orders/useOrders";
+import { useReorder } from "@/lib/orders/useReorder";
 import {
   ArrowRight,
   CalendarDays,
@@ -114,7 +115,8 @@ function FoodPlaceholder({
 
 type OrderCardProps = {
   order: Order;
-  onAction: (message: string) => void;
+  onAction: (orderId: string) => void;
+  added?: boolean;
 };
 
 function CurrentOrderCard({ order }: OrderCardProps) {
@@ -189,7 +191,7 @@ function CurrentOrderCard({ order }: OrderCardProps) {
   );
 }
 
-function HistoryOrderCard({ order, onAction }: OrderCardProps) {
+function HistoryOrderCard({ order, onAction, added }: OrderCardProps) {
   return (
     <article className={styles.historyCard} aria-label={`Đơn hàng ${order.id}`}>
       <div className={styles.historyTop}>
@@ -232,14 +234,10 @@ function HistoryOrderCard({ order, onAction }: OrderCardProps) {
         <button
           type="button"
           className={styles.primaryButton}
-          onClick={() =>
-            onAction(
-              `Chưa thể đặt lại đơn #${order.id}: dữ liệu mẫu chưa có ` +
-                "đầy đủ món và tùy chọn. Chưa có món nào được thêm vào giỏ.",
-            )
-          }
+          disabled={added}
+          onClick={() => onAction(order.id)}
         >
-          Đặt lại
+          {added ? "Đã thêm vào giỏ" : "Đặt lại"}
         </button>
       </div>
     </article>
@@ -251,7 +249,7 @@ export default function OrdersView() {
     useOrders();
   const [scope, setScope] = useState<Scope>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
-  const [notice, setNotice] = useState("");
+  const { reorder, addedIds, notice, setNotice } = useReorder();
 
   function toCard(order: (typeof currentRecords)[number]): Order {
     return {
@@ -351,6 +349,7 @@ export default function OrdersView() {
       {notice && (
         <div className={styles.notice} role="status">
           <p>{notice}</p>
+          <Link href="/cart">Xem giỏ hàng</Link>
           <button type="button" onClick={() => setNotice("")}>
             Đóng
           </button>
@@ -377,7 +376,7 @@ export default function OrdersView() {
               <CurrentOrderCard
                 key={order.id}
                 order={order}
-                onAction={setNotice}
+                onAction={reorder}
               />
             ))}
           </div>
@@ -444,7 +443,8 @@ export default function OrdersView() {
               <HistoryOrderCard
                 key={order.id}
                 order={order}
-                onAction={setNotice}
+                onAction={reorder}
+                added={addedIds.has(order.id)}
               />
             ))}
           </div>

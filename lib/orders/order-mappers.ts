@@ -64,8 +64,7 @@ export function toOrderDetail(order: OrderRecord): OrderDetail {
         (option) => `${option.group_name}: ${option.option_name}`,
       ),
 
-      // Không có ghi chú riêng cho món.
-      note: "",
+      optionSnapshots: item.option_snapshot_price,
 
       // Menu chỉ dùng chọn icon, không dùng lấy lại tên/giá.
       kind: menuItem?.category === "Nước uống" ? "drink" : "food",

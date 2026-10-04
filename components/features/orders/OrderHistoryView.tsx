@@ -24,6 +24,7 @@ import {
 import styles from "@/styles/order-history.module.css";
 import { normalizeSearchText as normalize } from "@/lib/format";
 import { useOrders } from "@/lib/orders/useOrders";
+import { useReorder } from "@/lib/orders/useReorder";
 
 type Filter = "all" | "completed" | "cancelled" | "rejected";
 type Sort = "newest" | "oldest" | "highest" | "lowest";
@@ -74,7 +75,7 @@ export default function OrderHistoryView() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("newest");
   const [page, setPage] = useState(1);
-  const [notice, setNotice] = useState("");
+  const { reorder, addedIds, notice, setNotice } = useReorder();
 
   const search = normalize(query).replace(/^#/, "");
 
@@ -182,6 +183,7 @@ export default function OrderHistoryView() {
       {notice && (
         <div className={styles.notice} role="status">
           <p>{notice}</p>
+          <Link href="/cart">Xem giỏ hàng</Link>
           <button type="button" onClick={() => setNotice("")}>
             Đóng
           </button>
@@ -254,15 +256,10 @@ export default function OrderHistoryView() {
                 <button
                   type="button"
                   className={styles.primaryButton}
-                  onClick={() =>
-                    setNotice(
-                      `Đặt lại đơn #${order.id} chưa được kết nối. ` +
-                        "Cần kiểm tra món, giá và tùy chọn hiện tại của quán " +
-                        "trước khi thêm vào giỏ. Chưa có món nào được thêm.",
-                    )
-                  }
+                  disabled={addedIds.has(order.id)}
+                  onClick={() => reorder(order.id)}
                 >
-                  Đặt lại
+                  {addedIds.has(order.id) ? "Đã thêm vào giỏ" : "Đặt lại"}
                 </button>
               </div>
             </article>

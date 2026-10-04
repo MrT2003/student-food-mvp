@@ -176,7 +176,6 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
                       <p key={`${item.id}-${index}`}>+ {option}</p>
                     ))}
 
-                    {item.note && <p>{item.note}</p>}
                   </div>
 
                   <span

@@ -30,7 +30,6 @@ function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
 }
 
 export default function OrderConfirmView() {
-  const items = useCartStore((state) => state.items);
   const location = useCartStore((state) => state.location);
   const address = useCartStore((state) => state.address);
   const setLocation = useCartStore((state) => state.setLocation);
@@ -47,7 +46,7 @@ export default function OrderConfirmView() {
   const submitting = useRef(false);
   const checkoutCart = useCartStore((state) => state.checkoutCart);
 
-  const { groups, quantity: totalQuantity, subtotal: total } = useCartSummary();
+  const { items, groups, quantity: totalQuantity, subtotal: total } = useCartSummary();
 
   function handleConfirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -196,7 +195,6 @@ export default function OrderConfirmView() {
                                         • {extra.name} (+{money(extra.price)})
                                       </p>
                                     ))}
-                                    {item.note && <p>• {item.note}</p>}
                                   </div>
                                 </div>
                               </td>

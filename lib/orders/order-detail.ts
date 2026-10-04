@@ -1,4 +1,4 @@
-import type { OrderStatus } from "@/types/order.types";
+import type { OrderStatus, OptionSnapshot } from "@/types/order.types";
 
 export { formatMoney as formatOrderMoney } from "@/lib/format";
 
@@ -13,7 +13,7 @@ export type OrderDetailItem = {
   quantity: number;
   unitPrice: number;
   options: string[];
-  note: string;
+  optionSnapshots: OptionSnapshot[];
 };
 
 export type OrderDetail = {

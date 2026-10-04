@@ -10,16 +10,7 @@ import type {
   OrderDetail,
 } from "@/types/order.types";
 
-import type {
-  CartItem as CartItemView,
-  CartRestaurant,
-} from "@/lib/cart/mock-data";
-
-import {
-  projectCart,
-  projectOrder,
-  type SavedPreviewOrder,
-} from "@/lib/orders/preview-adapter";
+import { projectCart } from "@/lib/cart/view-model";
 
 import { mockRestaurants, mockMenuItemDetails } from "@/lib/mocks/catalog.mock";
 
@@ -30,6 +21,12 @@ import {
 } from "@/lib/cart/options";
 
 import { simulateCheckout } from "@/lib/mocks/checkout.mock";
+import { prepareReorder } from "@/lib/orders/reorder";
+import {
+  parseStudentSnapshot,
+  studentStorageKey,
+  type StudentSnapshot,
+} from "@/lib/mocks/student-storage";
 
 // Tài khoản fixture, chỉ dùng khi test frontend.
 // Không phải thông tin xác thực hoặc phân quyền thật.
@@ -57,25 +54,15 @@ type CheckoutActionResult =
   | { ok: true; result: CheckoutResult }
   | { ok: false; message: string };
 
-type CheckoutView = {
-  location: string;
-  address: string;
-  orders: SavedPreviewOrder[];
-};
-
 type StudentMockState = {
+  hasHydrated: boolean;
+  storageReadFailed: boolean;
+  storageWarning: string | null;
   // Dữ liệu gốc theo schema.
   cart: Cart;
   cart_items: CartItem[];
   orderRecords: Record<string, OrderDetail>;
-  lastCheckoutResult: CheckoutResult | null;
-
-  // Dữ liệu hiển thị để giữ tương thích UI hiện tại.
-  items: CartItemView[];
-  restaurants: CartRestaurant[];
-  ordersById: Record<string, SavedPreviewOrder>;
-  orderIds: string[];
-  checkout: CheckoutView | null;
+  lastCheckout: StudentSnapshot["lastCheckout"];
 
   // State của form, không phải cấu trúc bảng.
   location: string;
@@ -83,11 +70,10 @@ type StudentMockState = {
   preferences: Partial<Record<string, RestaurantPreference>>;
 
   addCatalogItem: (input: AddCartItemInput) => ActionResult;
+  reorderOrder: (orderId: string) => ActionResult;
 
-  // Lớp tương thích: chỉ cho phép đổi số lượng/xóa dòng.
-  setItems: (
-    update: CartItemView[] | ((current: CartItemView[]) => CartItemView[]),
-  ) => void;
+  updateCartItemQuantity: (id: string, quantity: number) => ActionResult;
+  removeCartItem: (id: string) => ActionResult;
 
   setLocation: (value: string) => void;
   setAddress: (value: string) => void;
@@ -115,7 +101,7 @@ function validateQuantity(quantity: number) {
 export const useStudentMockStore = create<StudentMockState>((set, get) => {
   function commitCart(rows: CartItem[]) {
     // Tính xong toàn bộ trước khi thay đổi state.
-    const view = projectCart(rows);
+    projectCart(rows);
     const activeRestaurantIds = new Set(rows.map((row) => row.restaurant_id));
 
     const preferences: StudentMockState["preferences"] = {};
@@ -128,8 +114,6 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
 
     set({
       cart_items: rows,
-      items: view.items,
-      restaurants: view.restaurants,
       preferences,
       cart: {
         ...get().cart,
@@ -139,16 +123,13 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
   }
 
   return {
+    hasHydrated: false,
+    storageReadFailed: false,
+    storageWarning: null,
     cart: initialCart,
     cart_items: [],
     orderRecords: {},
-    lastCheckoutResult: null,
-
-    items: [],
-    restaurants: [],
-    ordersById: {},
-    orderIds: [],
-    checkout: null,
+    lastCheckout: null,
 
     location: "KTX A",
     address: "",
@@ -227,40 +208,41 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
       }
     },
 
-    setItems: (update) => {
-      const state = get();
+    reorderOrder: (orderId) => {
+      try {
+        const state = get();
+        if (!state.hasHydrated) throw new Error("Vui lòng chờ khôi phục giỏ hàng.");
+        const order = state.orderRecords[orderId];
+        if (!order) throw new Error("Không tìm thấy đơn hàng.");
+        const rows = prepareReorder(order, {
+          customerId: state.cart.student_id, cartId: state.cart.id,
+          rows: state.cart_items, restaurants: mockRestaurants, menu: mockMenuItemDetails,
+        });
+        // Preserve current address/payment/notes for review at checkout.
+        commitCart(rows);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: errorMessage(error) };
+      }
+    },
 
-      const requested =
-        typeof update === "function" ? update(state.items) : update;
-
-      const ids = new Set<string>();
-      const now = new Date().toISOString();
-
-      const rows = requested.map((item) => {
-        if (ids.has(item.id)) {
-          throw new Error("Dòng giỏ hàng bị trùng.");
-        }
-
-        ids.add(item.id);
-
-        const existing = state.cart_items.find((row) => row.id === item.id);
-
-        if (!existing) {
-          throw new Error("Dùng addCatalogItem để thêm món mới.");
-        }
-
-        validateQuantity(item.quantity);
-
-        // Không nhận tên/giá/tùy chọn bị sửa từ UI cũ.
-        return {
-          ...existing,
-          quantity: item.quantity,
-          updated_at:
-            item.quantity === existing.quantity ? existing.updated_at : now,
-        };
-      });
-
-      commitCart(rows);
+    updateCartItemQuantity: (id, quantity) => {
+      try {
+        validateQuantity(quantity);
+        const rows = get().cart_items;
+        if (!rows.some((row) => row.id === id)) throw new Error("Không tìm thấy món trong giỏ.");
+        commitCart(rows.map((row) => row.id === id
+          ? { ...row, quantity, updated_at: new Date().toISOString() } : row));
+        return { ok: true };
+      } catch (error) { return { ok: false, message: errorMessage(error) }; }
+    },
+    removeCartItem: (id) => {
+      try {
+        const rows = get().cart_items;
+        if (!rows.some((row) => row.id === id)) throw new Error("Không tìm thấy món trong giỏ.");
+        commitCart(rows.filter((row) => row.id !== id));
+        return { ok: true };
+      } catch (error) { return { ok: false, message: errorMessage(error) }; }
     },
 
     setLocation: (location) => set({ location }),
@@ -322,39 +304,22 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
           menu_items: mockMenuItemDetails,
         });
 
-        const newOrderViews = output.created_orders.map((order) =>
-          projectOrder(order, location, address),
-        );
-
         const orderRecords = { ...state.orderRecords };
-        const ordersById = { ...state.ordersById };
 
         for (const order of output.created_orders) {
           orderRecords[order.id] = order;
         }
 
-        for (const order of newOrderViews) {
-          ordersById[order.id] = order;
-        }
-
         // Một lần cập nhật: lưu toàn bộ đơn và xóa giỏ.
-        // Nếu simulateCheckout/projectOrder lỗi, chưa đổi state.
+        // Nếu simulateCheckout lỗi, chưa đổi state.
         set({
           orderRecords,
-          ordersById,
-          orderIds: [
-            ...output.created_orders.map((order) => order.id),
-            ...state.orderIds,
-          ],
-          lastCheckoutResult: output.result,
-          checkout: {
+          lastCheckout: {
+            sessionId: output.result.session_checkout_id,
             location,
             address,
-            orders: newOrderViews,
           },
           cart_items: [],
-          items: [],
-          restaurants: [],
           preferences: {},
           cart: {
             ...state.cart,
@@ -375,3 +340,65 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
     },
   };
 });
+
+function snapshot(state: StudentMockState): StudentSnapshot {
+  return {
+    version: 1,
+    customerId: state.cart.student_id,
+    cart: state.cart,
+    cart_items: state.cart_items,
+    orderRecords: state.orderRecords,
+    location: state.location,
+    address: state.address,
+    preferences: state.preferences,
+    lastCheckout: state.lastCheckout,
+  };
+}
+
+// Called after mount only: the server and first browser render both use empty state.
+// Return the unsubscribe function for React StrictMode and layout unmounts.
+export function startStudentPersistence(storage: Pick<Storage, "getItem" | "setItem">) {
+  const key = studentStorageKey(MOCK_CUSTOMER.id);
+  let writable = true;
+  let warning: string | null = null;
+  if (!useStudentMockStore.getState().hasHydrated) {
+    try {
+      const raw = storage.getItem(key);
+      if (raw !== null) {
+        const saved = parseStudentSnapshot(raw, MOCK_CUSTOMER.id);
+        projectCart(saved.cart_items);
+        useStudentMockStore.setState({
+          cart: saved.cart,
+          cart_items: saved.cart_items,
+          orderRecords: saved.orderRecords,
+          location: saved.location,
+          address: saved.address,
+          preferences: saved.preferences,
+          lastCheckout: saved.lastCheckout,
+        });
+      }
+    } catch {
+      // Do not overwrite an unreadable/unsupported snapshot with an empty cart.
+      writable = false;
+      warning = "Không thể khôi phục dữ liệu demo. Bản lưu cũ được giữ nguyên; thay đổi trong phiên này sẽ không được lưu. Hãy kiểm tra quyền lưu trữ hoặc sao lưu/xóa riêng dữ liệu demo rồi tải lại trang.";
+    }
+    useStudentMockStore.setState({ hasHydrated: true, storageReadFailed: !writable, storageWarning: warning });
+  } else if (useStudentMockStore.getState().storageReadFailed) {
+    writable = false;
+  }
+
+  return useStudentMockStore.subscribe((state, previous) => {
+    if (!writable || state.cart === previous.cart && state.cart_items === previous.cart_items &&
+        state.orderRecords === previous.orderRecords && state.location === previous.location &&
+        state.address === previous.address && state.preferences === previous.preferences &&
+        state.lastCheckout === previous.lastCheckout) return;
+    try {
+      // One write contains both new orders and the emptied cart after checkout.
+      storage.setItem(key, JSON.stringify(snapshot(state)));
+      if (state.storageWarning) useStudentMockStore.setState({ storageWarning: null });
+    } catch {
+      const message = "Không thể lưu dữ liệu demo (bộ nhớ đầy hoặc bị chặn). Dữ liệu hiện tại vẫn dùng được, nhưng thay đổi mới có thể mất khi tải lại trang.";
+      if (state.storageWarning !== message) useStudentMockStore.setState({ storageWarning: message });
+    }
+  });
+}

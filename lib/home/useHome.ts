@@ -46,7 +46,6 @@ export function useHome() {
     filters,
     setFilters,
     restaurants,
-    recentRestaurants: previewRestaurants,
     selected,
     setSelected,
     reset,

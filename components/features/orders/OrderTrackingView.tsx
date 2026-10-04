@@ -365,7 +365,6 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
                     {item.options.length > 0 && (
                       <p>+ {item.options.join(", ")}</p>
                     )}
-                    {item.note && <p>{item.note}</p>}
                   </div>
 
                   <span

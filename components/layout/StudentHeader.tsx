@@ -19,9 +19,9 @@ export default function StudentHeader() {
   const restaurantCount = useCartStore(
     (state) =>
       new Set(
-        state.items
+        state.cart_items
           .filter((item) => item.quantity > 0)
-          .map((item) => item.restaurantId),
+          .map((item) => item.restaurant_id),
       ).size,
   );
   const pathname = usePathname();
