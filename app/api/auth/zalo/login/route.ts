@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from 'crypto'
-import { ZaloAuthService } from "@/services/auth.service";
+import { ZaloAuthService } from "@/services/zalo.service";
+
 
 
 export async function GET() {
 	const codeVerifier = ZaloAuthService.generateCodeVerifier();
 	const codeChallenge = ZaloAuthService.generateCodeChallenge(codeVerifier);
-	const state = crypto.randomBytes(16).toString();
+	const state = crypto.randomBytes(16).toString('hex');
 
 	const authUrl = ZaloAuthService.getAuthorizationUrl(codeChallenge, state)
 

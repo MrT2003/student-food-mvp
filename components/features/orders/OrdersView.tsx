@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useOrders } from "@/lib/orders/useOrders";
+import { useReorder } from "@/lib/orders/useReorder";
 import {
   ArrowRight,
   CalendarDays,
@@ -15,13 +17,8 @@ import {
   Milk,
   Utensils,
 } from "lucide-react";
-import { useOrderPreviewStore } from "@/store/useOrderPreviewStore";
 import styles from "@/styles/orders.module.css";
 import Link from "next/link";
-import {
-  formatOrderDate,
-  formatOrderPayment,
-} from "@/lib/orders/order-mappers";
 import { formatMoney } from "@/lib/format";
 
 type OrderStatus =
@@ -36,6 +33,9 @@ type StatusFilter = "all" | Exclude<OrderStatus, "rejected">;
 
 type Order = {
   id: string;
+  orderCode: string;
+  lineCount: number;
+
   restaurantName: string;
   location: string;
   kind: "food" | "drink";
@@ -54,72 +54,6 @@ const statusLabels: Record<OrderStatus, string> = {
   cancelled: "Đã hủy",
   rejected: "Bị từ chối",
 };
-
-const currentSamples: Order[] = [
-  {
-    id: "SF0123",
-    restaurantName: "Cơm Cô Ba",
-    location: "KTX A",
-    kind: "food",
-    status: "pending",
-    itemCount: 2,
-    firstItem: "Cơm gà chiên",
-    payment: "Chuyển khoản ngân hàng",
-    total: 100000,
-    date: "09:42 - 10/09/2026",
-  },
-  {
-    id: "SF0124",
-    restaurantName: "Trà Sữa Nhà Làm",
-    location: "KTX B",
-    kind: "drink",
-    status: "accepted",
-    itemCount: 2,
-    firstItem: "Trà sữa truyền thống",
-    payment: "Thanh toán khi nhận món",
-    total: 45000,
-    date: "09:45 - 10/09/2026",
-  },
-];
-
-const historySamples: Order[] = [
-  {
-    id: "SF0108",
-    restaurantName: "Cơm Gà 3 Chị Em",
-    location: "KTX A",
-    kind: "food",
-    status: "completed",
-    itemCount: 2,
-    firstItem: "Cơm gà",
-    payment: "Thanh toán khi nhận món",
-    total: 78000,
-    date: "08/09/2026",
-  },
-  {
-    id: "SF0101",
-    restaurantName: "Bún Chả Hà Nội",
-    location: "KTX A",
-    kind: "food",
-    status: "cancelled",
-    itemCount: 1,
-    firstItem: "Bún chả",
-    payment: "Thanh toán khi nhận món",
-    total: 52000,
-    date: "06/09/2026",
-  },
-  {
-    id: "SF0098",
-    restaurantName: "Mì Cay Seoul",
-    location: "KTX B",
-    kind: "food",
-    status: "rejected",
-    itemCount: 2,
-    firstItem: "Mì cay",
-    payment: "Chuyển khoản ngân hàng",
-    total: 65000,
-    date: "04/09/2026",
-  },
-];
 
 const scopeOptions: { value: Scope; label: string }[] = [
   { value: "all", label: "Tất cả" },
@@ -181,7 +115,8 @@ function FoodPlaceholder({
 
 type OrderCardProps = {
   order: Order;
-  onAction: (message: string) => void;
+  onAction: (orderId: string) => void;
+  added?: boolean;
 };
 
 function CurrentOrderCard({ order }: OrderCardProps) {
@@ -195,7 +130,7 @@ function CurrentOrderCard({ order }: OrderCardProps) {
           <StatusBadge status={order.status} />
         </div>
 
-        <p className={styles.orderCode}>Đơn hàng #{order.id}</p>
+        <p className={styles.orderCode}>Đơn hàng #{order.orderCode}</p>
 
         <div className={styles.metadata}>
           <span>
@@ -220,7 +155,9 @@ function CurrentOrderCard({ order }: OrderCardProps) {
           <div>
             <strong>{order.firstItem}</strong>
 
-            {order.itemCount > 1 && <p>và {order.itemCount - 1} món khác</p>}
+            {order.lineCount > 1 && (
+              <p>và {order.lineCount - 1} dòng món khác</p>
+            )}
           </div>
         </div>
       </div>
@@ -254,7 +191,7 @@ function CurrentOrderCard({ order }: OrderCardProps) {
   );
 }
 
-function HistoryOrderCard({ order, onAction }: OrderCardProps) {
+function HistoryOrderCard({ order, onAction, added }: OrderCardProps) {
   return (
     <article className={styles.historyCard} aria-label={`Đơn hàng ${order.id}`}>
       <div className={styles.historyTop}>
@@ -266,7 +203,7 @@ function HistoryOrderCard({ order, onAction }: OrderCardProps) {
             <StatusBadge status={order.status} />
           </div>
 
-          <p className={styles.orderCode}>Đơn hàng #{order.id}</p>
+          <p className={styles.orderCode}>Đơn hàng #{order.orderCode}</p>
 
           <div className={styles.historyMetadata}>
             <span>
@@ -297,14 +234,10 @@ function HistoryOrderCard({ order, onAction }: OrderCardProps) {
         <button
           type="button"
           className={styles.primaryButton}
-          onClick={() =>
-            onAction(
-              `Chưa thể đặt lại đơn #${order.id}: dữ liệu mẫu chưa có ` +
-                "đầy đủ món và tùy chọn. Chưa có món nào được thêm vào giỏ.",
-            )
-          }
+          disabled={added}
+          onClick={() => onAction(order.id)}
         >
-          Đặt lại
+          {added ? "Đã thêm vào giỏ" : "Đặt lại"}
         </button>
       </div>
     </article>
@@ -312,46 +245,36 @@ function HistoryOrderCard({ order, onAction }: OrderCardProps) {
 }
 
 export default function OrdersView() {
-  const ordersById = useOrderPreviewStore((state) => state.ordersById);
-  const orderIds = useOrderPreviewStore((state) => state.orderIds);
-
+  const { currentOrders: currentRecords, historyOrders: historyRecords } =
+    useOrders();
   const [scope, setScope] = useState<Scope>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
-  const [notice, setNotice] = useState("");
+  const { reorder, addedIds, notice, setNotice } = useReorder();
 
-  // Store hiện chỉ giữ lần xác nhận gần nhất.
-  // Nếu chưa có, dùng dữ liệu mẫu để dựng UI.
-  const currentOrders = useMemo<Order[]>(() => {
-    // Giữ dữ liệu mẫu khi chưa tạo đơn nào.
-    if (orderIds.length === 0) {
-      return currentSamples;
-    }
+  function toCard(order: (typeof currentRecords)[number]): Order {
+    return {
+      id: order.id,
+      orderCode: order.orderCode,
+      lineCount: order.items.length,
+      restaurantName: order.restaurantName,
+      location: order.restaurantLocation,
+      kind: order.kind,
+      status: order.status,
+      itemCount: order.quantity,
+      firstItem: order.items[0]?.name ?? "Món ăn",
+      payment: order.payment,
+      total: order.total,
+      date: order.placedAt,
+    };
+  }
 
-    return orderIds.flatMap((id): Order[] => {
-      const order = ordersById[id];
+  const currentOrders = currentRecords.map(toCard);
+  const historyOrders = historyRecords.map(toCard);
 
-      if (!order) return [];
-
-      return [
-        {
-          id: order.id,
-          restaurantName: order.restaurantName,
-          location: order.restaurantLocation,
-          kind: order.kind,
-          status: "pending",
-          itemCount: order.quantity,
-          firstItem: order.items[0]?.name ?? "Món ăn",
-          payment: formatOrderPayment(order.payment),
-          total: order.total,
-          date: formatOrderDate(order.createdAt),
-        },
-      ];
-    });
-  }, [ordersById, orderIds]);
-  function matchesStatus(order: Order) {
+  function matchesStatus(order: Order): boolean {
     if (status === "all") return true;
 
-    // Gom đơn bị từ chối vào nhóm không hoàn tất.
+    // Giữ cách lọc hiện tại: nhóm Đã hủy gồm cả Bị từ chối.
     if (status === "cancelled") {
       return order.status === "cancelled" || order.status === "rejected";
     }
@@ -360,7 +283,7 @@ export default function OrdersView() {
   }
 
   const visibleCurrent = currentOrders.filter(matchesStatus);
-  const visibleHistory = historySamples.filter(matchesStatus);
+  const visibleHistory = historyOrders.filter(matchesStatus);
 
   function selectScope(value: Scope) {
     setScope(value);
@@ -426,6 +349,7 @@ export default function OrdersView() {
       {notice && (
         <div className={styles.notice} role="status">
           <p>{notice}</p>
+          <Link href="/cart">Xem giỏ hàng</Link>
           <button type="button" onClick={() => setNotice("")}>
             Đóng
           </button>
@@ -452,7 +376,7 @@ export default function OrdersView() {
               <CurrentOrderCard
                 key={order.id}
                 order={order}
-                onAction={setNotice}
+                onAction={reorder}
               />
             ))}
           </div>
@@ -519,7 +443,8 @@ export default function OrdersView() {
               <HistoryOrderCard
                 key={order.id}
                 order={order}
-                onAction={setNotice}
+                onAction={reorder}
+                added={addedIds.has(order.id)}
               />
             ))}
           </div>

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { ZaloAuthService } from '@/services/auth.service';
+import { ZaloAuthService } from '@/services/zalo.service';
 import { createServerClient } from '@supabase/ssr';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { log } from 'console';
@@ -28,18 +28,18 @@ export async function GET(request: NextRequest) {
 
     try {
         // Extract access token from Zalo
-        const access_token = await ZaloAuthService.getZaloAccessToken(code, savedVerifier);
+        const access_token = (await ZaloAuthService.getZaloAccessToken(code, savedVerifier)).access_token;
         // Extract profile from Zalo 
-        const profile = await ZaloAuthService.getZaloProfile(access_token)
+        const {id , name , img_url} = await ZaloAuthService.getZaloProfile(access_token)
 
         // Delet temporary cookie
         cookieStore.delete('zalo_code_verifier');
         cookieStore.delete('zalo_auth_state');
 
         // Create virtual email and password represents for Zalo User to store into the supabase.auth table 
-        const zaloEmail = `${profile.id}@zalo.app`
+        const zaloEmail = `${id}@zalo.app`
         const zaloPassword = crypto.createHmac('sha256', process.env.SUPABASE_SERVICE_ROLE_KEY!)
-            .update(profile.id)
+            .update(id)
             .digest('hex')
 
 
@@ -82,13 +82,15 @@ export async function GET(request: NextRequest) {
                     )
                 }
 
-                // If error is duplicate insert then ignore and continue the below execution
-
+                // If data is already existed in schema auth.users then 
+                // continue to insert into the table public.users
             } else if (authData.user) {
                 // Implement query to insert into public.users 
                 const { error: dbError } = await supabaseAdmin.from('users').insert({
                     id: authData.user.id,
-                    email: zaloEmail,
+                    role: "student",
+                    name: name,
+                    avatar_url: img_url,
                     // full_name: profile.name,
                 })
 
@@ -130,7 +132,6 @@ export async function GET(request: NextRequest) {
         
         // Redirect to main page after successfully sign up
         return NextResponse.redirect("http://localhost:3000");
->>>>>>> Stashed changes
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

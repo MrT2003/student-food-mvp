@@ -55,8 +55,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   // Các trang không bắt buộc phải nhảy sang Onboarding ngay lập tức
   const isBypassPage =
     pathname === "/auth/callback" ||
-    pathname === "/auth/onboarding" ||
-    pathname === "/"; 
+    pathname === "/auth/onboarding";
+    // pathname === "/"; 
 
   const mustRedirect = needsOnboarding && !isBypassPage;
 

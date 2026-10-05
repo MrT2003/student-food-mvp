@@ -18,12 +18,13 @@ import {
 
 import {
   formatOrderMoney,
-  mockHistoryOrders,
   orderStatusLabels,
   type OrderDetail,
 } from "@/lib/orders/order-detail";
 import styles from "@/styles/order-history.module.css";
 import { normalizeSearchText as normalize } from "@/lib/format";
+import { useOrders } from "@/lib/orders/useOrders";
+import { useReorder } from "@/lib/orders/useReorder";
 
 type Filter = "all" | "completed" | "cancelled" | "rejected";
 type Sort = "newest" | "oldest" | "highest" | "lowest";
@@ -38,22 +39,11 @@ const filters: { value: Filter; label: string }[] = [
 ];
 
 function getTotal(order: OrderDetail) {
-  return (
-    order.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) +
-    order.deliveryFee
-  );
+  return order.total;
 }
 
 function getDateLabel(value: string) {
   return value.match(/\d{2}\/\d{2}\/\d{4}/)?.[0] ?? value;
-}
-
-function getDateValue(value: string) {
-  const match = value.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-  if (!match) return 0;
-
-  const [, day, month, year] = match;
-  return Date.UTC(Number(year), Number(month) - 1, Number(day));
 }
 
 function StatusIcon({ status }: { status: string }) {
@@ -80,27 +70,29 @@ function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
 }
 
 export default function OrderHistoryView() {
+  const { historyOrders } = useOrders();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("newest");
   const [page, setPage] = useState(1);
-  const [notice, setNotice] = useState("");
+  const { reorder, addedIds, notice, setNotice } = useReorder();
 
   const search = normalize(query).replace(/^#/, "");
 
-  const filteredOrders = mockHistoryOrders
+  const filteredOrders = historyOrders
     .filter((order) => filter === "all" || order.status === filter)
     .filter(
       (order) =>
         !search ||
         normalize(order.restaurantName).includes(search) ||
+        normalize(order.orderCode).includes(search) ||
         normalize(order.id).includes(search),
     )
     .sort((a, b) => {
       if (sort === "highest") return getTotal(b) - getTotal(a);
       if (sort === "lowest") return getTotal(a) - getTotal(b);
 
-      const difference = getDateValue(b.placedAt) - getDateValue(a.placedAt);
+      const difference = Date.parse(b.createdAt) - Date.parse(a.createdAt);
 
       return sort === "oldest" ? -difference : difference;
     });
@@ -129,7 +121,7 @@ export default function OrderHistoryView() {
       <div className={styles.toolbar}>
         <div className={styles.filters} aria-label="Lọc trạng thái">
           {filters.map((option) => {
-            const count = mockHistoryOrders.filter(
+            const count = historyOrders.filter(
               (order) =>
                 option.value === "all" || order.status === option.value,
             ).length;
@@ -191,6 +183,7 @@ export default function OrderHistoryView() {
       {notice && (
         <div className={styles.notice} role="status">
           <p>{notice}</p>
+          <Link href="/cart">Xem giỏ hàng</Link>
           <button type="button" onClick={() => setNotice("")}>
             Đóng
           </button>
@@ -213,7 +206,7 @@ export default function OrderHistoryView() {
 
               <div className={styles.title}>
                 <h2>{order.restaurantName}</h2>
-                <p>Đơn hàng #{order.id}</p>
+                <p>Đơn hàng #{order.orderCode}</p>
               </div>
 
               <span className={`${styles.badge} ${styles[order.status]}`}>
@@ -232,7 +225,7 @@ export default function OrderHistoryView() {
                 </span>
                 <span>
                   <Utensils size={17} aria-hidden="true" />
-                  {order.items.length} món
+                  {order.quantity} món
                 </span>
               </div>
 
@@ -263,15 +256,10 @@ export default function OrderHistoryView() {
                 <button
                   type="button"
                   className={styles.primaryButton}
-                  onClick={() =>
-                    setNotice(
-                      `Đặt lại đơn #${order.id} chưa được kết nối. ` +
-                        "Cần kiểm tra món, giá và tùy chọn hiện tại của quán " +
-                        "trước khi thêm vào giỏ. Chưa có món nào được thêm.",
-                    )
-                  }
+                  disabled={addedIds.has(order.id)}
+                  onClick={() => reorder(order.id)}
                 >
-                  Đặt lại
+                  {addedIds.has(order.id) ? "Đã thêm vào giỏ" : "Đặt lại"}
                 </button>
               </div>
             </article>

@@ -55,7 +55,7 @@ export async function updateSession(request: NextRequest) {
   // Bỏ qua kiểm tra Auth cho các route công khai (Public / Auth / API)
   const pathname = request.nextUrl.pathname
   const isPublicRoute = 
-    pathname === '/' || 
+    // pathname === '/' || 
     pathname.startsWith('/login') || 
     pathname.startsWith('/auth') || 
     pathname.startsWith('/api')
@@ -64,7 +64,7 @@ export async function updateSession(request: NextRequest) {
  if(!user && !isPublicRoute) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
 

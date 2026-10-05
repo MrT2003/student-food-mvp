@@ -27,36 +27,28 @@ function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
 export default function CartView() {
   const router = useRouter();
 
-  const items = useCartStore((state) => state.items);
-
-  const setItems = useCartStore((state) => state.setItems);
+  const updateQuantity = useCartStore((state) => state.updateCartItemQuantity);
+  const removeCartItem = useCartStore((state) => state.removeCartItem);
   const location = useCartStore((state) => state.location);
   const setLocation = useCartStore((state) => state.setLocation);
   const address = useCartStore((state) => state.address);
   const setAddress = useCartStore((state) => state.setAddress);
   const [message, setMessage] = useState("");
   const [addressError, setAddressError] = useState("");
-  const { groups, quantity, subtotal, unknownRestaurantIds } = useCartSummary();
+  const { items, groups, quantity, subtotal, unknownRestaurantIds } = useCartSummary();
   const deliveryFee = 0;
   const total = subtotal + deliveryFee;
 
   function changeQuantity(id: string, change: number) {
-    setItems((current) =>
-      current.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              quantity: Math.min(99, Math.max(1, item.quantity + change)),
-            }
-          : item,
-      ),
-    );
-    setMessage("");
+    const item = items.find((row) => row.id === id);
+    if (!item) return;
+    const result = updateQuantity(id, Math.min(99, Math.max(1, item.quantity + change)));
+    setMessage(result.ok ? "" : result.message);
   }
 
   function removeItem(id: string) {
-    setItems((current) => current.filter((item) => item.id !== id));
-    setMessage("Đã xóa món khỏi giỏ hàng mẫu.");
+    const result = removeCartItem(id);
+    setMessage(result.ok ? "Đã xóa món khỏi giỏ hàng." : result.message);
   }
 
   function handleCheckout(event: FormEvent<HTMLFormElement>) {
@@ -175,9 +167,6 @@ export default function CartView() {
                           </p>
                         ))}
 
-                        {item.note && (
-                          <p className={styles.itemNote}>{item.note}</p>
-                        )}
                       </div>
 
                       <div className={styles.itemActions}>

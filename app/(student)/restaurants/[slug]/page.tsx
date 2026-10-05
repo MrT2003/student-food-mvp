@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import RestaurantView from "@/components/features/restaurant/RestaurantView";
-import { getRestaurantDetail } from "@/lib/restaurant/mock-data";
+import { restaurantService } from "@/services/restaurant.service";
+import { toRestaurantView } from "@/lib/restaurant/view-model";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -8,9 +9,15 @@ type Props = {
 
 export default async function RestaurantPage({ params }: Props) {
   const { slug } = await params;
-  const restaurant = getRestaurantDetail(slug);
 
-  if (!restaurant) notFound();
+  const data = await restaurantService.getRestaurantMenu(slug);
 
-  return <RestaurantView key={restaurant.slug} restaurant={restaurant} />;
+  if (!data) notFound();
+
+  return (
+    <RestaurantView
+      key={data.restaurant.id}
+      restaurant={toRestaurantView(data)}
+    />
+  );
 }

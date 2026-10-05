@@ -14,8 +14,8 @@ import {
   Truck,
   Utensils,
 } from "lucide-react";
-import { useOrderPreviewStore } from "@/store/useOrderPreviewStore";
-import { getCartItemTotal } from "@/lib/cart/mock-data";
+import { useCheckout } from "@/lib/orders/useCheckout";
+import { orderStatusLabels } from "@/lib/orders/order-detail";
 import styles from "@/styles/order-success.module.css";
 import { formatMoney as money } from "@/lib/format";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
@@ -25,7 +25,7 @@ function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
 }
 
 export default function OrderSuccessView() {
-  const checkout = useOrderPreviewStore((state) => state.checkout);
+  const checkout = useCheckout();
 
   if (!checkout || checkout.orders.length === 0) {
     return (
@@ -33,8 +33,7 @@ export default function OrderSuccessView() {
         <ReceiptText size={48} aria-hidden="true" />
         <h1>Chưa có thông tin đơn hàng</h1>
         <p>
-          Kết quả mẫu chưa được tạo hoặc đã mất sau khi tải lại trang. Vui lòng
-          quay lại giỏ hàng để tiếp tục.
+          Chưa có phiên đặt hàng gần nhất. Vui lòng quay lại giỏ hàng để tiếp tục.
         </p>
         <Link href="/cart" className={styles.primaryButton}>
           Về giỏ hàng
@@ -76,12 +75,9 @@ export default function OrderSuccessView() {
         <section className={styles.orderList} aria-label="Các đơn hàng đã tạo">
           {checkout.orders.map((order) => {
             const PaymentIcon =
-              order.payment === "bank" ? CreditCard : Banknote;
+              order.paymentMethod === "bank_transfer" ? CreditCard : Banknote;
 
-            const paymentLabel =
-              order.payment === "bank"
-                ? "Chuyển khoản ngân hàng"
-                : "Thanh toán khi nhận món";
+            const paymentLabel = order.payment;
 
             return (
               <article className={styles.orderCard} key={order.id}>
@@ -93,10 +89,12 @@ export default function OrderSuccessView() {
                   <div className={styles.orderInfo}>
                     <div className={styles.orderHeading}>
                       <h2>{order.restaurantName}</h2>
-                      <span className={styles.status}>Đang chờ xác nhận</span>
+                      <span className={styles.status}>{orderStatusLabels[order.status]}</span>
                     </div>
 
-                    <p className={styles.orderCode}>Đơn hàng #{order.id}</p>
+                    <p className={styles.orderCode}>
+                      Đơn hàng #{order.orderCode}
+                    </p>
 
                     <div className={styles.orderMeta}>
                       <span>
@@ -132,16 +130,15 @@ export default function OrderSuccessView() {
                               {item.name} × {item.quantity}
                             </strong>
 
-                            {item.extras.map((extra) => (
-                              <p key={extra.id}>
-                                + {extra.name} (+{money(extra.price)})
+                            {item.optionSnapshots.map((option) => (
+                              <p key={option.option_id}>
+                                + {option.group_name}: {option.option_name} (+{money(option.additional_price)})
                               </p>
                             ))}
 
-                            {item.note && <p>{item.note}</p>}
                           </div>
 
-                          <strong>{money(getCartItemTotal(item))}</strong>
+                          <strong>{money(item.unitPrice * item.quantity)}</strong>
                         </li>
                       ))}
                     </ul>

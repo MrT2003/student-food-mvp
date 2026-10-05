@@ -28,19 +28,21 @@ export async function GET(request: Request) {
       const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || ''
 
       // 2. Insert/Update vào bảng profiles trong Database của bạn
-      await supabase.from('users').upsert(
+      const { error: dbError } = await supabase.from('users').upsert(
         {
-          id: user.id, // Primary Key kết nối với auth.users
-          auth_uid: user.id,
-          email: user.email,
+          id: user.id, // Primary Key trùng với auth.users.id
           role: "student",
-          status:"active",
+          status: "active",
           name: fullName,
           avatar_url: avatarUrl,
-          updated_at: new Date().toISOString(),
         },
         { onConflict: 'id' }
       )
+
+      if (dbError) {
+        console.error("Lỗi khởi tạo user trong DB tại Callback:", dbError.message)
+        // Vẫn cho redirect tiếp để AuthProvider hoặc Onboarding xử lý
+      }
 
       // 3. Xử lý Redirect như bình thường
       const forwardedHost = request.headers.get('x-forwarded-host')

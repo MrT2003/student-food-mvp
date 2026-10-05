@@ -51,7 +51,7 @@ export const AuthClientService = {
   },
 
   singInWithZalo(): void {
-    window.location.href = `auth/api/zalo/login`
+    window.location.assign("/api/auth/zalo/login");
   },
   
   getAuthErrorMessage(error: unknown): string {

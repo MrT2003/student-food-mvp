@@ -7,3 +7,4 @@ export default function AppProviders({ children }: { children: ReactNode }) {
   // Luôn luôn bọc AuthProvider để đồng bộ dữ liệu User toàn hệ thống
   return <AuthProvider>{children}</AuthProvider>;
 }
+

@@ -54,6 +54,7 @@ export function useSignOut() {
     setSignOutError(null);
 
     try {
+      // Interact with DB 
       await AuthClientService.signOut()
       setUser(null);
       router.replace("/auth/login");
@@ -86,12 +87,14 @@ export function useAuthCompletion(
   const name = nameDraft ?? profile?.name ?? "";
   const phone = phoneDraft ?? profile?.phone ?? "";
 
+
   let destination: string | null = null;
 
   if (status === "ready") {
     if (!profile) {
       destination = "/auth/login";
-    } else if (profile.phone?.trim()) {
+    }
+     else if (profile.phone?.trim()) {
       destination = "/";
     } else if (mode === "callback") {
       destination = "/auth/onboarding";
@@ -142,7 +145,6 @@ export function useAuthCompletion(
       setSaving(false);
     }
   }
-
   return {
     profile,
     name,

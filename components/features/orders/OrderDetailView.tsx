@@ -97,11 +97,8 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
     );
   }
 
-  const subtotal = order.items.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0,
-  );
-  const total = subtotal + order.deliveryFee;
+  const subtotal = order.subtotal;
+  const total = order.total;
   const canTrack = order.status === "pending" || order.status === "accepted";
 
   return (
@@ -125,7 +122,7 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
             <StatusBadge status={order.status} />
           </div>
 
-          <p className={styles.orderCode}>Đơn hàng #{order.id}</p>
+          <p className={styles.orderCode}>Đơn hàng #{order.orderCode}</p>
 
           <div className={styles.metadata}>
             <span>
@@ -179,7 +176,6 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
                       <p key={`${item.id}-${index}`}>+ {option}</p>
                     ))}
 
-                    {item.note && <p>{item.note}</p>}
                   </div>
 
                   <span
@@ -234,9 +230,7 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
             <dl className={styles.details}>
               <DetailRow label="Cửa hàng">{order.restaurantName}</DetailRow>
               <DetailRow label="Khu vực">{order.restaurantLocation}</DetailRow>
-              <DetailRow label="Số lượng món">
-                {order.items.length} món
-              </DetailRow>
+              <DetailRow label="Số lượng món">{order.quantity} món</DetailRow>
               <DetailRow label="Đặt lúc">{order.placedAt}</DetailRow>
               <DetailRow label="Trạng thái">
                 <StatusBadge status={order.status} />
@@ -271,8 +265,7 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
             </SectionTitle>
 
             <div className={styles.address}>
-              <strong>{order.deliveryLocation}</strong>
-              <p>{order.deliveryAddress || "Chưa có địa chỉ chi tiết."}</p>
+              <p>{order.deliveryAddress || "Chưa có địa chỉ nhận hàng."}</p>
             </div>
           </section>
         </aside>

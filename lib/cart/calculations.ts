@@ -1,4 +1,4 @@
-import type { CartItem, CartRestaurant } from "@/lib/cart/mock-data";
+import type { CartItem, CartRestaurant } from "@/lib/cart/view-model";
 
 export type CartGroup = {
   restaurant: CartRestaurant;

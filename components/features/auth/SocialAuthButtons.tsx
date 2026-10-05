@@ -6,6 +6,7 @@ type Props = {
   pending: boolean;
   error: string | null;
   onGoogle: () => void;
+  onZalo: () => void;
 };
 
 function GoogleIcon() {
@@ -40,6 +41,7 @@ export default function SocialAuthButtons({
   pending,
   error,
   onGoogle,
+  onZalo,
 }: Props) {
   const isLogin = mode === "login";
 
@@ -53,9 +55,10 @@ export default function SocialAuthButtons({
 
       <button
         type="button"
-        disabled
-        aria-describedby="zalo-status"
-        className="flex min-h-[72px] w-full cursor-not-allowed items-center gap-3 rounded-2xl bg-gradient-to-r from-[#2998ff] to-[#2478ef] px-4 py-3 text-base font-semibold text-white sm:gap-5 sm:px-7 sm:text-xl"
+        onClick={onZalo}
+        disabled={pending}
+        aria-busy={pending}
+        className="flex min-h-[72px] w-full cursor-pointer items-center gap-3 rounded-2xl bg-gradient-to-r from-[#2998ff] to-[#2478ef] px-4 py-3 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:gap-5 sm:px-7 sm:text-xl"
       >
         <span
           aria-hidden="true"
@@ -81,13 +84,6 @@ export default function SocialAuthButtons({
           aria-hidden="true"
         />
       </button>
-
-      <p
-        id="zalo-status"
-        className="mt-2 text-center text-xs text-[#526a9e]"
-      >
-        Đăng nhập Zalo đang được tích hợp.
-      </p>
 
       <div className="my-5 flex items-center gap-4 text-[#526a9e]">
         <span className="h-px flex-1 bg-[#dce2ed]" />

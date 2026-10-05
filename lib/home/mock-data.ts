@@ -1,21 +1,74 @@
 import type { HomeRestaurant } from "@/types/home.types";
+import {
+  catalogRestaurantViews,
+  type HomeIllustration,
+} from "@/lib/mocks/catalog-views.mock";
 
-// UI fixtures only. Replace with service results when the API is ready.
 export type PreviewRestaurant = HomeRestaurant & {
-  illustration: "rice" | "tea" | "noodles" | "spicy" | "bread" | "chicken";
+  illustration: HomeIllustration;
   orderCount: number;
   searchTerms: string[];
 };
 
-export const previewAccount = { name: "Nguyễn Văn A", initial: "N", unreadCount: 3 };
+export const previewAccount = {
+  name: "Nguyễn Văn A",
+  initial: "N",
+  unreadCount: 3,
+};
 
-export const previewRestaurants: PreviewRestaurant[] = [
-  { id: "demo-com-co-ba", slug: "com-co-ba", name: "Cơm Cô Ba", location: "KTX A", description: "Cơm, Món Việt", avatar_url: null, operating_status: "open", menuItemCount: 12, categories: ["Cơm", "Món Việt"], illustration: "rice", orderCount: 3, searchTerms: ["cơm gà", "cơm sườn"] },
-  { id: "demo-tra-sua", slug: "tra-sua-nha-lam", name: "Trà Sữa Nhà Làm", location: "KTX B", description: "Trà sữa, Đồ uống", avatar_url: null, operating_status: "open", menuItemCount: 18, categories: ["Trà sữa", "Đồ uống"], illustration: "tea", orderCount: 5, searchTerms: ["trân châu", "trà đào"] },
-  { id: "demo-bun-cha", slug: "bun-cha-ha-noi", name: "Bún Chả Hà Nội", location: "KTX A", description: "Bún, Món Việt", avatar_url: null, operating_status: "open", menuItemCount: 10, categories: ["Bún", "Món Việt"], illustration: "noodles", orderCount: 2, searchTerms: ["bún chả", "nem rán"] },
-  { id: "demo-mi-cay", slug: "mi-cay-seoul", name: "Mì Cay Seoul", location: "KTX B", description: "Món Hàn, Ăn vặt", avatar_url: null, operating_status: "open", menuItemCount: 14, categories: ["Món Hàn", "Ăn vặt"], illustration: "spicy", orderCount: 4, searchTerms: ["mì cay", "tokbokki"] },
-  { id: "demo-banh-mi", slug: "banh-mi-sau", name: "Bánh Mì Sáu", location: "KTX A", description: "Bánh mì, Ăn vặt", avatar_url: null, operating_status: "open", menuItemCount: 9, categories: ["Bánh mì", "Ăn vặt"], illustration: "bread", orderCount: 6, searchTerms: ["bánh mì thịt", "bánh mì trứng"] },
-  { id: "demo-ga-ran", slug: "ga-ran-campus", name: "Gà Rán Campus", location: "KTX B", description: "Gà rán, Ăn vặt", avatar_url: null, operating_status: "open", menuItemCount: 16, categories: ["Gà rán", "Ăn vặt"], illustration: "chicken", orderCount: 3, searchTerms: ["gà rán", "khoai tây chiên"] },
+// Giữ sáu quán và thứ tự Trang chủ hiện tại.
+const homeSlugs = [
+  "com-co-ba",
+  "tra-sua-nha-lam",
+  "bun-cha-ha-noi",
+  "mi-cay-seoul",
+  "banh-mi-sau",
+  "ga-ran-campus",
 ];
 
-export const previewNotifications = ["Cơm Cô Ba đang mở cửa nhận đơn.", "Khám phá món ngon mới quanh KTX B.", "Chào mừng bạn đến với StudentFood!"];
+// Chỉ giữ tương thích với phần Đặt lại nhanh hiện tại.
+// Sẽ thay bằng lịch sử đơn hàng ở bước xử lý orders.
+const demoOrderCounts: Record<string, number> = {
+  "com-co-ba": 3,
+  "tra-sua-nha-lam": 5,
+  "bun-cha-ha-noi": 2,
+  "mi-cay-seoul": 4,
+  "banh-mi-sau": 6,
+  "ga-ran-campus": 3,
+};
+
+export const previewRestaurants: PreviewRestaurant[] = homeSlugs.flatMap(
+  (slug) => {
+    const view = catalogRestaurantViews.find(
+      (entry) => entry.restaurant.slug === slug,
+    );
+
+    if (!view) return [];
+
+    const { restaurant } = view;
+
+    return [
+      {
+        id: restaurant.id,
+        slug: restaurant.slug,
+        name: restaurant.name,
+        description: restaurant.description,
+        avatar_url: restaurant.avatar_url,
+        location: restaurant.location,
+        operating_status: restaurant.operating_status,
+
+        menuItemCount: view.items.length,
+        categories: [...view.categories],
+        illustration: view.illustration,
+        searchTerms: [...view.searchTerms],
+        orderCount: demoOrderCounts[slug] ?? 0,
+      },
+    ];
+  },
+);
+
+export const previewNotifications = [
+  "Khám phá các quán ăn quanh khu ký túc xá.",
+  "Xem những món ăn phổ biến hôm nay.",
+  "Chào mừng bạn đến với StudentFood!",
+];
