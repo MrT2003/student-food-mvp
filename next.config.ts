@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // OAuth callbacks contain single-use credentials in the query string.
+  logging: { incomingRequests: { ignore: [/\/api\/auth\/zalo(?:\/|\?)/] } },
 };
 
 export default nextConfig;
