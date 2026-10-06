@@ -26,7 +26,7 @@ export const CartUtilities = {
 					.map((opt) => ({
 						id: opt.id,
 						name: opt.name,
-						price: opt.additional_price,
+						additional_price: opt.additional_price,
 					})),
 			})); 
 	},

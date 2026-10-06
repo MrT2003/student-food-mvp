@@ -1,3 +1,4 @@
+// Archived draft, not an API endpoint.
 // import { createClient } from "@supabase/supabase-js";
 
 // export async function GET() {

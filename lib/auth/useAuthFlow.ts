@@ -121,7 +121,6 @@ export function useAuthCompletion(
       });
 
       setUser(updated);
-      router.replace("/");
     } catch (error) {
       setLocalError(AuthClientService.getAuthErrorMessage(error));
     } finally {

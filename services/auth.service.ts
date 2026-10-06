@@ -1,11 +1,9 @@
-'use-client'
+"use client";
 
 import { createClient } from "@/lib/supabase/client";
 import type { AuthProfile, UpdateProfileInput } from "@/types/auth.types";
-import { Database } from '@/types/database.types';
-import router from 'next/router';
 
-// Define error message 
+// Define error message
 const authErrorMessages: Record<string, string> = {
   UNAUTHORIZED: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
   NOT_ALLOWED: "Bạn không được phép thực hiện thao tác này.",
@@ -22,9 +20,9 @@ export const AuthClientService = {
     return typeof value === "object" && value !== null;
   },
 
-  // Sign out function 
+  // Sign out function
   async signOut(): Promise<void> {
-    const supabase = createClient()
+    const supabase = createClient();
     const { error } = await supabase.auth.signOut();
 
     if (error) {
@@ -53,15 +51,21 @@ export const AuthClientService = {
   singInWithZalo(): void {
     window.location.assign("/api/auth/zalo/login");
   },
-  
+
   getAuthErrorMessage(error: unknown): string {
     const outer = AuthClientService.isRecord(error) ? error : null;
-    const detail = outer && AuthClientService.isRecord(outer.error) ? outer.error : outer;
+    const detail =
+      outer && AuthClientService.isRecord(outer.error) ? outer.error : outer;
 
     const code = detail?.code;
 
     if (typeof code === "string" && authErrorMessages[code]) {
       return authErrorMessages[code];
+    }
+
+    const message = detail?.message;
+    if (typeof message === "string" && authErrorMessages[message]) {
+      return authErrorMessages[message];
     }
 
     if (error instanceof TypeError) {
@@ -90,8 +94,7 @@ export const AuthClientService = {
 
     const supabase = createClient();
 
-    // Dùng trực tiếp hàm rpc() của SDK, không cần gọi fetch() thủ công
-    const { data, error } = await supabase.rpc("update_my_profile", {
+    const { error } = await supabase.rpc("update_my_profile", {
       p_name: name,
       p_phone: phone,
       p_avatar_url: input.avatarUrl ?? null,
@@ -100,15 +103,23 @@ export const AuthClientService = {
     if (error) {
       throw error;
     }
-    return data as AuthProfile;
-  }
-}
+
+    const updatedProfile = await getCurrentProfile();
+
+    if (!updatedProfile?.phone?.trim()) {
+      throw new Error("Chưa lưu được số điện thoại. Vui lòng thử lại.");
+    }
+
+    return updatedProfile;
+  },
+};
 
 export async function getCurrentProfile(): Promise<AuthProfile | null> {
   const supabase = createClient();
 
   // 1. Kiểm tra session
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const { data: sessionData, error: sessionError } =
+    await supabase.auth.getSession();
 
   if (sessionError) {
     throw sessionError;
@@ -129,7 +140,8 @@ export async function getCurrentProfile(): Promise<AuthProfile | null> {
   const meta = user.user_metadata;
 
   // 3. Trích xuất thông tin Google Metadata làm dữ liệu dự phòng (Fallback)
-  const googleName = meta?.full_name || meta?.name || user.email?.split("@")[0] || "Người dùng";
+  const googleName =
+    meta?.full_name || meta?.name || user.email?.split("@")[0] || "Người dùng";
   const googleAvatar = meta?.avatar_url || meta?.picture || null;
 
   // 4. Query thông tin từ bảng `users` trong Database
@@ -160,18 +172,14 @@ export async function getCurrentProfile(): Promise<AuthProfile | null> {
   };
 }
 
-
-
-
 export function subscribeAuthProfile(
   onProfile: (profile: AuthProfile | null) => void,
   onError: (message: string) => void,
 ): () => void {
-
   let stopped = false;
   let revision = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const supabase = createClient()
+  const supabase = createClient();
 
   function scheduleReload() {
     const currentRevision = ++revision;
@@ -227,9 +235,4 @@ export function subscribeAuthProfile(
     data.subscription.unsubscribe();
   };
 }
-
-type userRow = Database['public']['Tables']['users']['Row']
-
-
-
 
