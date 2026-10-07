@@ -1,175 +1,110 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CircleCheck, LogIn, Mail, ShieldCheck } from "lucide-react";
-import { createClient}  from "@/lib/supabase/client";
+import { CircleCheck, Link2, Mail, ShieldCheck } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import styles from "@/styles/account.module.css";
-import { AuthClientService } from "@/services/auth.service";
 
-type IdentityState = {
-  userId: string | null;
-  googleLinked: boolean;
-  error: string | null;
+type Methods = { userId: string; google: boolean; zalo: boolean };
+const feedback: Record<string, string> = {
+  success: "Đã liên kết Zalo. Bạn có thể đăng nhập cùng tài khoản bằng Google hoặc Zalo.",
+  conflict: "Zalo này hoặc tài khoản StudentFood đã có liên kết khác. Không thể tự động gộp hai tài khoản.",
+  cancelled: "Bạn đã hủy liên kết Zalo.",
+  session_changed: "Phiên đăng nhập đã thay đổi hoặc hết hạn. Vui lòng đăng nhập Google và liên kết lại.",
+  failed: "Chưa thể liên kết Zalo. Vui lòng thử lại.",
 };
 
 export default function AccountSecurity() {
-  const user = useAuthStore((state) => state.user);
-
-  const [identity, setIdentity] = useState<IdentityState | null>(null);
+  const userId = useAuthStore((state) => state.user?.id);
+  const [methods, setMethods] = useState<Methods | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [pending, setPending] = useState(false);
-  const [actionError, setActionError] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadIdentity() {
+    if (!userId) return;
+    const controller = new AbortController();
+    async function load() {
       try {
-        const supabase = createClient()
-        const { data, error } = await supabase.auth.getUser();
-
-        if (error) throw error;
-
-        const googleLinked =
-          data.user?.identities?.some((item) => item.provider === "google") ??
-          false;
-
-        if (!cancelled) {
-          setIdentity({
-            userId: data.user?.id ?? null,
-            googleLinked,
-            error: null,
-          });
+        const response = await fetch("/api/auth/zalo/link", { cache: "no-store", signal: controller.signal });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Không thể tải phương thức đăng nhập.");
+        if (data.userId !== userId || typeof data.google !== "boolean" || typeof data.zalo !== "boolean") {
+          throw new Error("Phiên đăng nhập đã thay đổi. Vui lòng tải lại trang.");
         }
-      } catch (error: unknown) {
-        if (!cancelled) {
-          setIdentity({
-            userId: null,
-            googleLinked: false,
-            error: AuthClientService.getAuthErrorMessage(error),
-          });
+        setMethods(data);
+        setError("");
+        const result = new URL(window.location.href).searchParams.get("zalo_link");
+        if (result && (result !== "success" || data.zalo)) setNotice(feedback[result] || "");
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setError(error instanceof Error ? error.message : "Không thể tải phương thức đăng nhập.");
         }
       }
     }
+    void load();
+    return () => controller.abort();
+  }, [userId, attempt]);
 
-    void loadIdentity();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
-  async function handleGoogleLogin() {
+  async function linkZalo() {
     if (pending) return;
-
-    // Đăng nhập một tài khoản khác không đồng nghĩa
-    // với liên kết tài khoản đó vào hồ sơ hiện tại.
-    if (
-      identity?.userId &&
-      !window.confirm(
-        "Đăng nhập Google có thể chuyển sang tài khoản khác. " +
-          "Thao tác này không liên kết Google vào tài khoản hiện tại. " +
-          "Bạn có muốn tiếp tục?",
-      )
-    ) {
-      return;
-    }
-
     setPending(true);
-    setActionError("");
-
+    setError("");
+    setNotice("");
     try {
-      await AuthClientService.signInWithGoogle();
-    } catch (error: unknown) {
-      setActionError(AuthClientService.getAuthErrorMessage(error));
+      const response = await fetch("/api/auth/zalo/link", { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Không thể bắt đầu liên kết.");
+      const url = new URL(data.url);
+      if (url.origin !== "https://oauth.zaloapp.com") throw new Error("Địa chỉ xác thực không hợp lệ.");
+      window.location.assign(url.href);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Không thể bắt đầu liên kết.");
       setPending(false);
     }
   }
 
-  const loading = identity === null;
-  const googleLinked = identity?.googleLinked ?? false;
-  const error = actionError || identity?.error;
-
+  const current = methods?.userId === userId ? methods : null;
   return (
     <section className={styles.card} aria-labelledby="security-title">
       <div className={styles.sectionHeading}>
-        <span className={styles.sectionIcon}>
-          <ShieldCheck size={27} aria-hidden="true" />
-        </span>
-
+        <span className={styles.sectionIcon}><ShieldCheck size={27} aria-hidden="true" /></span>
         <div>
           <h2 id="security-title">Bảo mật tài khoản</h2>
-          <p>Quản lý các phương thức đăng nhập của bạn.</p>
+          <p>Liên kết thêm phương thức để có thể đăng nhập khi mất quyền truy cập một tài khoản.</p>
         </div>
       </div>
-
       <div className={styles.providerList}>
-        <div className={styles.providerRow}>
-          <span
-            className={`${styles.providerLogo} ${styles.zaloLogo}`}
-            aria-hidden="true"
-          >
-            Zalo
-          </span>
-
-          <div className={styles.providerCopy}>
-            <h3>Zalo</h3>
-            <p>Phương thức đăng nhập Zalo đang được tích hợp.</p>
-          </div>
-
-          <span className={styles.providerPending}>Đang tích hợp</span>
-        </div>
-
-        <div className={styles.providerRow}>
-          <span
-            className={`${styles.providerLogo} ${styles.googleLogo}`}
-            aria-hidden="true"
-          >
-            <Mail size={28} />
-          </span>
-
-          <div className={styles.providerCopy}>
-            <h3>Google / Gmail</h3>
-            <p>
-              {loading
-                ? "Đang kiểm tra phương thức đăng nhập..."
-                : identity?.error
-                  ? "Chưa xác minh được trạng thái liên kết."
-                  : googleLinked
-                    ? "Tài khoản của bạn đã liên kết với Google."
-                    : "Sử dụng tài khoản Google để đăng nhập."}
-            </p>
-          </div>
-
-          {loading ? (
-            <span className={styles.providerPending} role="status">
-              Đang kiểm tra…
-            </span>
-          ) : googleLinked ? (
-            <span className={styles.providerConnected}>
-              <CircleCheck size={18} aria-hidden="true" />
-              Đã liên kết
-            </span>
-          ) : (
-            <button
-              type="button"
-              className={styles.providerButton}
-              disabled={pending || Boolean(identity?.error)}
-              aria-busy={pending}
-              onClick={handleGoogleLogin}
-            >
-              <LogIn size={19} aria-hidden="true" />
-              {pending ? "Đang chuyển hướng…" : "Đăng nhập bằng Google"}
-            </button>
-          )}
-        </div>
+        {(["zalo", "google"] as const).map((provider) => {
+          const linked = current?.[provider] ?? false;
+          const label = provider === "zalo" ? "Zalo" : "Google / Gmail";
+          return (
+            <div className={styles.providerRow} key={provider}>
+              <span className={styles.providerLogo + " " + (provider === "zalo" ? styles.zaloLogo : styles.googleLogo)} aria-hidden="true">
+                {provider === "zalo" ? "Zalo" : <Mail size={28} />}
+              </span>
+              <div className={styles.providerCopy}>
+                <h3>{label}</h3>
+                <p>{!current ? error ? "Chưa xác minh được phương thức đăng nhập." : "Đang kiểm tra phương thức đăng nhập..."
+                  : linked ? "Bạn có thể dùng " + label + " để đăng nhập tài khoản này."
+                  : "Chưa liên kết với tài khoản này."}</p>
+              </div>
+              {linked ? (
+                <span className={styles.providerConnected}><CircleCheck size={18} aria-hidden="true" />Đã liên kết</span>
+              ) : provider === "zalo" && current?.google ? (
+                <button type="button" className={styles.providerButton} disabled={pending} aria-busy={pending} onClick={() => void linkZalo()}>
+                  <Link2 size={19} aria-hidden="true" />{pending ? "Đang chuyển đến Zalo..." : "Liên kết Zalo"}
+                </button>
+              ) : (
+                <span className={styles.providerPending}>{current ? "Chưa liên kết" : error ? "Chưa xác minh" : "Đang kiểm tra..."}</span>
+              )}
+            </div>
+          );
+        })}
       </div>
-
-      {error && (
-        <p className={styles.error} role="alert">
-          {error}
-        </p>
-      )}
+      {notice && <p className={styles.feedback} role="status">{notice}</p>}
+      {error && <p className={styles.error} role="alert">{error} <button type="button" onClick={() => setAttempt((value) => value + 1)}>Thử lại</button></p>}
     </section>
   );
 }

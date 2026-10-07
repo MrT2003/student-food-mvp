@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import type { HeaderNotification } from "./header-preview-data";
 
 const icons = { rice: CookingPot, tea: CupSoda, noodles: Soup, spicy: Soup };
@@ -75,6 +76,7 @@ interface AccountDropdownProps {
   name: string;
   initial: string;
   avatarUrl?: string | null;
+  phone?: string | null;
   onNavigate: () => void;
 }
 
@@ -82,9 +84,15 @@ export function AccountDropdown({
   name,
   initial,
   avatarUrl,
+  phone,
   onNavigate,
 }: AccountDropdownProps) {
   const { logout, pending } = useSignOut();
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
+  const normalizedPhone = phone?.replace(/\s/g, "") ?? "";
+  const maskedPhone = normalizedPhone.length >= 6
+    ? `${normalizedPhone.slice(0, 2)}•• ••• ${normalizedPhone.slice(-3)}`
+    : "Chưa cập nhật số điện thoại";
 
   return (
     <section
@@ -94,11 +102,13 @@ export function AccountDropdown({
     >
       <div className={styles.identity}>
         <span className={styles.avatar}>
-          {avatarUrl ? (
+          {avatarUrl && avatarUrl !== failedAvatar ? (
             <Image
               src={avatarUrl}
               alt={name}
               fill
+              sizes="58px"
+              onError={() => setFailedAvatar(avatarUrl)}
               unoptimized // Dùng unoptimized cho ảnh Google/bên thứ 3 nếu chưa config domain trong next.config
               className={styles.avatarImage}
             />
@@ -108,7 +118,7 @@ export function AccountDropdown({
         </span>
         <div>
           <strong>{name}</strong>
-          <p>09•• ••• 567</p>
+          <p>{maskedPhone}</p>
         </div>
       </div>
 

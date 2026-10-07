@@ -11,7 +11,10 @@ export type AuthProfile = Pick<
   | "avatar_url"
   | "status"
   | "work_for_restaurant_id"
->;
+> & {
+  /** Display-only authentication information; not columns in public.users. */
+  authProviders?: Array<"google" | "zalo">;
+};
 
 export type UpdateProfileInput = {
   name: string;

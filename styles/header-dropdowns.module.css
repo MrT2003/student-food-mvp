@@ -18,7 +18,8 @@
 .unread .dot { background:#ff4d12; }
 .account { width:290px; padding:18px 20px 12px; }
 .identity { display:flex; gap:15px; align-items:center; padding-bottom:16px; border-bottom:1px solid #eee; }
-.avatar { display:grid; place-items:center; width:58px; height:58px; flex-shrink:0; border-radius:50%; background:#ffad96; color:#fff; font-size:26px; }
+.avatar { position:relative; overflow:hidden; display:grid; place-items:center; width:58px; height:58px; flex-shrink:0; border-radius:50%; background:#ffad96; color:#fff; font-size:26px; }
+.avatarImage { object-fit:cover; }
 .identity strong { display:block; font-size:18px; font-weight:700; }
 .identity p { color:var(--sf-muted); font-size:15px; margin:5px 0 0; }
 .accountLinks { padding:10px 0; border-bottom:1px solid #eee; }

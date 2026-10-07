@@ -169,6 +169,13 @@ export async function getCurrentProfile(): Promise<AuthProfile | null> {
     avatar_url: data?.avatar_url || googleAvatar,
     status: data?.status ?? "active",
     work_for_restaurant_id: data?.work_for_restaurant_id ?? null,
+    authProviders: [
+      ...(user.identities?.some((identity) => identity.provider === "google")
+        ? ["google" as const] : []),
+      // The custom Zalo callback creates Auth accounts with this email format.
+      ...(/^\d+@zalo\.app$/i.test(user.email ?? "")
+        ? ["zalo" as const] : []),
+    ],
   };
 }
 

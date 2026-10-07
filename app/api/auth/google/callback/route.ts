@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 // The client you created from the Server-Side Auth instructions
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   // Protect redirect link from hacker 
   // if next is a malicious link attached by hacker such as next = "htps://hacker-website.com"
   // then next check will be false and return to the landing page by reset next = "/"
-  if (!next.startsWith('/')) {
+  if (!next.startsWith('/') || next.startsWith('//') || next.includes('\\')) {
     // if "next" is not a relative URL, use the default
     next = '/'
   }
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
       const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || ''
 
       // 2. Insert/Update vào bảng profiles trong Database của bạn
-      const { error: dbError } = await supabase.from('users').upsert(
+      const { error: dbError } = await createAdminClient().from('users').upsert(
         {
           id: user.id, // Primary Key trùng với auth.users.id
           role: "student",
@@ -36,12 +37,12 @@ export async function GET(request: Request) {
           name: fullName,
           avatar_url: avatarUrl,
         },
-        { onConflict: 'id' }
+        { onConflict: 'id', ignoreDuplicates: true }
       )
 
       if (dbError) {
         console.error("Lỗi khởi tạo user trong DB tại Callback:", dbError.message)
-        // Vẫn cho redirect tiếp để AuthProvider hoặc Onboarding xử lý
+        return NextResponse.redirect(`${origin}/auth/auth-code-error`)
       }
 
       // 3. Xử lý Redirect như bình thường

@@ -182,7 +182,7 @@ export const ZaloAuthService = {
       process.env.NODE_ENV === "production"
         ? "ZALO_CALLBACK_URL_PRODUCT"
         : "ZALO_CALLBACK_URL_DEV";
-    const redirectUri = process.env.ZALO_CALLBACK_URL_DEV;
+    const redirectUri = process.env[callbackVariable]?.trim();
 
     if (!appID || !redirectUri) {
       throw new Error(

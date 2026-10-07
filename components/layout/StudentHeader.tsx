@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, ShoppingCart, Utensils } from "lucide-react";
-import { previewAccount } from "@/lib/home/mock-data";
+import { useAuthStore } from "@/store/useAuthStore";
 import { AccountDropdown, NotificationDropdown } from "./HeaderDropdowns";
 import {
   headerNotifications,
@@ -16,6 +17,12 @@ import { useCartStore } from "@/store/useCartStore";
 type Panel = "notifications" | "account" | null;
 
 export default function StudentHeader() {
+  const user = useAuthStore((state) => state.user);
+  const authStatus = useAuthStore((state) => state.status);
+  const name = user?.name?.trim() || "Tài khoản";
+  const initial = Array.from(name)[0]?.toUpperCase() || "U";
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
+  const avatarUrl = user?.avatar_url;
   const restaurantCount = useCartStore(
     (state) =>
       new Set(
@@ -136,7 +143,7 @@ export default function StudentHeader() {
               <span className={styles.notificationBadge}>{unreadCount}</span>
             )}
           </button>
-          <button
+          {user ? <button
             type="button"
             className={styles.accountButton}
             aria-expanded={panel === "account"}
@@ -145,10 +152,19 @@ export default function StudentHeader() {
             }
             onClick={() => toggle("account")}
           >
-            <span className={styles.avatar}>{previewAccount.initial}</span>
-            <span className={styles.accountName}>{previewAccount.name}</span>
+            <span className={styles.avatar}>
+              {avatarUrl && avatarUrl !== failedAvatar ? (
+                <Image src={avatarUrl} alt="" fill sizes="44px" unoptimized
+                  className={styles.avatarImage} onError={() => setFailedAvatar(avatarUrl)} />
+              ) : initial}
+            </span>
+            <span className={styles.accountName} title={name}>{name}</span>
             <ChevronDown size={21} aria-hidden="true" />
-          </button>
+          </button> : authStatus === "loading" ? (
+            <span role="status">Đang tải tài khoản...</span>
+          ) : (
+            <Link href="/auth/login" className={styles.accountButton}>Đăng nhập</Link>
+          )}
           {panel === "notifications" && (
             <NotificationDropdown
               notifications={notifications}
@@ -166,10 +182,12 @@ export default function StudentHeader() {
               }
             />
           )}
-          {panel === "account" && (
+          {panel === "account" && user && (
             <AccountDropdown
-              name={previewAccount.name}
-              initial={previewAccount.initial}
+              name={name}
+              initial={initial}
+              avatarUrl={avatarUrl}
+              phone={user.phone}
               onNavigate={() => setPanel(null)}
             />
           )}
