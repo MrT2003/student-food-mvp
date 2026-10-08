@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { formatMoney as money } from "@/lib/format";
 import { useCartSummary } from "@/lib/cart/useCartSummary";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
+import { cartSync } from "@/lib/cart/cart-sync";
 import {
   getCartItemTotal,
   getCartItemUnitPrice,
@@ -39,6 +40,7 @@ export default function OrderConfirmView() {
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const addressInput = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
@@ -48,7 +50,7 @@ export default function OrderConfirmView() {
 
   const { items, groups, quantity: totalQuantity, subtotal: total } = useCartSummary();
 
-  function handleConfirm(event: FormEvent<HTMLFormElement>) {
+  async function handleConfirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (submitting.current) return;
@@ -63,16 +65,21 @@ export default function OrderConfirmView() {
     }
 
     submitting.current = true;
-
-    const result = checkoutCart();
-
-    if (!result.ok) {
+    setIsSubmitting(true);
+    try {
+      await cartSync.flush();
+      const result = checkoutCart();
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      router.replace("/cart/success");
+    } catch {
+      setError("Chưa thể đồng bộ giỏ hàng. Vui lòng thử lại trước khi đặt hàng.");
+    } finally {
       submitting.current = false;
-      setError(result.message);
-      return;
+      setIsSubmitting(false);
     }
-
-    router.replace("/cart/success");
   }
 
   return (
@@ -371,9 +378,9 @@ export default function OrderConfirmView() {
           <button
             type="submit"
             className={styles.primaryButton}
-            disabled={items.length === 0}
+            disabled={items.length === 0 || isSubmitting}
           >
-            Xác nhận đặt hàng
+            {isSubmitting ? "Đang xử lý…" : "Xác nhận đặt hàng"}
             <ArrowRight size={23} aria-hidden="true" />
           </button>
 

@@ -1,6 +1,36 @@
 import type { SelectedOption } from "@/types/cart.types";
 import type { OptionSnapshot } from "@/types/order.types";
-import type { MenuItemDetail } from "@/types/restaurant.types";
+import type { MenuItemDetail, MenuOptionGroupDetail } from "@/types/restaurant.types";
+
+// Selection state and cart payload share the same shape; never read IDs from DOM.
+export function toggleSelectedOption(
+  selected: readonly SelectedOption[],
+  group: MenuOptionGroupDetail,
+  optionId: string,
+): SelectedOption[] {
+  if (!group.is_active || !group.options.some(
+    (option) => option.id === optionId && option.is_active && option.group_id === group.id,
+  )) return [...selected];
+
+  if (group.is_multiple) {
+    return selected.some((option) => option.option_id === optionId)
+      ? selected.filter((option) => option.option_id !== optionId)
+      : normalizeSelectedOptions([...selected, { option_id: optionId }]);
+  }
+
+  return normalizeSelectedOptions([
+    ...clearSelectedOptionGroup(selected, group),
+    { option_id: optionId },
+  ]);
+}
+
+export function clearSelectedOptionGroup(
+  selected: readonly SelectedOption[],
+  group: MenuOptionGroupDetail,
+): SelectedOption[] {
+  const groupIds = new Set(group.options.map((option) => option.id));
+  return selected.filter((option) => !groupIds.has(option.option_id));
+}
 
 export function normalizeSelectedOptions(
   selected: readonly SelectedOption[],

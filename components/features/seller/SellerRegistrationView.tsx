@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useSellerPreviewStore } from "@/store/useSellerPreviewStore";
 import {
   useEffect,
   useRef,
@@ -67,6 +69,7 @@ const benefits = [
 ];
 
 export default function SellerRegistrationView() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -205,13 +208,20 @@ export default function SellerRegistrationView() {
     setErrors(nextErrors);
     if (nextErrors.length > 0) return;
 
-    // Điểm tích hợp API tạo cửa hàng sau này.
-    // Chưa upload ảnh, lưu database hoặc thay đổi quyền tài khoản.
-    setMessage(
-      `Thông tin cửa hàng "${name.trim()}" hợp lệ ở phía frontend. ` +
-        "Đây là bản xem trước: chưa tạo cửa hàng, chưa tải ảnh lên " +
-        "và chưa chuyển sang Seller Dashboard.",
-    );
+    // Replace with a successful API response before navigating in production.
+    // Session draft does not upload images, create a restaurant or grant roles.
+    try {
+      useSellerPreviewStore.getState().registerPreview({
+        name: name.trim(), description: description.trim(), location: location.trim(), cash, bank,
+        hours: scheduleMode === "later" ? "Giờ hoạt động: Chưa thiết lập" : scheduleMode === "same"
+          ? `${enabledDays.map((day) => day.label).join(", ")}: ${openTime} – ${closeTime}`
+          : enabledDays.map((day) => `${day.label}: ${day.open} – ${day.close}`).join("; "),
+      });
+    } catch {
+      setErrors(["Không lưu được bản xem trước trong phiên trình duyệt. Vui lòng kiểm tra quyền lưu trữ và thử lại."]);
+      return;
+    }
+    router.push("/seller");
   }
 
   return (
@@ -595,6 +605,7 @@ export default function SellerRegistrationView() {
           {message && (
             <p className={styles.previewNotice} role="status">
               {message}
+              {" "}<Link href="/seller">Xem tổng quan seller (demo)</Link>
             </p>
           )}
 
@@ -613,7 +624,7 @@ export default function SellerRegistrationView() {
             quản lý cửa hàng.
           </p>
           <p className={styles.previewLabel}>
-            Bản UI mẫu: chưa lưu dữ liệu hoặc chuyển trang.
+            Bản UI mẫu: lưu thông tin bản xem trước trong phiên trình duyệt và chuyển đến Tổng quan. Chưa tạo cửa hàng, tải ảnh lên hoặc cấp quyền seller.
           </p>
         </form>
       </section>

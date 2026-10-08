@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { cartSync } from "@/lib/cart/cart-sync";
 
 import type { AddCartItemInput, Cart, CartItem } from "@/types/cart.types";
 
@@ -119,6 +120,13 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
         ...get().cart,
         updated_at: new Date().toISOString(),
       },
+    });
+    cartSync.enqueue({
+      cart_id: get().cart.id,
+      items: rows.map(({ id, menu_item_id, restaurant_id, quantity, selected_options }) => ({
+        id, menu_item_id, restaurant_id, quantity,
+        selected_options: selected_options.map((option) => ({ ...option })),
+      })),
     });
   }
 

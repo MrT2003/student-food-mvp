@@ -21,9 +21,11 @@ import type {
 } from "@/types/restaurant.types";
 
 import {
-  normalizeSelectedOptions,
+  clearSelectedOptionGroup,
   resolveSelectedOptions,
+  toggleSelectedOption,
 } from "@/lib/cart/options";
+import type { SelectedOption } from "@/types/cart.types";
 
 import { useCartStore } from "@/store/useCartStore";
 import { useFlyToCart } from "@/lib/cart/useFlyToCart";
@@ -46,11 +48,16 @@ function FoodPlaceholder({ drink }: { drink: boolean }) {
 }
 
 export default function DishView({ restaurant, item }: Props) {
+  // Different dishes must not inherit the previous dish's option IDs or quantity.
+  return <DishSelection key={item.id} restaurant={restaurant} item={item} />;
+}
+
+function DishSelection({ restaurant, item }: Props) {
   const addCatalogItem = useCartStore((state) => state.addCatalogItem);
 
   const { sourceRef, flyToCart } = useFlyToCart();
 
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selected, setSelected] = useState<SelectedOption[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [notice, setNotice] = useState("");
 
@@ -61,17 +68,14 @@ export default function DishView({ restaurant, item }: Props) {
       options: group.options.filter((option) => option.is_active),
     }));
 
+  const selectedIds = new Set(selected.map((option) => option.option_id));
   const selectedOptions = groups.flatMap((group) =>
     group.options
-      .filter((option) => selectedIds.includes(option.id))
+      .filter((option) => selectedIds.has(option.id))
       .map((option) => ({
         ...option,
         groupName: group.name,
       })),
-  );
-
-  const selected = normalizeSelectedOptions(
-    selectedIds.map((option_id) => ({ option_id })),
   );
 
   // Hiển thị giá tạm tính trong lúc người dùng đang chọn.
@@ -93,27 +97,13 @@ export default function DishView({ restaurant, item }: Props) {
   const restaurantHref = `/restaurants/${encodeURIComponent(restaurant.slug)}`;
 
   function toggleOption(group: MenuOptionGroupDetail, optionId: string) {
-    setSelectedIds((current) => {
-      if (group.is_multiple) {
-        return current.includes(optionId)
-          ? current.filter((id) => id !== optionId)
-          : [...current, optionId];
-      }
-
-      const groupIds = new Set(group.options.map((option) => option.id));
-
-      const otherGroups = current.filter((id) => !groupIds.has(id));
-
-      return [...otherGroups, optionId];
-    });
+    setSelected((current) => toggleSelectedOption(current, group, optionId));
 
     setNotice("");
   }
 
   function clearGroup(group: MenuOptionGroupDetail) {
-    const groupIds = new Set(group.options.map((option) => option.id));
-
-    setSelectedIds((current) => current.filter((id) => !groupIds.has(id)));
+    setSelected((current) => clearSelectedOptionGroup(current, group));
 
     setNotice("");
   }
@@ -222,13 +212,13 @@ export default function DishView({ restaurant, item }: Props) {
                   <label
                     key={option.id}
                     className={styles.radioOption}
-                    data-selected={selectedIds.includes(option.id)}
+                    data-selected={selectedIds.has(option.id)}
                   >
                     <input
                       type={group.is_multiple ? "checkbox" : "radio"}
                       name={`option-group-${group.id}`}
                       value={option.id}
-                      checked={selectedIds.includes(option.id)}
+                      checked={selectedIds.has(option.id)}
                       onChange={() => toggleOption(group, option.id)}
                     />
 
