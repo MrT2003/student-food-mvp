@@ -6,11 +6,21 @@ import { hasGoogleIdentity } from "@/services/zalo-account.service";
 
 export async function GET() {
   try {
-    const client = await createClient();
-    const { data, error } = await client.auth.getUser();
+    // Init supabaseServer instance 
+    const supabaseServer = await createClient();
+    // Extract user information from the account linked with Google 
+    const { data, error } = await supabaseServer.auth.getUser();
+    // If fail to extract infor then return error and force user login again 
     if (error || !data.user) return NextResponse.json({ error: "Vui lòng đăng nhập lại." }, { status: 401 });
-    const { data: linked, error: linkedError } = await createAdminClient().from("user_zalo_identities")
-      .select("user_id").eq("user_id", data.user.id).maybeSingle();
+    // // Init supabase admin instance 
+    // Because policy is that authenticated can read the data from the table user_zalo_identites so that we do not need to instantiate 
+    // the supabaseAdmin here 
+    // const supabaseAdmin = createAdminClient();
+    
+    // Extract information from user_zalo_identites to check whether the zalo account is already linked with google account 
+    // If the data is null meaning that the user not yet link with the same account with google and zalo 
+    const { data: linked, error: linkedError } = await supabaseServer.from("user_zalo_identities").select("user_id").eq("user_id", data.user.id).maybeSingle();
+    // Send response extracted data from user_zalo_identities 
     if (linkedError) throw linkedError;
     return NextResponse.json({
       userId: data.user.id,
@@ -27,8 +37,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Yêu cầu không hợp lệ." }, { status: 403 });
   }
   try {
-    const client = await createClient();
-    const { data, error } = await client.auth.getUser();
+    const supabaseServer = await createClient();
+    const { data, error } = await supabaseServer.auth.getUser();
     if (error || !data.user) return NextResponse.json({ error: "Vui lòng đăng nhập lại." }, { status: 401 });
     if (!hasGoogleIdentity(data.user)) {
       return NextResponse.json({ error: "Tính năng này dành cho tài khoản đã liên kết Google." }, { status: 403 });

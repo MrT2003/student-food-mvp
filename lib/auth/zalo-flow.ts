@@ -8,7 +8,7 @@ type ZaloFlow = {
   mode: "login" | "link";
   userId: string | null;
   state: string;
-  verifier: string;
+  code_verifier: string;
   expiresAt: number;
 };
 
@@ -34,7 +34,7 @@ export function decodeZaloFlow(value?: string): ZaloFlow | null {
     if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return null;
     const flow = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
     if (!flow || !["login", "link"].includes(flow.mode) ||
-      typeof flow.state !== "string" || typeof flow.verifier !== "string" ||
+      typeof flow.state !== "string" || typeof flow.code_verifier !== "string" ||
       !Number.isFinite(flow.expiresAt) || flow.expiresAt <= Date.now() ||
       (flow.mode === "link" && (typeof flow.userId !== "string" || !flow.userId)) ||
       (flow.mode === "login" && flow.userId !== null)) return null;
@@ -43,13 +43,15 @@ export function decodeZaloFlow(value?: string): ZaloFlow | null {
 }
 
 export async function beginZaloFlow(userId: string | null = null) {
-  const verifier = ZaloAuthService.generateCodeVerifier();
+  const code_verifier = ZaloAuthService.generateCodeVerifier();
   const flow: ZaloFlow = {
-    mode: userId ? "link" : "login", userId, verifier,
+    mode: userId ? "link" : "login", 
+    userId, 
+    code_verifier: code_verifier,
     state: randomBytes(32).toString("hex"), expiresAt: Date.now() + 600_000,
   };
   const url = ZaloAuthService.getAuthorizationUrl(
-    ZaloAuthService.generateCodeChallenge(verifier), flow.state,
+    ZaloAuthService.generateCodeChallenge(code_verifier), flow.state,
   );
   const jar = await cookies();
   jar.set(ZALO_FLOW_COOKIE, encodeZaloFlow(flow), {

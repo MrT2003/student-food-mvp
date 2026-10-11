@@ -66,6 +66,7 @@ export default function AccountSecurity() {
   }
 
   const current = methods?.userId === userId ? methods : null;
+  console.log("CURRENT USER DATA: ", current)
   return (
     <section className={styles.card} aria-labelledby="security-title">
       <div className={styles.sectionHeading}>

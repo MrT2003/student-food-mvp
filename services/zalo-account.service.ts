@@ -25,13 +25,23 @@ export async function loginWithVerifiedZalo(
   profile: { id: string; name: string; img_url: string },
 ) {
   if (!/^\d{1,64}$/.test(profile.id)) throw new Error("INVALID_ZALO_ID");
+  // Firstr try to check the user_zalo_identities first. If the userId exist mean that the 
+  // user already link account with both google and zalo
   let userId = await resolveUser(admin, profile.id);
+  // Else, it mean that the account not yet exist
   if (!userId) {
+    // Then it try to create new account from Zalo 
+
+    // Store data into auth.users ( default cuar supabase )
     const { data, error } = await admin.auth.admin.createUser({
-      email: `${profile.id}@zalo.app`, password: randomBytes(48).toString("base64url"),
+      email: `${profile.id}@zalo.app`, 
+      password: randomBytes(48).toString("base64url"),
       email_confirm: true,
     });
     if (error) {
+      // If error is not related to duplicate insert row ( mean that user with this Zalo account is already existed in the database )
+      // then return error.
+      // Else try to sign user in 
       if (!["email_exists", "user_already_exists"].includes(error.code ?? "")) throw error;
       userId = await resolveUser(admin, profile.id);
     } else { userId = data.user?.id ?? null; }
@@ -48,6 +58,7 @@ export async function loginWithVerifiedZalo(
     if (error) throw error;
   }
   // Also checks active profile and ownership atomically, including legacy accounts.
+  // Store data into user_zalo_identity
   await linkZaloAccount(admin, profile.id, userId);
 
   // Issue a one-time Auth token for the SAME user, without changing their password.

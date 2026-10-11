@@ -3,7 +3,8 @@ import { beginZaloFlow } from "@/lib/auth/zalo-flow";
 
 export async function GET() {
   try {
-    const response = NextResponse.redirect(await beginZaloFlow());
+    const authorizationUrl = await beginZaloFlow()
+    const response = NextResponse.redirect(authorizationUrl);
     response.headers.set("Cache-Control", "no-store");
     return response;
   } catch {
