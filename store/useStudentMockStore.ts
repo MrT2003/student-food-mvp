@@ -125,7 +125,7 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
       cart_id: get().cart.id,
       items: rows.map(({ id, menu_item_id, restaurant_id, quantity, selected_options }) => ({
         id, menu_item_id, restaurant_id, quantity,
-        selected_options: selected_options.map((option) => ({ ...option })),
+        selected_options: normalizeSelectedOptions(selected_options),
       })),
     });
   }
@@ -310,6 +310,7 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
           cart_items: state.cart_items,
           restaurants: mockRestaurants,
           menu_items: mockMenuItemDetails,
+      existing_orders: Object.values(state.orderRecords),
         });
 
         const orderRecords = { ...state.orderRecords };

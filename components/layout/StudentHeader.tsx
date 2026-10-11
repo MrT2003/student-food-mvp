@@ -10,12 +10,14 @@ import {
   type HeaderNotification,
 } from "./header-preview-data";
 import styles from "@/styles/home.module.css";
+import sellerStyles from "@/styles/seller-header.module.css";
 import { usePathname } from "next/navigation";
 import { useCartStore } from "@/store/useCartStore";
 
 type Panel = "notifications" | "account" | null;
 
-export default function StudentHeader() {
+export default function StudentHeader({ variant = "student" }: { variant?: "student" | "seller" }) {
+  const seller = variant === "seller";
   const restaurantCount = useCartStore(
     (state) =>
       new Set(
@@ -54,11 +56,11 @@ export default function StudentHeader() {
   }
 
   return (
-    <header className={styles.header}>
-      <div className={styles.headerInner}>
+    <header className={`${styles.header} ${seller ? sellerStyles.header : ""}`}>
+      <div className={`${styles.headerInner} ${seller ? sellerStyles.inner : ""}`}>
         <Link
           href="/"
-          className={styles.brand}
+          className={`${styles.brand} ${seller ? sellerStyles.brand : ""}`}
           aria-label="StudentFood - Trang chủ"
         >
           <span className={styles.brandIcon}>
@@ -71,7 +73,7 @@ export default function StudentHeader() {
             <small>Món ngon, gần bạn hơn</small>
           </span>
         </Link>
-        <nav aria-label="Điều hướng chính" className={styles.navigation}>
+        <nav aria-label="Điều hướng chính" className={`${styles.navigation} ${seller ? sellerStyles.navigation : ""}`}>
           <Link href="/" aria-current={pathname === "/" ? "page" : undefined}>
             Trang chủ
           </Link>
@@ -100,7 +102,7 @@ export default function StudentHeader() {
             Đơn hàng
           </Link>
         </nav>
-        <div ref={actions} className={styles.headerActions}>
+        <div ref={actions} className={`${styles.headerActions} ${seller ? sellerStyles.actions : ""}`}>
           <Link
             href="/cart"
             data-cart-target

@@ -8,7 +8,13 @@ require.extensions[".ts"] = (module, filename) => {
   });
   module._compile(outputText, filename);
 };
-const { toggleSelectedOption: toggle, clearSelectedOptionGroup: clear, createOptionHash, resolveSelectedOptions } = require("../lib/cart/options.ts");
+const { toggleSelectedOption: toggle, clearSelectedOptionGroup: clear, createOptionHash, resolveSelectedOptions, normalizeSelectedOptions } = require("../lib/cart/options.ts");
+assert.deepEqual(normalizeSelectedOptions([
+  { option_id: "pearl", option_name: "Pearl", additional_price: 5000, price: 1 },
+  { option_id: "pearl", group_name: "Topping" },
+  { option_id: "jelly", name: "Jelly" },
+]), [{ option_id: "jelly" }, { option_id: "pearl" }], "Payload strips display fields and duplicate IDs");
+assert.deepEqual(normalizeSelectedOptions([]), [], "No topping produces an empty array");
 const option = (id, group_id, is_active = true) => ({ id, group_id, is_active, option_name: id, additional_price: 5000 });
 const toppings = { id: "toppings", menu_item_id: "dish", name: "Topping", is_active: true, is_multiple: true, is_required: false,
   options: [option("pearl", "toppings"), option("jelly", "toppings"), option("inactive", "toppings", false)] };

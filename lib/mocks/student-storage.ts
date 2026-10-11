@@ -1,6 +1,7 @@
 import type { Cart, CartItem } from "@/types/cart.types";
 import type { OrderDetail } from "@/types/order.types";
 import { createOptionHash } from "@/lib/cart/options";
+import { migrateMockOrderCodes } from "@/lib/mocks/order-codes.mock";
 
 // Local demo data only. Never use this as authentication or server order data.
 export type StudentSnapshot = {
@@ -49,10 +50,10 @@ function validOrder(v: unknown, customerId: string): boolean {
         !(item.menu_item_id === null || id(item.menu_item_id)) ||
         !text(item.item_name_snapshot) || !nullableText(item.image_url) ||
         !quantity(item.quantity) || !money(item.unit_price_snapshot) ||
-        !Array.isArray(item.option_snapshot_price)) return false;
+        !Array.isArray(item.selected_options)) return false;
     ids.add(item.id);
     let extras = 0;
-    for (const option of item.option_snapshot_price) {
+    for (const option of item.selected_options) {
       if (!object(option) || !id(option.option_id) || !text(option.group_name) ||
           !text(option.option_name) || !money(option.additional_price)) return false;
       extras += option.additional_price;
@@ -91,6 +92,18 @@ export function parseStudentSnapshot(raw: string, customerId: string): StudentSn
     restaurants.add(row.restaurant_id);
   }
   for (const [key, order] of Object.entries(v.orderRecords)) {
+    // Read old browser snapshots without dropping order history after the rename.
+    // New snapshots only write selected_options. Preserve invalid data for validation.
+    if (object(order) && Array.isArray(order.order_items)) {
+      for (const item of order.order_items) {
+        if (!object(item)) continue;
+        if (!("selected_options" in item) && "option_snapshot_price" in item) {
+          item.selected_options = item.option_snapshot_price;
+        }
+        if (item.selected_options === null) item.selected_options = [];
+        delete item.option_snapshot_price;
+      }
+    }
     if (!object(order) || key !== order.id || !validOrder(order, customerId)) return fail();
   }
   for (const [key, pref] of Object.entries(v.preferences)) {
@@ -102,5 +115,6 @@ export function parseStudentSnapshot(raw: string, customerId: string): StudentSn
     if (!object(last) || !id(last.sessionId) || !text(last.location) || !text(last.address) ||
         !Object.values(v.orderRecords).some((o) => object(o) && o.session_checkout_id === last.sessionId)) return fail();
   }
-  return v as unknown as StudentSnapshot;
+  const snapshot = v as unknown as StudentSnapshot;
+  return { ...snapshot, orderRecords: migrateMockOrderCodes(snapshot.orderRecords) };
 }

@@ -6,6 +6,7 @@ import type {
 import type { OrderDetail, OrderDetailItem } from "@/lib/orders/order-detail";
 
 import { mockRestaurants, mockMenuItems } from "@/lib/mocks/catalog.mock";
+import { formatTransferContent } from "@/lib/orders/order-code";
 
 const orderDateFormatter = new Intl.DateTimeFormat("vi-VN", {
   timeZone: "Asia/Ho_Chi_Minh",
@@ -60,11 +61,11 @@ export function toOrderDetail(order: OrderRecord): OrderDetail {
       // Đã bao gồm phụ thu tùy chọn.
       unitPrice: item.unit_price_snapshot,
 
-      options: item.option_snapshot_price.map(
+      options: item.selected_options.map(
         (option) => `${option.group_name}: ${option.option_name}`,
       ),
 
-      optionSnapshots: item.option_snapshot_price,
+      optionSnapshots: item.selected_options,
 
       // Menu chỉ dùng chọn icon, không dùng lấy lại tên/giá.
       kind: menuItem?.category === "Nước uống" ? "drink" : "food",
@@ -89,6 +90,8 @@ export function toOrderDetail(order: OrderRecord): OrderDetail {
 
     placedAt: formatOrderDate(order.created_at),
     payment: formatOrderPayment(order.payment_method),
+    transferContent: order.payment_method === "bank_transfer" && restaurant
+      ? formatTransferContent(order.order_code, restaurant.name) : null,
     note: order.customer_notes ?? "",
 
     // Database lưu địa chỉ đầy đủ trong một trường.

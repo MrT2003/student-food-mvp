@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import {
   CalendarDays,
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
   MapPin,
   Phone,
   Search,
+  SlidersHorizontal,
   User,
   Utensils,
   Wallet,
@@ -22,6 +24,8 @@ import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
 import { useSellerPreview } from "@/store/useSellerPreviewStore";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
+import TransferContent from "@/components/ui/TransferContent";
+import { formatTransferContent } from "@/lib/orders/order-code";
 import {
   createSellerOrderFixtures,
   demoSellerRestaurant,
@@ -55,7 +59,7 @@ function Badge({ status }: { status: OrderStatus }) {
   return (
     <span className={`${styles.badge} ${styles[status]}`}>
       <Icon size={16} />
-      {orderStatusLabels[status]}
+      {status === "pending" ? "Chờ xác nhận" : orderStatusLabels[status]}
     </span>
   );
 }
@@ -63,19 +67,17 @@ function Badge({ status }: { status: OrderStatus }) {
 function Item({ item }: { item: SellerOrder["order_items"][number] }) {
   return (
     <div className={styles.item}>
-      <FoodThumbnail
+      {item.image_url ? <Image src={item.image_url} alt={item.item_name_snapshot} width={52} height={52} unoptimized className={styles.thumb} /> : <FoodThumbnail
         kind={
           normalizeSearchText(item.item_name_snapshot).includes("tra")
             ? "drink"
             : "food"
         }
         className={styles.thumb}
-      />
+      />}
       <div>
         <strong>{item.item_name_snapshot}</strong>
-        {item.option_snapshot_price.map((o) => (
-          <small key={o.option_id}>+ {o.option_name}</small>
-        ))}
+        {item.selected_options.length > 0 && <small>+ {item.selected_options.map((o) => o.option_name).join(", ")}</small>}
       </div>
       <span className={styles.quantity}>×{item.quantity}</span>
     </div>
@@ -92,6 +94,7 @@ export default function SellerOrdersView() {
   const [period, setPeriod] = useState("today");
   const [sort, setSort] = useState("newest");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({ filter: "", page: 1 });
   const [notice, setNotice] = useState("");
   const bill = useRef<HTMLElement>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
@@ -124,8 +127,16 @@ export default function SellerOrdersView() {
         (Date.parse(a.created_at) - Date.parse(b.created_at)),
     );
   const selected = selectedSellerOrder(visible, selectedId);
+  const filterKey = JSON.stringify([tab, query, period, sort]);
+  const pageCount = Math.max(1, Math.ceil(visible.length / 3));
+  const page = Math.min(pagination.filter === filterKey ? pagination.page : 1, pageCount);
+  const pageOrders = visible.slice((page - 1) * 3, page * 3);
+  function goToPage(next: number) {
+    setPagination({ filter: filterKey, page: next });
+    setSelectedId(null);
+  }
   useEffect(() => {
-    if (selectedId) bill.current?.focus();
+    if (selectedId) bill.current?.focus({ preventScroll: window.matchMedia("(min-width: 1201px)").matches });
   }, [selectedId]);
 
   function closeBill() {
@@ -153,7 +164,7 @@ export default function SellerOrdersView() {
 
   return (
     <div className={styles.page}>
-      <StudentHeader />
+      <StudentHeader variant="seller" />
       <div
         className={styles.workspace}
         data-bill-open={selected ? "true" : "false"}
@@ -237,17 +248,18 @@ export default function SellerOrdersView() {
                     ? "Danh sách đơn chờ xác nhận"
                     : `Đơn ${sellerTabs.find((t) => t.value === tab)?.label.toLowerCase()}`}
                 </h2>
-                <p>Chọn một đơn để xem đầy đủ thông tin.</p>
+                <p>{tab === "pending" ? "Các đơn mới cần bạn xác nhận." : "Chọn một đơn để xem đầy đủ thông tin."}</p>
               </div>
-              <select
+              <label className={styles.sort}><SlidersHorizontal size={17} /><span>Sắp xếp:</span><select
                 aria-label="Sắp xếp đơn hàng"
                 value={sort}
-                onChange={(e) => setSort(e.target.value)}
+                onChange={(e) => { setSort(e.target.value); setSelectedId(null); }}
               >
                 <option value="newest">Mới nhất</option>
                 <option value="oldest">Cũ nhất</option>
-              </select>
+              </select></label>
             </div>
+            <div className={styles.orderList}>
             {!ready ? (
               <p role="status" className={styles.empty}>
                 Đang tải đơn hàng…
@@ -259,7 +271,7 @@ export default function SellerOrdersView() {
                 <p>Thử trạng thái, từ khóa hoặc khoảng thời gian khác.</p>
               </div>
             ) : (
-              visible.map((order) => (
+              pageOrders.map((order) => (
                 <article
                   key={order.id}
                   className={`${styles.order} ${selectedId === order.id ? styles.selected : ""}`}
@@ -296,9 +308,9 @@ export default function SellerOrdersView() {
                           {order.customer.phone ?? "Đã ẩn số điện thoại"}
                         </span>
                       </div>
-                      <span>
+                      <span className={styles.address}>
                         <MapPin size={17} />
-                        {order.delivery_address}
+                        <span><strong>{(order.delivery_address ?? "Chưa có địa chỉ").split(",")[0]}</strong>{(order.delivery_address ?? "").split(",").slice(1).join(",").trim()}</span>
                       </span>
                       <span>
                         <ClipboardList size={17} />
@@ -320,7 +332,7 @@ export default function SellerOrdersView() {
                         <Item key={item.id} item={item} />
                       ))}
                       {order.order_items.length > 2 && (
-                        <small>+{order.order_items.length - 2} món khác</small>
+                        <small className={styles.moreItems}><b>+{order.order_items.length - 2}</b> món khác</small>
                       )}
                     </div>
                   </div>
@@ -368,6 +380,8 @@ export default function SellerOrdersView() {
                 </article>
               ))
             )}
+            </div>
+            {pageCount > 1 && <nav className={styles.pagination} aria-label="Phân trang đơn hàng"><span>{visible.length} đơn · Trang {page}/{pageCount}</span><div><button disabled={page === 1} onClick={() => goToPage(page - 1)}>Trước</button><button disabled={page === pageCount} onClick={() => goToPage(page + 1)}>Sau</button></div></nav>}
           </section>
           <p className={styles.demo}>
             Bản demo UI · Không phải đơn thật. Thay đổi trạng thái sẽ mất khi
@@ -420,6 +434,7 @@ export default function SellerOrdersView() {
                 Thông tin thanh toán
               </h3>
               <p>{formatOrderPayment(selected.payment_method)}</p>
+              {selected.payment_method === "bank_transfer" && <TransferContent value={formatTransferContent(selected.order_code, draft?.name || demoSellerRestaurant.name)} />}
             </section>
             <section>
               <h3>
@@ -471,8 +486,8 @@ export default function SellerOrdersView() {
             </p>
             <div className={styles.helpRows} aria-hidden="true">
               {sellerTabs.map((t) => (
-                <div key={t.value}>
-                  <CheckCircle2 />
+                <div key={t.value} data-status={t.value}>
+                  {t.value === "pending" ? <Clock3 /> : t.value === "cancelled" ? <XCircle /> : <CheckCircle2 />}
                   <span />
                 </div>
               ))}

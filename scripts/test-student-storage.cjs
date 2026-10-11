@@ -252,7 +252,7 @@ test("Reorder failures are atomic: missing menu, removed options, closed shop, l
   closed.restaurants.find((r) => r.id === order.restaurant_id).operating_status = "closed";
   assert.throws(() => prepareReorder(order, closed), /không nhận đơn/);
   const deletedOption = structuredClone(order);
-  deletedOption.order_items[1].option_snapshot_price = [{ option_id: "missing-option" }];
+  deletedOption.order_items[1].selected_options = [{ option_id: "missing-option" }];
   assert.throws(() => prepareReorder(deletedOption, context), /tùy chọn/);
   const overflow = structuredClone(order);
   overflow.order_items[1].quantity = 100;
@@ -288,14 +288,20 @@ test("Quantity/remove actions validate inputs and prune only the removed shop pr
   stop();
 });
 
-test("V1 snapshot restores without legacy UI; success uses historical prices/status", () => {
+test("Legacy order option snapshots migrate; success preserves historical prices/status", () => {
   const storage = memory();
   let stop = start(storage);
   const selected = drink.option_groups.map((g) => ({ option_id: g.options[0].id }));
   add(drink, selected);
   const order = endLatestOrder();
   const saved = JSON.parse(storage.getItem(key));
-  // Explicit pre-cleanup v1 wire format; no migration or storage reset required.
+  // Simulate browser data saved before the order_items column rename.
+  for (const record of Object.values(saved.orderRecords)) {
+    for (const item of record.order_items) {
+      item.option_snapshot_price = item.selected_options;
+      delete item.selected_options;
+    }
+  }
   const v1 = { version: 1, customerId: initial.cart.student_id, cart: saved.cart,
     cart_items: [], orderRecords: saved.orderRecords, location: saved.location,
     address: saved.address, preferences: {}, lastCheckout: saved.lastCheckout };
@@ -305,14 +311,49 @@ test("V1 snapshot restores without legacy UI; success uses historical prices/sta
     drink.price += 9999;
     stop = start(storage);
     assert.equal(store.getState().storageWarning, null);
+    const restoredItem = store.getState().orderRecords[order.id].order_items[0];
+    assert.equal("option_snapshot_price" in restoredItem, false);
+    assert.deepEqual(restoredItem.selected_options, order.order_items[0].selected_options);
     const result = checkoutView(store.getState());
     assert.equal(result.orders[0].id, order.id);
     assert.equal(result.orders[0].status, "completed");
     assert.equal(result.orders[0].items[0].unitPrice, order.order_items[0].unit_price_snapshot);
-    assert.deepEqual(result.orders[0].items[0].optionSnapshots, order.order_items[0].option_snapshot_price);
+    assert.deepEqual(result.orders[0].items[0].optionSnapshots, order.order_items[0].selected_options);
     assert.equal(result.orders[0].total, order.total);
-    assert.equal(getCheckoutView(saved.orderRecords, "other-customer", saved.lastCheckout).orders.length, 0);
+    assert.equal(getCheckoutView(store.getState().orderRecords, "other-customer", saved.lastCheckout).orders.length, 0);
   } finally { drink.price = originalPrice; stop(); }
+});
+
+test("Order codes migrate without changing UUIDs and continue after reload", () => {
+  const { formatOrderCode, formatTransferContent } = require("../lib/orders/order-code.ts");
+  const { nextMockOrderCode, migrateMockOrderCodes } = require("../lib/mocks/order-codes.mock.ts");
+  const storage = memory();
+  let stop = start(storage);
+  add();
+  store.getState().setAddress("Phòng 101");
+  store.getState().setPreference(simple.restaurant_id, { payment: "bank" });
+  assert.equal(store.getState().checkoutCart().ok, true);
+  const order = Object.values(store.getState().orderRecords)[0];
+  assert.equal(order.order_code, "SF-01-0001");
+  assert.equal(checkoutView(store.getState()).orders[0].transferContent, "SF010001 - COM CO BA");
+  const saved = JSON.parse(storage.getItem(key));
+  saved.orderRecords[order.id].order_code = `DEMO-${order.id}`;
+  stop();
+  storage.setItem(key, JSON.stringify(saved));
+  reset(); stop = start(storage);
+  assert.equal(store.getState().orderRecords[order.id].order_code, "SF-01-0001");
+  assert.deepEqual(store.getState().orderRecords[order.id].order_items, order.order_items);
+  add();
+  assert.equal(store.getState().checkoutCart().ok, true);
+  assert.deepEqual(Object.values(store.getState().orderRecords).map((o) => o.order_code), ["SF-01-0001", "SF-01-0002"]);
+  const high = { ...order, order_code: "SF-01-1000" };
+  assert.equal(nextMockOrderCode(order.restaurant_id, [high]), "SF-01-1001");
+  assert.equal(formatOrderCode(101, 10000), "SF-101-10000");
+  assert.equal(formatTransferContent("SF-01-0001", " Cơm Cô Ba "), "SF010001 - COM CO BA");
+  assert.equal(formatTransferContent("SF-02-0001", "Đồ uống"), "SF020001 - DO UONG");
+  const migrated = migrateMockOrderCodes({ [order.id]: order });
+  assert.deepEqual(migrateMockOrderCodes(migrated), migrated);
+  stop();
 });
 
 console.log(`${passed} storage/reorder tests passed.`);

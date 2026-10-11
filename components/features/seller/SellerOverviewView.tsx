@@ -22,7 +22,7 @@ export default function SellerOverviewView() {
   ];
   return (
     <div className={styles.page}>
-      <StudentHeader />
+      <StudentHeader variant="seller" />
       <div className={styles.workspace}>
         <SellerSidebar active="overview" name={name} />
         <main className={styles.main}>

@@ -22,6 +22,7 @@ import type {
 
 import {
   clearSelectedOptionGroup,
+  normalizeSelectedOptions,
   resolveSelectedOptions,
   toggleSelectedOption,
 } from "@/lib/cart/options";
@@ -115,14 +116,18 @@ function DishSelection({ restaurant, item }: Props) {
     }
 
     try {
+      // Allowlist payload fields: names/prices are for display only.
+      const selected_options = normalizeSelectedOptions(
+        selected.map(({ option_id }) => ({ option_id })),
+      );
       // Báo rõ nhóm nào chưa chọn hoặc lựa chọn không hợp lệ.
-      resolveSelectedOptions(item, selected);
+      resolveSelectedOptions(item, selected_options);
 
       const result = addCatalogItem({
         restaurant_id: restaurant.id,
         menu_item_id: item.id,
         quantity,
-        selected_options: selected,
+        selected_options,
       });
 
       if (!result.ok) {

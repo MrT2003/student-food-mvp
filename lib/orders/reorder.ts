@@ -23,7 +23,7 @@ export function prepareReorder(order: OrderDetail, context: {
     if (!item?.is_active || !item.is_available) {
       throw new Error(`${old.item_name_snapshot}: món không còn khả dụng. Chưa thêm món nào vào giỏ.`);
     }
-    const selected = normalizeSelectedOptions(old.option_snapshot_price.map((o) => ({ option_id: o.option_id })));
+    const selected = normalizeSelectedOptions(old.selected_options.map((o) => ({ option_id: o.option_id })));
     try { getEstimatedUnitPrice(item, selected); } catch {
       throw new Error(`${item.name}: giá hoặc tùy chọn không còn hợp lệ, vui lòng chọn lại ở trang chi tiết món. Chưa thêm món nào vào giỏ.`);
     }

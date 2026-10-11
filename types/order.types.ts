@@ -18,9 +18,9 @@ export type OptionSnapshot = {
 
 export type OrderItem = Omit<
   Tables["order_items"]["Row"],
-  "option_snapshot_price"
+  "selected_options"
 > & {
-  option_snapshot_price: OptionSnapshot[];
+  selected_options: OptionSnapshot[];
 };
 
 export type OrderDetail = Order & {

@@ -1,4 +1,5 @@
-import { mockMenuItemDetails, mockRestaurants } from "@/lib/mocks/catalog.mock";
+import { mockMenuItemDetails, mockRestaurants, mockRestaurantNumbers } from "@/lib/mocks/catalog.mock";
+import { formatOrderCode } from "@/lib/orders/order-code";
 import type { SellerOrder } from "@/lib/seller/orders";
 import type { OrderStatus } from "@/types/order.types";
 
@@ -13,13 +14,13 @@ export function createSellerOrderFixtures(now: string): SellerOrder[] {
     const items = menu.slice(index % 3, index % 3 + (index % 3 + 1)).map((m, n) => ({
       id: `80000000-0000-4000-8000-${String(index * 10 + n + 1).padStart(12, "0")}`,
       order_id: id, menu_item_id: m.id, item_name_snapshot: m.name,
-      unit_price_snapshot: m.price, quantity: 1, option_snapshot_price: [], image_url: m.image_url,
+      unit_price_snapshot: m.price, quantity: 1, selected_options: [], image_url: m.image_url,
     }));
     const total = items.reduce((sum, item) => sum + item.unit_price_snapshot * item.quantity, 0);
     return {
       id, restaurant_id: demoSellerRestaurant.id, student_id: `50000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
       session_checkout_id: `90000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
-      order_code: `SF${String(128 + index).padStart(5, "0")}`, order_status: status,
+      order_code: formatOrderCode(mockRestaurantNumbers[demoSellerRestaurant.id], statuses.length - index), order_status: status,
       payment_method: index % 3 === 2 ? "bank_transfer" : "cash",
       payment_confirmed_at: null, payment_confirmed_by: null,
       subtotal: total, total, delivery_address: ["KTX A, Cổng B, Phòng 302", "KTX C, Tòa C1, Phòng 410", "KTX B, Tòa B2, Phòng 205"][index % 3],

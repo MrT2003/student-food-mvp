@@ -31,6 +31,7 @@ export type OrderDetail = {
 
   placedAt: string;
   payment: string;
+  transferContent: string | null;
   note: string;
 
   deliveryLocation: string;

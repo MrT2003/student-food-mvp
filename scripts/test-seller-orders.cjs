@@ -13,7 +13,7 @@ assert.equal(selectedSellerOrder(pending, pending[0].id), pending[0]);
 assert.equal(selectedSellerOrder([], pending[0].id), undefined);
 assert.equal(selectedSellerOrder(pending, orders[3].id), undefined);
 assert.equal(filterSellerOrders(orders, demoSellerRestaurant.id, "tran minh anh", null).length, 3);
-assert.equal(filterSellerOrders(orders, demoSellerRestaurant.id, "#SF00128", null).length, 1);
+assert.equal(filterSellerOrders(orders, demoSellerRestaurant.id, "#SF-01-0007", null).length, 1);
 assert.equal(filterSellerOrders(orders, "other-shop", "", null).length, 0);
 assert.equal(filterSellerOrders(orders, demoSellerRestaurant.id, "", "2026-10-04").length, 0);
 assert.equal(filterSellerOrders(orders, demoSellerRestaurant.id, "", vietnamDay(now)).length, 7);
