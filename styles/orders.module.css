@@ -1,0 +1,1035 @@
+.page {
+  --ink: #081447;
+  --muted: #657b9e;
+  --orange: #ff4d12;
+  --border: #e9e3da;
+
+  width: min(1528px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 30px 0 36px;
+  color: var(--ink);
+}
+
+.page,
+.page * {
+  box-sizing: border-box;
+}
+
+.page button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.page button:focus-visible {
+  outline: 3px solid #466db2;
+  outline-offset: 4px;
+}
+
+.heading h1 {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.heading p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.filters,
+.scopeFilters,
+.statusFilters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filters {
+  margin: 20px 0 24px;
+}
+
+.scopeButton {
+  min-height: 44px;
+  padding: 9px 25px;
+  border: 1px solid #e8ebef;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 3px 7px rgb(8 20 71 / 4%);
+  font-weight: 600 !important;
+}
+
+.scopeActive {
+  border-color: transparent;
+  background: linear-gradient(110deg, #ff8524, #ff3524);
+  color: #fff;
+}
+
+.filterDivider {
+  width: 1px;
+  height: 30px;
+  margin: 0 10px;
+  background: #dce2eb;
+}
+
+.statusButton,
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.statusButton {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+}
+
+.statusSelected {
+  border-color: currentColor;
+  box-shadow: 0 0 0 2px rgb(8 20 71 / 5%);
+}
+
+.badge {
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.pending {
+  background: #fff3e3;
+  color: #e97b0d;
+}
+
+.accepted {
+  background: #e4f8e6;
+  color: #278b35;
+}
+
+.completed {
+  background: #e5f8e7;
+  color: #2c8d3b;
+}
+
+.statusButton.completed {
+  background: #f0f1f3;
+  color: #737f90;
+}
+
+.cancelled,
+.rejected {
+  background: #ffedef;
+  color: #ef4942;
+}
+
+.section {
+  margin-top: 18px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.sectionHeading h2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.3;
+  letter-spacing: -0.6px;
+}
+
+.sectionIcon,
+.bulbIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #ff8524, #ff4018);
+}
+
+.sectionIcon {
+  width: 40px;
+  height: 40px;
+  margin-right: 4px;
+  border-radius: 50%;
+}
+
+.count {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.currentList {
+  display: grid;
+  gap: 18px;
+}
+
+.currentCard {
+  display: grid;
+  grid-template-columns: 146px minmax(0, 1fr) minmax(270px, 30%);
+  align-items: start;
+  gap: 26px;
+  padding: 22px 24px;
+  border: 1px solid #e7eaf0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(8 20 71 / 2%);
+}
+
+.foodPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid #f0e1d3;
+  border-radius: 12px;
+  color: #dd6c23;
+  background:
+    radial-gradient(circle at 75% 22%, #fff4cf 0 14%, transparent 15%),
+    linear-gradient(135deg, #f6e8d8, #f2cdab);
+}
+
+.foodPlaceholder svg {
+  width: 46%;
+  height: 46%;
+  stroke-width: 1.5;
+}
+
+.drinkPlaceholder {
+  color: #a16d38;
+  background:
+    radial-gradient(circle at 25% 75%, #f8eddf 0 18%, transparent 19%),
+    linear-gradient(135deg, #f3eae1, #dec6a9);
+}
+
+.smallPlaceholder {
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+}
+
+.orderContent,
+.historyContent {
+  min-width: 0;
+}
+
+.orderTitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.orderTitle h3 {
+  margin: 0;
+  font-size: 25px;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
+}
+
+.orderCode {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.metadata {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 0;
+  margin-top: 22px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.metadata > span,
+.historyMetadata > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.metadata > span + span {
+  margin-left: 18px;
+  padding-left: 18px;
+  border-left: 1px solid #e3e8ef;
+}
+
+.itemPreview {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 17px;
+}
+
+.itemPreview strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.itemPreview p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.orderActions {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  gap: 7px;
+  min-width: 0;
+  padding-left: 28px;
+  border-left: 1px solid #e7eaf0;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.total {
+  font-size: 29px;
+  line-height: 1.1;
+  letter-spacing: -0.6px;
+}
+
+.orderDate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 1px 0 5px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.primaryButton,
+.outlineButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 9px 17px;
+  border-radius: 9px;
+  text-decoration: none;
+  font-weight: 600 !important;
+  line-height: 1.2;
+}
+
+.primaryButton {
+  border: 1px solid transparent;
+  background: linear-gradient(110deg, #ff8424, #ff3524);
+  color: #fff;
+}
+
+.outlineButton {
+  border: 1px solid #ff9b80;
+  background: #fff;
+  color: var(--orange);
+}
+
+.primaryButton:hover {
+  filter: brightness(0.96);
+}
+
+.outlineButton:hover {
+  background: #fff7f1;
+}
+
+.infoBanner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 18px 0;
+  padding: 13px 17px;
+  border: 1px solid #ffe1cc;
+  border-radius: 13px;
+  background: #fff6ef;
+}
+
+.bulbIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+}
+
+.infoBanner > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.infoBanner h3 {
+  margin: 0 0 5px;
+  font-size: 18px;
+}
+
+.infoBanner p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.infoBanner > button {
+  flex-shrink: 0;
+}
+
+.textButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--orange);
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.historyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.historyCard {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e7eaf0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.historyTop {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.historyTitle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.historyTitle h3 {
+  margin: 2px 0 0;
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.historyTitle .badge {
+  gap: 5px;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.historyTitle .badge svg {
+  width: 15px;
+  height: 15px;
+}
+
+.historyContent .orderCode {
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.historyMetadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.historyBottom {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) auto auto;
+  align-items: end;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.historyAmount {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.historyAmount strong {
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.historyBottom button {
+  padding-inline: 18px;
+}
+
+.empty {
+  margin: 0;
+  padding: 32px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--muted);
+  text-align: center;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border: 1px solid #d9e6f9;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #315483;
+}
+
+.notice p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.notice button {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border: 1px solid #bfd0e6;
+  border-radius: 7px;
+  background: #fff;
+  color: inherit;
+}
+
+.demoNote {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 1250px) {
+  .currentCard {
+    grid-template-columns: 115px minmax(0, 1fr) 260px;
+    gap: 18px;
+  }
+
+  .orderActions {
+    padding-left: 18px;
+  }
+
+  .orderTitle h3 {
+    font-size: 22px;
+  }
+
+  .historyGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filterDivider {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .page {
+    width: calc(100% - 32px);
+    padding-top: 24px;
+  }
+
+  .currentCard {
+    grid-template-columns: 110px minmax(0, 1fr);
+    padding: 18px;
+  }
+
+  .orderActions {
+    grid-column: 1 / -1;
+    padding: 16px 0 0;
+    border-left: 0;
+    border-top: 1px solid #e7eaf0;
+  }
+
+  .infoBanner {
+    flex-wrap: wrap;
+  }
+
+  .infoBanner > div {
+    flex-basis: calc(100% - 80px);
+  }
+
+  .infoBanner > button {
+    margin-left: 74px;
+  }
+
+  .historyGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .heading p {
+    font-size: 15px;
+  }
+
+  .filters,
+  .scopeFilters,
+  .statusFilters {
+    gap: 8px;
+  }
+
+  .scopeButton {
+    min-height: 40px;
+    padding: 8px 18px;
+  }
+
+  .statusButton {
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 12px !important;
+  }
+
+  .sectionHeading {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .sectionHeading h2 {
+    gap: 6px;
+    font-size: 20px;
+  }
+
+  .sectionIcon {
+    width: 33px;
+    height: 33px;
+  }
+
+  .currentCard {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .orderTitle h3 {
+    font-size: 20px;
+  }
+
+  .badge {
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+
+  .orderCode {
+    font-size: 14px;
+  }
+
+  .metadata {
+    gap: 10px;
+    margin-top: 14px;
+    font-size: 14px;
+  }
+
+  .metadata > span + span {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .itemPreview {
+    gap: 8px;
+  }
+
+  .smallPlaceholder {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .itemPreview strong,
+  .itemPreview p {
+    font-size: 13px;
+  }
+
+  .historyTop {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .historyBottom {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .historyAmount {
+    grid-column: 1 / -1;
+  }
+
+  .infoBanner {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .bulbIcon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .infoBanner > div {
+    flex-basis: calc(100% - 54px);
+  }
+
+  .infoBanner > button {
+    margin-left: 54px;
+  }
+
+  .textButton {
+    font-size: 13px !important;
+  }
+}
+
+/* Orders: bố trí gọn hơn trên laptop và desktop */
+@media (min-width: 1024px) {
+  /* Chỉ tác động layout đang chứa trang Đơn hàng */
+  :global(main):has(> .page) {
+    width: min(1480px, calc(100% - 48px));
+    max-width: none;
+    margin-inline: auto;
+    padding: 18px 0;
+  }
+
+  .page {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Tiêu đề và bộ lọc */
+  .heading h1 {
+    font-size: clamp(30px, 2.2vw, 36px);
+    line-height: 1.2;
+  }
+
+  .heading p {
+    margin-top: 6px;
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .filters {
+    margin: 14px 0 16px;
+    gap: 10px;
+  }
+
+  .scopeFilters,
+  .statusFilters {
+    gap: 10px;
+  }
+
+  .page .scopeButton,
+  .page .statusButton {
+    min-height: 38px;
+    padding: 8px 16px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .filterDivider {
+    height: 26px;
+    margin-inline: 6px;
+  }
+
+  /* Tiêu đề các nhóm đơn hàng */
+  .section {
+    margin-top: 14px;
+  }
+
+  .sectionHeading {
+    margin-bottom: 10px;
+  }
+
+  .sectionHeading h2 {
+    font-size: 23px;
+    line-height: 30px;
+  }
+
+  .sectionIcon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .sectionIcon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Card đơn hàng hiện tại */
+  .currentList {
+    gap: 12px;
+  }
+
+  .currentCard {
+    grid-template-columns: 104px minmax(0, 1fr) minmax(260px, 29%);
+    align-items: center;
+    gap: 20px;
+    padding: 14px 18px;
+  }
+
+  .currentCard > .foodPlaceholder {
+    width: 104px;
+    height: 104px;
+    align-self: center;
+  }
+
+  .orderTitle {
+    gap: 8px 14px;
+  }
+
+  .orderTitle h3 {
+    font-size: 22px;
+    line-height: 28px;
+  }
+
+  .badge {
+    padding: 6px 9px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .badge svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .orderCode {
+    margin-top: 5px;
+    font-size: 15px;
+    line-height: 21px;
+  }
+
+  .metadata {
+    margin-top: 12px;
+    gap: 8px 0;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .metadata > span {
+    gap: 6px;
+  }
+
+  .metadata > span + span {
+    margin-left: 12px;
+    padding-left: 12px;
+  }
+
+  .metadata svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .itemPreview {
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .smallPlaceholder {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .itemPreview strong {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .itemPreview p {
+    margin-top: 2px;
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  /* Tổng tiền và nút thao tác */
+  .orderActions {
+    justify-content: center;
+    gap: 5px;
+    padding-left: 20px;
+  }
+
+  .muted {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .total {
+    font-size: 25px;
+    line-height: 30px;
+  }
+
+  .orderDate {
+    margin: 0 0 3px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .page .primaryButton,
+  .page .outlineButton {
+    min-height: 36px;
+    padding: 7px 12px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  /* Banner hướng dẫn */
+  .infoBanner {
+    gap: 14px;
+    margin: 12px 0;
+    padding: 10px 14px;
+  }
+
+  .bulbIcon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .bulbIcon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .infoBanner h3 {
+    margin-bottom: 3px;
+    font-size: 16px;
+    line-height: 22px;
+  }
+
+  .infoBanner p {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  /* Lịch sử đơn hàng */
+  .historyGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .historyCard {
+    padding: 12px;
+  }
+
+  .historyTop {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .historyTitle {
+    gap: 6px;
+  }
+
+  .historyTitle h3 {
+    font-size: 16px;
+    line-height: 21px;
+  }
+
+  .historyTitle .badge {
+    padding: 5px 7px;
+    font-size: 12px;
+  }
+
+  .historyContent .orderCode {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 19px;
+  }
+
+  .historyMetadata {
+    margin-top: 8px;
+    gap: 6px 12px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .historyMetadata > span {
+    gap: 6px;
+  }
+
+  .historyMetadata svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .historyBottom {
+    grid-template-columns: minmax(80px, 1fr) auto auto;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .historyAmount {
+    gap: 2px;
+  }
+
+  .historyAmount strong {
+    font-size: 22px;
+    line-height: 27px;
+  }
+
+  .page .textButton {
+    font-size: 14px;
+  }
+
+  .demoNote {
+    margin-top: 12px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+}
+
+/* Cửa sổ hẹp: tránh ép ba card lịch sử quá chật */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .currentCard {
+    grid-template-columns: 80px minmax(0, 1fr) 240px;
+    gap: 14px;
+  }
+
+  .currentCard > .foodPlaceholder {
+    width: 80px;
+    height: 80px;
+  }
+
+  .orderActions {
+    padding-left: 14px;
+  }
+
+  .historyGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
