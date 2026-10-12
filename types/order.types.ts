@@ -58,3 +58,33 @@ export type CheckoutResult = {
   session_checkout_id: string;
   orders: CheckoutOrderReference[];
 };
+
+export interface CheckoutItemInput {
+  cartItemId: string;
+  quantity: number;
+  expectedUnitPrice: number;
+}
+
+// Required input to create order
+// 1 order can contains multiple items
+export interface CreateOrderInput {
+  items: CheckoutItemInput[];
+  deliveryAddress: string;
+  customerNotes?: string;
+  paymentMethod: PaymentMethod;
+  expectedTotal: number;
+  sessionCheckoutId?: string;
+}
+
+export interface CreateOrderSummary {
+  orderId: string;
+  orderCode: string;
+  restaurantId: string;
+  subtotal: string;
+  total: string;
+}
+
+export interface CreateOrderResponse {
+  sessionCheckoutId: string;
+  orders: CreateOrderSummary[];
+}

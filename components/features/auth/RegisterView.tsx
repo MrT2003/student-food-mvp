@@ -1,19 +1,19 @@
 "use client";
 
-import Link from "next/link";
-import { Info } from "lucide-react";
-import AuthIntro from "@/components/features/auth/AuthIntro";
 import AuthBenefits from "@/components/features/auth/AuthBenefits";
+import AuthIntro from "@/components/features/auth/AuthIntro";
 import SocialAuthButtons from "@/components/features/auth/SocialAuthButtons";
 import { useSignIn } from "@/lib/auth/useAuthFlow";
 import styles from "@/styles/auth-fit.module.css";
+import { Info } from "lucide-react";
+import Link from "next/link";
 
 type Props = {
   mode?: "register" | "login";
 };
 
 export default function RegisterView({ mode = "register" }: Props) {
-  const { pending, error, continueWithGoogle } = useSignIn();
+  const { pending, error, continueWithGoogle, continueWithZalo } = useSignIn();
   const isRegister = mode === "register";
 
   return (
@@ -59,11 +59,13 @@ export default function RegisterView({ mode = "register" }: Props) {
               isRegister ? "mt-9 max-w-[430px]" : "mt-12 max-w-[460px]",
             ].join(" ")}
           >
+
             <SocialAuthButtons
               mode={mode}
               pending={pending}
               error={error}
               onGoogle={() => void continueWithGoogle()}
+              onZalo={() => void continueWithZalo()}
             />
           </div>
 

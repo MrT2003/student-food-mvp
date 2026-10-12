@@ -90,8 +90,10 @@ export function toOrderDetail(order: OrderRecord): OrderDetail {
 
     placedAt: formatOrderDate(order.created_at),
     payment: formatOrderPayment(order.payment_method),
-    transferContent: order.payment_method === "bank_transfer" && restaurant
-      ? formatTransferContent(order.order_code, restaurant.name) : null,
+    transferContent:
+      order.payment_method === "bank_transfer" && restaurant
+        ? formatTransferContent(order.order_code, restaurant.name)
+        : null,
     note: order.customer_notes ?? "",
 
     // Database lưu địa chỉ đầy đủ trong một trường.

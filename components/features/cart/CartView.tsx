@@ -38,14 +38,20 @@ export default function CartView() {
   const [addressError, setAddressError] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const submitting = useRef(false);
-  const { items, groups, quantity, subtotal, unknownRestaurantIds } = useCartSummary();
+  const { items, groups, quantity, subtotal, unknownRestaurantIds } =
+    useCartSummary();
   const deliveryFee = 0;
   const total = subtotal + deliveryFee;
 
   function changeQuantity(id: string, change: number) {
-    const item = useCartStore.getState().cart_items.find((row) => row.id === id);
+    const item = useCartStore
+      .getState()
+      .cart_items.find((row) => row.id === id);
     if (!item) return;
-    const result = updateQuantity(id, Math.min(99, Math.max(1, item.quantity + change)));
+    const result = updateQuantity(
+      id,
+      Math.min(99, Math.max(1, item.quantity + change)),
+    );
     setMessage(result.ok ? "" : result.message);
   }
 
@@ -83,7 +89,9 @@ export default function CartView() {
         router.push("/cart/confirm");
       }
     } catch {
-      setMessage("Chưa thể đồng bộ giỏ hàng. Các thay đổi vẫn được giữ lại, vui lòng thử lại.");
+      setMessage(
+        "Chưa thể đồng bộ giỏ hàng. Các thay đổi vẫn được giữ lại, vui lòng thử lại.",
+      );
     } finally {
       submitting.current = false;
       setIsSyncing(false);
@@ -182,7 +190,6 @@ export default function CartView() {
                             + {extra.name} (+{money(extra.price)})
                           </p>
                         ))}
-
                       </div>
 
                       <div className={styles.itemActions}>

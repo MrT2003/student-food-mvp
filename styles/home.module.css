@@ -143,8 +143,14 @@
 }
 .accountName {
   font-size: 18px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .avatar {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
   width: 44px;
   height: 44px;
   display: grid;
@@ -153,6 +159,9 @@
   background: #ffad96;
   color: white;
   font-size: 20px;
+}
+.avatarImage {
+  object-fit: cover;
 }
 .headerPanel {
   position: absolute;

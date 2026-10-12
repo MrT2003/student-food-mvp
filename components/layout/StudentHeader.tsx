@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, ShoppingCart, Utensils } from "lucide-react";
-import { previewAccount } from "@/lib/home/mock-data";
+import { useAuthStore } from "@/store/useAuthStore";
 import { AccountDropdown, NotificationDropdown } from "./HeaderDropdowns";
 import {
   headerNotifications,
@@ -16,8 +17,21 @@ import { useCartStore } from "@/store/useCartStore";
 
 type Panel = "notifications" | "account" | null;
 
-export default function StudentHeader({ variant = "student" }: { variant?: "student" | "seller" }) {
+export default function StudentHeader({
+  variant = "student",
+}: {
+  variant?: "student" | "seller";
+}) {
   const seller = variant === "seller";
+
+  const user = useAuthStore((state) => state.user);
+  const authStatus = useAuthStore((state) => state.status);
+
+  const name = user?.name?.trim() || "Tài khoản";
+  const initial = Array.from(name)[0]?.toUpperCase() || "U";
+
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
+  const avatarUrl = user?.avatar_url;
   const restaurantCount = useCartStore(
     (state) =>
       new Set(
@@ -57,7 +71,9 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
 
   return (
     <header className={`${styles.header} ${seller ? sellerStyles.header : ""}`}>
-      <div className={`${styles.headerInner} ${seller ? sellerStyles.inner : ""}`}>
+      <div
+        className={`${styles.headerInner} ${seller ? sellerStyles.inner : ""}`}
+      >
         <Link
           href="/"
           className={`${styles.brand} ${seller ? sellerStyles.brand : ""}`}
@@ -73,7 +89,10 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
             <small>Món ngon, gần bạn hơn</small>
           </span>
         </Link>
-        <nav aria-label="Điều hướng chính" className={`${styles.navigation} ${seller ? sellerStyles.navigation : ""}`}>
+        <nav
+          aria-label="Điều hướng chính"
+          className={`${styles.navigation} ${seller ? sellerStyles.navigation : ""}`}
+        >
           <Link href="/" aria-current={pathname === "/" ? "page" : undefined}>
             Trang chủ
           </Link>
@@ -102,7 +121,10 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
             Đơn hàng
           </Link>
         </nav>
-        <div ref={actions} className={`${styles.headerActions} ${seller ? sellerStyles.actions : ""}`}>
+        <div
+          ref={actions}
+          className={`${styles.headerActions} ${seller ? sellerStyles.actions : ""}`}
+        >
           <Link
             href="/cart"
             data-cart-target
@@ -138,19 +160,43 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
               <span className={styles.notificationBadge}>{unreadCount}</span>
             )}
           </button>
-          <button
-            type="button"
-            className={styles.accountButton}
-            aria-expanded={panel === "account"}
-            aria-controls={
-              panel === "account" ? "home-header-panel" : undefined
-            }
-            onClick={() => toggle("account")}
-          >
-            <span className={styles.avatar}>{previewAccount.initial}</span>
-            <span className={styles.accountName}>{previewAccount.name}</span>
-            <ChevronDown size={21} aria-hidden="true" />
-          </button>
+          {user ? (
+            <button
+              type="button"
+              className={styles.accountButton}
+              aria-expanded={panel === "account"}
+              aria-controls={
+                panel === "account" ? "home-header-panel" : undefined
+              }
+              onClick={() => toggle("account")}
+            >
+              <span className={styles.avatar}>
+                {avatarUrl && avatarUrl !== failedAvatar ? (
+                  <Image
+                    src={avatarUrl}
+                    alt=""
+                    fill
+                    sizes="44px"
+                    unoptimized
+                    className={styles.avatarImage}
+                    onError={() => setFailedAvatar(avatarUrl)}
+                  />
+                ) : (
+                  initial
+                )}
+              </span>
+              <span className={styles.accountName} title={name}>
+                {name}
+              </span>
+              <ChevronDown size={21} aria-hidden="true" />
+            </button>
+          ) : authStatus === "loading" ? (
+            <span role="status">Đang tải tài khoản...</span>
+          ) : (
+            <Link href="/auth/login" className={styles.accountButton}>
+              Đăng nhập
+            </Link>
+          )}
           {panel === "notifications" && (
             <NotificationDropdown
               notifications={notifications}
@@ -168,10 +214,12 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
               }
             />
           )}
-          {panel === "account" && (
+          {panel === "account" && user && (
             <AccountDropdown
-              name={previewAccount.name}
-              initial={previewAccount.initial}
+              name={name}
+              initial={initial}
+              avatarUrl={avatarUrl}
+              phone={user.phone}
               onNavigate={() => setPanel(null)}
             />
           )}

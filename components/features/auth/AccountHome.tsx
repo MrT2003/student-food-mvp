@@ -12,7 +12,7 @@ const roleLabels = {
 
 export default function AccountHome() {
   const user = useAuthStore((state) => state.user);
-  const { logout, pending, error } = useSignOut();
+  const { logout, pending, signOutError: error } = useSignOut();
 
   if (!user) return null;
 

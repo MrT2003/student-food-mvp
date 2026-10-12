@@ -123,10 +123,15 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
     });
     cartSync.enqueue({
       cart_id: get().cart.id,
-      items: rows.map(({ id, menu_item_id, restaurant_id, quantity, selected_options }) => ({
-        id, menu_item_id, restaurant_id, quantity,
-        selected_options: normalizeSelectedOptions(selected_options),
-      })),
+      items: rows.map(
+        ({ id, menu_item_id, restaurant_id, quantity, selected_options }) => ({
+          id,
+          menu_item_id,
+          restaurant_id,
+          quantity,
+          selected_options: normalizeSelectedOptions(selected_options),
+        }),
+      ),
     });
   }
 
@@ -219,12 +224,16 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
     reorderOrder: (orderId) => {
       try {
         const state = get();
-        if (!state.hasHydrated) throw new Error("Vui lòng chờ khôi phục giỏ hàng.");
+        if (!state.hasHydrated)
+          throw new Error("Vui lòng chờ khôi phục giỏ hàng.");
         const order = state.orderRecords[orderId];
         if (!order) throw new Error("Không tìm thấy đơn hàng.");
         const rows = prepareReorder(order, {
-          customerId: state.cart.student_id, cartId: state.cart.id,
-          rows: state.cart_items, restaurants: mockRestaurants, menu: mockMenuItemDetails,
+          customerId: state.cart.student_id,
+          cartId: state.cart.id,
+          rows: state.cart_items,
+          restaurants: mockRestaurants,
+          menu: mockMenuItemDetails,
         });
         // Preserve current address/payment/notes for review at checkout.
         commitCart(rows);
@@ -238,19 +247,30 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
       try {
         validateQuantity(quantity);
         const rows = get().cart_items;
-        if (!rows.some((row) => row.id === id)) throw new Error("Không tìm thấy món trong giỏ.");
-        commitCart(rows.map((row) => row.id === id
-          ? { ...row, quantity, updated_at: new Date().toISOString() } : row));
+        if (!rows.some((row) => row.id === id))
+          throw new Error("Không tìm thấy món trong giỏ.");
+        commitCart(
+          rows.map((row) =>
+            row.id === id
+              ? { ...row, quantity, updated_at: new Date().toISOString() }
+              : row,
+          ),
+        );
         return { ok: true };
-      } catch (error) { return { ok: false, message: errorMessage(error) }; }
+      } catch (error) {
+        return { ok: false, message: errorMessage(error) };
+      }
     },
     removeCartItem: (id) => {
       try {
         const rows = get().cart_items;
-        if (!rows.some((row) => row.id === id)) throw new Error("Không tìm thấy món trong giỏ.");
+        if (!rows.some((row) => row.id === id))
+          throw new Error("Không tìm thấy món trong giỏ.");
         commitCart(rows.filter((row) => row.id !== id));
         return { ok: true };
-      } catch (error) { return { ok: false, message: errorMessage(error) }; }
+      } catch (error) {
+        return { ok: false, message: errorMessage(error) };
+      }
     },
 
     setLocation: (location) => set({ location }),
@@ -310,7 +330,7 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
           cart_items: state.cart_items,
           restaurants: mockRestaurants,
           menu_items: mockMenuItemDetails,
-      existing_orders: Object.values(state.orderRecords),
+          existing_orders: Object.values(state.orderRecords),
         });
 
         const orderRecords = { ...state.orderRecords };
@@ -366,7 +386,9 @@ function snapshot(state: StudentMockState): StudentSnapshot {
 
 // Called after mount only: the server and first browser render both use empty state.
 // Return the unsubscribe function for React StrictMode and layout unmounts.
-export function startStudentPersistence(storage: Pick<Storage, "getItem" | "setItem">) {
+export function startStudentPersistence(
+  storage: Pick<Storage, "getItem" | "setItem">,
+) {
   const key = studentStorageKey(MOCK_CUSTOMER.id);
   let writable = true;
   let warning: string | null = null;
@@ -389,25 +411,40 @@ export function startStudentPersistence(storage: Pick<Storage, "getItem" | "setI
     } catch {
       // Do not overwrite an unreadable/unsupported snapshot with an empty cart.
       writable = false;
-      warning = "Không thể khôi phục dữ liệu demo. Bản lưu cũ được giữ nguyên; thay đổi trong phiên này sẽ không được lưu. Hãy kiểm tra quyền lưu trữ hoặc sao lưu/xóa riêng dữ liệu demo rồi tải lại trang.";
+      warning =
+        "Không thể khôi phục dữ liệu demo. Bản lưu cũ được giữ nguyên; thay đổi trong phiên này sẽ không được lưu. Hãy kiểm tra quyền lưu trữ hoặc sao lưu/xóa riêng dữ liệu demo rồi tải lại trang.";
     }
-    useStudentMockStore.setState({ hasHydrated: true, storageReadFailed: !writable, storageWarning: warning });
+    useStudentMockStore.setState({
+      hasHydrated: true,
+      storageReadFailed: !writable,
+      storageWarning: warning,
+    });
   } else if (useStudentMockStore.getState().storageReadFailed) {
     writable = false;
   }
 
   return useStudentMockStore.subscribe((state, previous) => {
-    if (!writable || state.cart === previous.cart && state.cart_items === previous.cart_items &&
-        state.orderRecords === previous.orderRecords && state.location === previous.location &&
-        state.address === previous.address && state.preferences === previous.preferences &&
-        state.lastCheckout === previous.lastCheckout) return;
+    if (
+      !writable ||
+      (state.cart === previous.cart &&
+        state.cart_items === previous.cart_items &&
+        state.orderRecords === previous.orderRecords &&
+        state.location === previous.location &&
+        state.address === previous.address &&
+        state.preferences === previous.preferences &&
+        state.lastCheckout === previous.lastCheckout)
+    )
+      return;
     try {
       // One write contains both new orders and the emptied cart after checkout.
       storage.setItem(key, JSON.stringify(snapshot(state)));
-      if (state.storageWarning) useStudentMockStore.setState({ storageWarning: null });
+      if (state.storageWarning)
+        useStudentMockStore.setState({ storageWarning: null });
     } catch {
-      const message = "Không thể lưu dữ liệu demo (bộ nhớ đầy hoặc bị chặn). Dữ liệu hiện tại vẫn dùng được, nhưng thay đổi mới có thể mất khi tải lại trang.";
-      if (state.storageWarning !== message) useStudentMockStore.setState({ storageWarning: message });
+      const message =
+        "Không thể lưu dữ liệu demo (bộ nhớ đầy hoặc bị chặn). Dữ liệu hiện tại vẫn dùng được, nhưng thay đổi mới có thể mất khi tải lại trang.";
+      if (state.storageWarning !== message)
+        useStudentMockStore.setState({ storageWarning: message });
     }
   });
 }

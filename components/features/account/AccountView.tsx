@@ -1,5 +1,11 @@
 "use client";
 
+import { useSignOut } from "@/lib/auth/useAuthFlow";
+import { useAuthStore } from "@/store/useAuthStore";
+import { AuthClientService } from "@/services/auth.service";
+import type { AuthProfile } from "@/types/auth.types";
+import styles from "@/styles/account.module.css";
+import { Camera, Info, LogOut, Settings, UserRound } from "lucide-react";
 import Image from "next/image";
 import {
   useEffect,
@@ -8,23 +14,30 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { Camera, Info, LogOut, Settings, UserRound } from "lucide-react";
-import styles from "@/styles/account.module.css";
-import AccountSuccessModal from "./AccountSuccessModal";
 import AccountSecurity from "./AccountSecurity";
-
-const initialProfile = {
-  name: "Nguyễn Văn A",
-  phone: "0901 234 567",
-};
+import AccountSuccessModal from "./AccountSuccessModal";
 
 export default function AccountView() {
-  const [name, setName] = useState(initialProfile.name);
-  const [phone, setPhone] = useState(initialProfile.phone);
+  const profile = useAuthStore((state) => state.user);
+  const status = useAuthStore((state) => state.status);
+  const error = useAuthStore((state) => state.error);
+  if (status === "loading") return <p role="status">Đang tải tài khoản...</p>;
+  if (!profile) return <p role="alert">{error || "Vui lòng đăng nhập để xem tài khoản."}</p>;
+  return <AccountProfile key={profile.id} profile={profile} />;
+}
+
+function AccountProfile({ profile }: { profile: AuthProfile }) {
+  const [nameDraft, setName] = useState<string | null>(null);
+  const [phoneDraft, setPhone] = useState<string | null>(null);
+  const name = nameDraft ?? profile.name ?? "";
+  const phone = phoneDraft ?? profile.phone ?? "";
+  const setUser = useAuthStore((state) => state.setUser);
+  const [saving, setSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const { logout, pending, signOutError } = useSignOut()
   const fileInput = useRef<HTMLInputElement>(null);
 
   // Giải phóng ảnh xem trước khi đổi ảnh hoặc rời trang.
@@ -57,8 +70,9 @@ export default function AccountView() {
     setMessage("Ảnh đang được xem trước trên thiết bị, chưa tải lên hệ thống.");
   }
 
-  function handleSave(event: FormEvent<HTMLFormElement>) {
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     setError("");
     setMessage("");
 
@@ -75,16 +89,24 @@ export default function AccountView() {
       return;
     }
 
-    setName(trimmedName);
-
-    // UI demo: chưa gọi API, chưa lưu dữ liệu vào Supabase.
-    // Khi có API, chỉ mở popup sau khi cập nhật thành công.
-    setShowSuccessModal(true);
-  }
-
-  function showPendingMessage(action: string) {
-    setError("");
-    setMessage(`${action} chưa được kết nối API.`);
+    if (avatarUrl) {
+      setError("Ảnh mới chưa được tải lên. Hãy bỏ ảnh xem trước trước khi lưu thông tin.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const updated = await AuthClientService.updateMyProfile({
+        name: trimmedName, phone: normalizedPhone, avatarUrl: profile.avatar_url,
+      });
+      setUser(updated);
+      setName(null);
+      setPhone(null);
+      setShowSuccessModal(true);
+    } catch (error) {
+      setError(AuthClientService.getAuthErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -111,17 +133,18 @@ export default function AccountView() {
           <div className={styles.avatarColumn}>
             <div className={styles.avatarWrapper}>
               <div className={styles.avatar}>
-                {avatarUrl ? (
+                {avatarUrl || profile.avatar_url ? (
                   <Image
-                    src={avatarUrl}
-                    alt="Ảnh đại diện đang xem trước"
+                    src={avatarUrl || profile.avatar_url!}
+                    alt="Ảnh đại diện"
                     fill
-                    unoptimized
+                    unoptimized // Dùng unoptimized nếu chưa config domain Google trong next.config.mjs
                     sizes="134px"
                     className={styles.avatarImage}
                   />
                 ) : (
-                  <span>N</span>
+                  /* Hiển thị chữ cái đầu tiên của Tên thay vì cố định chữ N */
+                  <span>{name ? name.charAt(0).toUpperCase() : "U"}</span>
                 )}
               </div>
 
@@ -151,6 +174,15 @@ export default function AccountView() {
               <Camera size={21} aria-hidden="true" />
               Thay đổi ảnh
             </button>
+            {avatarUrl && (
+              <button
+                type="button"
+                className={styles.outlineButton}
+                onClick={() => { setAvatarUrl(null); setMessage(""); setError(""); }}
+              >
+                Bỏ ảnh xem trước
+              </button>
+            )}
           </div>
 
           <form className={styles.profileForm} onSubmit={handleSave}>
@@ -199,8 +231,8 @@ export default function AccountView() {
               </p>
             </div>
 
-            <button type="submit" className={styles.primaryButton}>
-              Lưu thay đổi
+            <button type="submit" className={styles.primaryButton} disabled={saving} aria-busy={saving}>
+              {saving ? "Đang lưu..." : "Lưu thay đổi"}
             </button>
           </form>
         </div>
@@ -225,16 +257,17 @@ export default function AccountView() {
         <button
           type="button"
           className={styles.outlineButton}
-          onClick={() => showPendingMessage("Chức năng đăng xuất")}
+          onClick={logout}
+          disabled={pending}
         >
           <LogOut size={21} aria-hidden="true" />
-          Đăng xuất
+          {pending ? "Đang đăng xuất..." : "Đăng xuất"}
         </button>
       </section>
 
-      {error && (
+      {(error || signOutError) && (
         <p className={styles.error} role="alert">
-          {error}
+          {error || signOutError}
         </p>
       )}
 

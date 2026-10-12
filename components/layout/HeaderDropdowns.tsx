@@ -1,3 +1,5 @@
+import { useSignOut } from "@/lib/auth/useAuthFlow";
+import styles from "@/styles/header-dropdowns.module.css";
 import {
   CookingPot,
   CupSoda,
@@ -6,9 +8,10 @@ import {
   Store,
   UserRound,
 } from "lucide-react";
-import type { HeaderNotification } from "./header-preview-data";
-import styles from "@/styles/header-dropdowns.module.css";
+import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
+import type { HeaderNotification } from "./header-preview-data";
 
 const icons = { rice: CookingPot, tea: CupSoda, noodles: Soup, spicy: Soup };
 
@@ -68,15 +71,29 @@ export function NotificationDropdown({
   );
 }
 
+
+interface AccountDropdownProps {
+  name: string;
+  initial: string;
+  avatarUrl?: string | null;
+  phone?: string | null;
+  onNavigate: () => void;
+}
+
 export function AccountDropdown({
   name,
   initial,
+  avatarUrl,
+  phone,
   onNavigate,
-}: {
-  name: string;
-  initial: string;
-  onNavigate: () => void;
-}) {
+}: AccountDropdownProps) {
+  const { logout, pending } = useSignOut();
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
+  const normalizedPhone = phone?.replace(/\s/g, "") ?? "";
+  const maskedPhone = normalizedPhone.length >= 6
+    ? `${normalizedPhone.slice(0, 2)}•• ••• ${normalizedPhone.slice(-3)}`
+    : "Chưa cập nhật số điện thoại";
+
   return (
     <section
       id="home-header-panel"
@@ -84,12 +101,27 @@ export function AccountDropdown({
       aria-label="Tài khoản"
     >
       <div className={styles.identity}>
-        <span className={styles.avatar}>{initial}</span>
+        <span className={styles.avatar}>
+          {avatarUrl && avatarUrl !== failedAvatar ? (
+            <Image
+              src={avatarUrl}
+              alt={name}
+              fill
+              sizes="58px"
+              onError={() => setFailedAvatar(avatarUrl)}
+              unoptimized // Dùng unoptimized cho ảnh Google/bên thứ 3 nếu chưa config domain trong next.config
+              className={styles.avatarImage}
+            />
+          ) : (
+            initial
+          )}
+        </span>
         <div>
           <strong>{name}</strong>
-          <p>09•• ••• 567</p>
+          <p>{maskedPhone}</p>
         </div>
       </div>
+
       <div className={styles.accountLinks}>
         <Link href="/account" onClick={onNavigate}>
           <UserRound aria-hidden="true" />
@@ -100,14 +132,15 @@ export function AccountDropdown({
           Đăng ký bán hàng
         </Link>
       </div>
+
       <button
         type="button"
         className={styles.logout}
-        disabled
-        title="Giao diện mẫu, chưa kết nối phiên đăng nhập"
+        onClick={logout}
+        disabled={pending}
       >
         <LogOut aria-hidden="true" />
-        Đăng xuất
+        {pending ? "Đang xử lý..." : "Đăng xuất"}
       </button>
     </section>
   );
