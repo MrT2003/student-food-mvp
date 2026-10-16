@@ -1,5 +1,6 @@
-import { validateToken } from "@/utilities/auth.utility";
+import {AuthUtilities} from "@/utilities/auth.utility";
 import { isRecord } from "@/utilities/system.utility";
+import { ZaloProfileResponse } from "@/types/auth.types";
 import * as crypto from "crypto";
 import "server-only";
 
@@ -7,11 +8,6 @@ interface ZaloTokenReponse {
   access_token: string;
 }
 
-interface ZaloProfileResponse {
-  id: string;
-  name: string;
-  img_url: string;
-}
 
 interface FailureMsg {
   httpStatus?: number;
@@ -149,7 +145,7 @@ async function sendRequestToZalo(
   }
 }
 
-export const ZaloAuthService = {
+export const ZaloProviderService = {
   // generateCodeVerifier generate a code verifier with length of 43
   generateCodeVerifier(): string {
     const validChars =
@@ -260,7 +256,7 @@ export const ZaloAuthService = {
       requestInit,
     );
     // Validate return access_token
-    if (!validateToken(response.access_token)) {
+    if (!AuthUtilities.validateToken(response.access_token)) {
       return generateFailureReponse("token_validation", "invalid_field", {
         // No Http error at this time so the code is 200
         httpStatus: 200,
@@ -278,7 +274,7 @@ export const ZaloAuthService = {
   ): Promise<ZaloProfileResponse> {
     const stage = "profile_request";
     // Validate whether access_token is in correct format
-    if (!validateToken(access_token)) {
+    if (!AuthUtilities.validateToken(access_token)) {
       return generateFailureReponse("token_validation", "invalid_field", {
         // Attach the format error message of access_token
         field: { access_token: "Token shape is invalid or empty string" },

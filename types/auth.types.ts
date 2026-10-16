@@ -21,3 +21,9 @@ export type UpdateProfileInput = {
   phone: string;
   avatarUrl: string | null;
 };
+
+export interface ZaloProfileResponse {
+  id: string;
+  name: string;
+  img_url: string;
+}
