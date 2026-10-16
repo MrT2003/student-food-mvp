@@ -1,6 +1,6 @@
-// import HomeView from "@/components/features/home/HomeView";
 // import CartTestPanel from "@/components/buttons/addToCartBtn";
-import OrderTestPanel from "@/components/buttons/orderTestPanel";
+// import OrderTestPanel from "@/components/buttons/orderTestPanel";
+import HomeView from "@/components/features/home/HomeView";
 // import HomeView from "@/components/features/home/HomeView";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
@@ -9,6 +9,6 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <OrderTestPanel />;
+  return <HomeView/>;
 }
 

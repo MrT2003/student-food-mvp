@@ -1,7 +1,7 @@
 import "server-only";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import { ZaloAuthService } from "@/services/zalo.service";
+import { ZaloProviderService } from "@/services/zalo-provider.service";
 
 export const ZALO_FLOW_COOKIE = "sf_zalo_flow";
 type ZaloFlow = {
@@ -43,16 +43,16 @@ export function decodeZaloFlow(value?: string): ZaloFlow | null {
 }
 
 export async function beginZaloFlow(userId: string | null = null) {
-  const code_verifier = ZaloAuthService.generateCodeVerifier();
+  const code_verifier = ZaloProviderService.generateCodeVerifier();
   const flow: ZaloFlow = {
+    // If there exist userId then it is link, else it is login 
     mode: userId ? "link" : "login", 
     userId, 
     code_verifier: code_verifier,
     state: randomBytes(32).toString("hex"), expiresAt: Date.now() + 600_000,
   };
-  const url = ZaloAuthService.getAuthorizationUrl(
-    ZaloAuthService.generateCodeChallenge(code_verifier), flow.state,
-  );
+  const codeChallenge = ZaloProviderService.generateCodeChallenge(code_verifier);
+  const url = ZaloProviderService.getAuthorizationUrl( codeChallenge, flow.state);
   const jar = await cookies();
   jar.set(ZALO_FLOW_COOKIE, encodeZaloFlow(flow), {
     httpOnly: true, secure: process.env.NODE_ENV === "production",
