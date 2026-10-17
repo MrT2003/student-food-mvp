@@ -1,7 +1,6 @@
 "use client";
 
 import { create } from "zustand";
-import { cartSync } from "@/lib/cart/cart-sync";
 
 import type {
   AddCartItemInput,
@@ -139,6 +138,11 @@ function mapRawOrderRow(raw: Record<string, unknown>): OrderDetail {
         })
       : [];
 
+    const hasTotalPrice =
+      itemObj.total_price !== null &&
+      itemObj.total_price !== undefined &&
+      Number.isFinite(Number(itemObj.total_price));
+
     return {
       id: String(itemObj.id ?? ""),
       order_id: String(itemObj.order_id ?? raw.id ?? ""),
@@ -148,7 +152,9 @@ function mapRawOrderRow(raw: Record<string, unknown>): OrderDetail {
       image_url:
         typeof itemObj.image_url === "string" ? itemObj.image_url : null,
       quantity: Number(itemObj.quantity ?? 1),
-      unit_price_snapshot: Number(itemObj.unit_price_snapshot ?? 0),
+      unit_price_snapshot: hasTotalPrice
+        ? Number(itemObj.total_price)
+        : Number(itemObj.unit_price_snapshot ?? 0),
       selected_options,
     };
   });
@@ -167,7 +173,7 @@ function mapRawOrderRow(raw: Record<string, unknown>): OrderDetail {
   }, 0);
 
   // RPC create_checkout_orders lưu base_price vào unit_price_snapshot và phụ thu vào option_snapshot_price.
-  // Nếu tổng gồm phụ thu khớp với subtotal của đơn, cộng phụ thu vào unit_price_snapshot để UI hiển thị đúng.
+  // Nếu chưa có cột total_price và tổng gồm phụ thu khớp với subtotal của đơn, cộng phụ thu vào unit_price_snapshot.
   const normalizedItems =
     withOptionsSum === orderSubtotal && baseSum !== orderSubtotal
       ? parsedItems.map((it) => ({
@@ -244,18 +250,6 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
         ...get().cart,
         updated_at: new Date().toISOString(),
       },
-    });
-    cartSync.enqueue({
-      cart_id: get().cart.id,
-      items: rows.map(
-        ({ id, menu_item_id, restaurant_id, quantity, selected_options }) => ({
-          id,
-          menu_item_id,
-          restaurant_id,
-          quantity,
-          selected_options: normalizeSelectedOptions(selected_options),
-        }),
-      ),
     });
   }
 
@@ -336,11 +330,19 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
         const nextOrderRecords: Record<string, OrderDetail> = {
           ...state.orderRecords,
         };
+        let recoveredLastCheckout = state.lastCheckout;
         if (Array.isArray(ordersResponse.data)) {
           for (const rawRow of ordersResponse.data) {
             const detail = mapRawOrderRow(rawRow as Record<string, unknown>);
             if (detail.id) {
               nextOrderRecords[detail.id] = detail;
+              if (!recoveredLastCheckout && detail.session_checkout_id) {
+                recoveredLastCheckout = {
+                  sessionId: detail.session_checkout_id,
+                  location: state.location,
+                  address: detail.delivery_address ?? state.address,
+                };
+              }
             }
           }
         }
@@ -351,6 +353,7 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
           cart_items: mappedRows,
           preferences,
           orderRecords: nextOrderRecords,
+          lastCheckout: recoveredLastCheckout,
         });
       } catch (error) {
         console.error("[useStudentMockStore] syncFromDatabase failed:", error);

@@ -20,7 +20,6 @@ import { useRouter } from "next/navigation";
 import { formatMoney as money } from "@/lib/format";
 import { useCartSummary } from "@/lib/cart/useCartSummary";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
-import { cartSync } from "@/lib/cart/cart-sync";
 import {
   getCartItemTotal,
   getCartItemUnitPrice,
@@ -69,7 +68,6 @@ export default function OrderConfirmView() {
     submitting.current = true;
     setIsSubmitting(true);
     try {
-      await cartSync.flush();
       const result = await checkoutDatabaseCart();
       if (!result.ok) {
         setError(result.message);
@@ -77,7 +75,7 @@ export default function OrderConfirmView() {
       }
       router.replace("/cart/success");
     } catch {
-      setError("Chưa thể đồng bộ giỏ hàng. Vui lòng thử lại trước khi đặt hàng.");
+      setError("Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.");
     } finally {
       submitting.current = false;
       setIsSubmitting(false);

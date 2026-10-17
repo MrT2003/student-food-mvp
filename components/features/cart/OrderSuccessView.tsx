@@ -219,11 +219,6 @@ export default function OrderSuccessView() {
           Đơn hàng của tôi
         </Link>
       </div>
-
-      <p className={styles.demoNote}>
-        Bản xem trước giao diện: chưa gửi đơn đến cửa hàng hoặc thực hiện thanh
-        toán.
-      </p>
     </div>
   );
 }

@@ -2,27 +2,9 @@ import { createClient } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 import { CartUtilities, type SelectedGroup, type CompactSelectedGroup } from "@/utilities/cart_order.utility";
-import type { CartItem as CartItemRow, GetCartResult } from "@/types/cart.types";
+import type { GetCartResult } from "@/types/cart.types";
 import type { CartItem, CartRestaurant } from "@/lib/cart/view-model";
 import { getCartSummary } from "@/lib/cart/calculations";
-
-export type CartSyncInput = {
-  cart_id: string;
-  items: Pick<
-    CartItemRow,
-    "id" | "menu_item_id" | "restaurant_id" | "quantity" | "selected_options"
-  >[];
-};
-
-export const cartService = {
-  async syncCart(snapshot: CartSyncInput): Promise<void> {
-    // Frontend-only adapter: intentionally no HTTP request yet.
-    // Backend integration replaces this method with one atomic full-cart sync.
-    // Send absolute quantities, reconcile removed rows, and calculate prices server-side.
-    // The server must authenticate the cart owner; client IDs are not authorization.
-    void snapshot;
-  },
-};
 
 export interface AddToCartInput {
   menuItemId: string;

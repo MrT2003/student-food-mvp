@@ -19,7 +19,6 @@ import { useCartStore } from "@/store/useCartStore";
 import { formatMoney as money } from "@/lib/format";
 import { useCartSummary } from "@/lib/cart/useCartSummary";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
-import { cartSync } from "@/lib/cart/cart-sync";
 
 function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
   return <FoodThumbnail kind={kind} className={styles.placeholder} />;
@@ -60,7 +59,7 @@ export default function CartView() {
     setMessage(result.ok ? "Đã xóa món khỏi giỏ hàng." : result.message);
   }
 
-  async function handleCheckout(event: FormEvent<HTMLFormElement>) {
+  function handleCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current) return;
     setMessage("");
@@ -84,14 +83,9 @@ export default function CartView() {
     submitting.current = true;
     setIsSyncing(true);
     try {
-      await cartSync.flush();
       if (useCartStore.getState().cart_items.length > 0) {
         router.push("/cart/confirm");
       }
-    } catch {
-      setMessage(
-        "Chưa thể đồng bộ giỏ hàng. Các thay đổi vẫn được giữ lại, vui lòng thử lại.",
-      );
     } finally {
       submitting.current = false;
       setIsSyncing(false);
