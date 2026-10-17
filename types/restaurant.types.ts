@@ -1,4 +1,6 @@
 import type { Database } from "@/types/database.types";
+import type { StudentService } from "@/types/student-service.types";
+
 
 type Tables = Database["public"]["Tables"];
 
@@ -34,4 +36,15 @@ export type MenuItemDetail = MenuItem & {
 export type RestaurantMenu = {
   restaurant: RestaurantPublic;
   items: MenuItemDetail[];
+};
+
+
+export type RestaurantServiceType = Pick<
+  StudentService,
+  "listRestaurants" | "getRestaurantMenu"
+> & {
+  getMenuItem(
+    restaurantSlug: string,
+    itemSlugOrId: string,
+  ): Promise<MenuItemDetail | null>;
 };

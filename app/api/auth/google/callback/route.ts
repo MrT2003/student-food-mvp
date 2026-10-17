@@ -70,9 +70,43 @@ export async function GET(request: Request) {
     if (!ZaloAccountService.hasGoogleIdentity(data.user)) throw new Error("GOOGLE_IDENTITY_MISSING");
     // Client đặc quyền phục vụ kiểm tra profile và RPC đồng bộ email.
     const supabaseAdminClient = createAdminClient();
-    // Profile được trigger tạo khi đăng ký; callback không upsert/reset trạng thái user.
-    // Profile phải tồn tại và active; không tự tạo bù hoặc mở khóa tài khoản.
-    try { await ZaloAccountService.assertActiveProfile(supabaseAdminClient, data.user.id); }
+    // Không còn trigger trên auth.users: đăng nhập Google phải tự tạo profile còn thiếu.
+    // Đặt cả bước tạo và kiểm tra trong try để lỗi profile luôn dẫn tới xóa session.
+    try {
+      // Nhánh link chỉ dùng profile hiện có; không tạo lại profile của tài khoản đang liên kết.
+      if (!linking) {
+        const { data: profile, error: profileReadError } = await supabaseAdminClient
+          .from("users").select("id").eq("id", data.user.id).maybeSingle();
+        if (profileReadError) throw profileReadError;
+
+        if (!profile) {
+          // Chỉ lấy thông tin hiển thị từ identity Google sau khi exchange thành công.
+          // role/status do server quyết định; email xác minh sẽ do RPC đồng bộ ở bước sau.
+          const googleIdentity = data.user.identities?.find(identity => identity.provider === "google");
+          const identityData = googleIdentity?.identity_data;
+          const name = [identityData?.full_name, identityData?.name]
+            .find((value): value is string => typeof value === "string" && value.trim().length > 0);
+          const avatar = [identityData?.avatar_url, identityData?.picture]
+            .find((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+          // ON CONFLICT DO NOTHING: hai callback đồng thời không ghi đè profile của nhau.
+          // Nếu profile đã xuất hiện, giữ nguyên cả role/status, kể cả trạng thái bị khóa.
+          const { error: profileInsertError } = await supabaseAdminClient.from("users").upsert({
+            id: data.user.id,
+            name: name?.trim() || "Sinh viên",
+            avatar_url: avatar?.trim() || null,
+            role: "student",
+            status: "active",
+          }, { onConflict: "id", ignoreDuplicates: true });
+          // Auth và public.users không chung transaction qua hai API này.
+          // Nếu insert thất bại, giữ Auth user để lần đăng nhập sau tạo bù profile.
+          if (profileInsertError) throw profileInsertError;
+        }
+      }
+
+      // Kiểm tra lại sau insert/conflict; tuyệt đối không tự mở khóa profile đã tồn tại.
+      await ZaloAccountService.assertActiveProfile(supabaseAdminClient, data.user.id);
+    }
     // Profile lỗi: xóa session rồi đưa lỗi ra ngoài.
     catch (error) {
       // Xóa session cục bộ khi UUID sai hoặc profile không được phép.
