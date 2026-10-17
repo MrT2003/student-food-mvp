@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import DishView from "@/components/features/dish/DishView";
-import { restaurantService } from "@/services/restaurant.service";
+import { RestaurantService } from "@/services/restaurant.service";
 
 type Props = {
   params: Promise<{
@@ -13,8 +13,8 @@ export default async function DishPage({ params }: Props) {
   const { slug, itemId } = await params;
 
   const [menu, item] = await Promise.all([
-    restaurantService.getRestaurantMenu(slug),
-    restaurantService.getMenuItem(slug, itemId),
+    RestaurantService.getRestaurantMenu(slug),
+    RestaurantService.getMenuItem(slug, itemId),
   ]);
 
   if (!menu || !item) notFound();

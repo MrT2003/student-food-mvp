@@ -1,4 +1,6 @@
 import type { Database } from "@/types/database.types";
+import type { CartItem as DisplayCartItem, CartRestaurant } from "@/lib/cart/view-model";
+import type { getCartSummary } from "@/lib/cart/calculations";
 import type {
   MenuItemDetail,
   RestaurantPublic,
@@ -7,6 +9,14 @@ import type {
 type Tables = Database["public"]["Tables"];
 
 export type Cart = Tables["carts"]["Row"];
+
+// Kết quả đọc giỏ thật: giữ nguyên tên field mà CartView/OrderConfirmView sử dụng.
+// cart = null nghĩa là người dùng chưa tạo giỏ, không cần INSERT khi chỉ xem giỏ.
+export type GetCartResult = ReturnType<typeof getCartSummary> & {
+  cart: Cart | null;
+  items: DisplayCartItem[];
+  restaurants: CartRestaurant[];
+};
 
 // Quy ước JSON gửi trong selected_options.
 // Không chứa giá do khách hàng quyết định.
