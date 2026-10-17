@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { normalizeSearchText as normalize } from "@/lib/format";
-import { exploreRestaurants } from "./mock-data";
+import { exploreRestaurants, type ExploreRestaurant } from "./mock-data";
 
 export const categories = [
   "Cơm",
@@ -15,7 +15,9 @@ export const categories = [
 export type Category = (typeof categories)[number];
 export type Location = "all" | "KTX A" | "KTX B";
 export type SortBy = "popular" | "name" | "menu";
-export default function useExplore() {
+export default function useExplore(
+  initialRestaurants: ExploreRestaurant[] = exploreRestaurants,
+) {
   const [searchInput, setSearchInput] = useState("");
   const [query, setQuery] = useState("");
   const [openOnly, setOpenOnly] = useState(false);
@@ -26,7 +28,7 @@ export default function useExplore() {
   const restaurants = useMemo(() => {
     const search = normalize(query);
 
-    const result = exploreRestaurants.filter((restaurant) => {
+    const result = initialRestaurants.filter((restaurant) => {
       if (openOnly && !restaurant.isOpen) return false;
 
       if (location !== "all" && restaurant.location !== location) {
@@ -60,7 +62,7 @@ export default function useExplore() {
 
       return b.popularity - a.popularity;
     });
-  }, [query, openOnly, location, category, sortBy]);
+  }, [query, openOnly, location, category, sortBy, initialRestaurants]);
 
   function resetFilters() {
     setSearchInput("");

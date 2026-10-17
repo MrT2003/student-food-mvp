@@ -25,6 +25,10 @@ export const OrderServices = {
 			throw new Error('Vui lòng tải giá giỏ hàng trước khi đặt hàng.');
 		}
 
+		if (!input.restaurantPreferences || input.restaurantPreferences.length === 0) {
+			throw new Error("Vui lòng chọn phương thức thanh toán cho từng cửa hàng !");
+		}
+
 		// Create payload 
 		const payload = {
 			// Seperate information of each selected items 
@@ -35,8 +39,11 @@ export const OrderServices = {
 				expected_unit_price: item.expectedUnitPrice,
 			})),
 			p_delivery_address: input.deliveryAddress.trim(),
-			p_customer_notes: input.customerNotes?.trim(),
-			p_payment_method: input.paymentMethod,
+			p_restaurant_preferences: input.restaurantPreferences.map((pref) => ({
+				restaurant_id: pref.restaurant_id,
+				payment_method: pref.payment_method,
+				customer_notes: pref.customer_notes?.trim() || null,
+			})),
 			p_expected_total: input.expectedTotal,
 			p_checkout_session_id: validSessionId,
 		};

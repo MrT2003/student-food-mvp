@@ -11,13 +11,13 @@ const initialFilters: HomeFilters = {
   category: "all",
 };
 
-export function useHome() {
+export function useHome(initialRestaurants: PreviewRestaurant[] = previewRestaurants) {
   const [input, setInput] = useState("");
   const [filters, setFilters] = useState<HomeFilters>(initialFilters);
   const [selected, setSelected] = useState<PreviewRestaurant | null>(null);
   const restaurants = useMemo(
     () =>
-      previewRestaurants.filter((restaurant) => {
+      initialRestaurants.filter((restaurant) => {
         const text = normalize(
           [
             restaurant.name,
@@ -34,7 +34,7 @@ export function useHome() {
             restaurant.categories.includes(filters.category))
         );
       }),
-    [filters],
+    [filters, initialRestaurants],
   );
   function reset() {
     setInput("");

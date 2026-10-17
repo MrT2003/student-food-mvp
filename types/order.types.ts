@@ -25,6 +25,11 @@ export type OrderItem = Omit<
 
 export type OrderDetail = Order & {
   order_items: OrderItem[];
+  restaurant?: {
+    id?: string;
+    name: string;
+    location: string | null;
+  } | null;
 };
 
 // Quán có thể không còn public/active khi xem đơn cũ.
@@ -70,8 +75,9 @@ export interface CheckoutItemInput {
 export interface CreateOrderInput {
   items: CheckoutItemInput[];
   deliveryAddress: string;
+  restaurantPreferences?: RestaurantCheckoutPreference[];
   customerNotes?: string;
-  paymentMethod: PaymentMethod;
+  paymentMethod?: PaymentMethod;
   expectedTotal: number;
   sessionCheckoutId?: string;
 }

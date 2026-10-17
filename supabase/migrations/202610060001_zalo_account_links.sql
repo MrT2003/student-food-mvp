@@ -14,7 +14,7 @@ create policy read_own_zalo_identity on public.user_zalo_identities
   for select to authenticated using (user_id = (select auth.uid()));
 
 -- Only the trusted server may resolve a provider identity into an Auth account.
-create function public.resolve_zalo_user(p_zalo_id text)
+create function public.find_zalo_user(p_zalo_id text)
 returns uuid language sql security definer set search_path = '' as $$
   select coalesce(
     (select user_id from public.user_zalo_identities where zalo_id = p_zalo_id),

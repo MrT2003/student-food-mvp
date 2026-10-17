@@ -19,6 +19,7 @@ export default function AccountSecurity() {
   const [methods, setMethods] = useState<Methods | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [contactPending, setContactPending] = useState(false);
   const [pending, setPending] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
@@ -35,7 +36,14 @@ export default function AccountSecurity() {
         }
         setMethods(data);
         setError("");
-        const result = new URL(window.location.href).searchParams.get("zalo_link");
+        const params = new URL(window.location.href).searchParams;
+        const googleResult = params.get("google_link");
+        setContactPending(googleResult === "contact_pending");
+        if (googleResult) setNotice(googleResult === "success" && data.google
+          ? "Đã liên kết Google với tài khoản hiện tại."
+          : googleResult === "contact_pending" ? "Đã xác thực Google; chưa hoàn tất dữ liệu liên kết. Bấm thử lại."
+          : "Chưa thể liên kết Google. Phiên có thể đã thay đổi hoặc Google đã thuộc tài khoản khác.");
+        const result = params.get("zalo_link");
         if (result && (result !== "success" || data.zalo)) setNotice(feedback[result] || "");
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -65,8 +73,44 @@ export default function AccountSecurity() {
     }
   }
 
+  // Server kiểm tra tài khoản rồi dùng linkIdentity; callback mới lưu mapping và email.
+  async function linkGoogle() {
+    if (pending) return;
+    setPending(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/auth/google/link", { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Không thể liên kết Google.");
+      const url = new URL(data.url);
+      const authOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).origin;
+      // Auth có thể trả URL authorize của Supabase hoặc URL OAuth trực tiếp của Google.
+      const allowed = (url.origin === authOrigin && url.pathname.startsWith("/auth/v1/"))
+        || url.origin === "https://accounts.google.com";
+      if (!allowed || url.username || url.password) throw new Error("Địa chỉ xác thực không hợp lệ.");
+      window.location.assign(url.href);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Không thể liên kết Google.");
+      setPending(false);
+    }
+  }
+
+  // Retry độc lập, không yêu cầu người dùng liên kết Google lần nữa.
+  async function syncContact() {
+    if (pending) return;
+    setPending(true); setError("");
+    try {
+      const response = await fetch("/api/auth/google/contact", { method: "POST" });
+      if (!response.ok) throw new Error("Chưa thể đồng bộ email. Vui lòng thử lại.");
+      setContactPending(false); setNotice("Đã hoàn tất dữ liệu liên kết và email Google.");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("google_link");
+      window.history.replaceState(null, "", url.href);
+    } catch (error) { setError(error instanceof Error ? error.message : "Không thể đồng bộ email."); }
+    finally { setPending(false); }
+  }
+
   const current = methods?.userId === userId ? methods : null;
-  console.log("CURRENT USER DATA: ", current)
+
   return (
     <section className={styles.card} aria-labelledby="security-title">
       <div className={styles.sectionHeading}>
@@ -97,6 +141,10 @@ export default function AccountSecurity() {
                 <button type="button" className={styles.providerButton} disabled={pending} aria-busy={pending} onClick={() => void linkZalo()}>
                   <Link2 size={19} aria-hidden="true" />{pending ? "Đang chuyển đến Zalo..." : "Liên kết Zalo"}
                 </button>
+              ) : provider === "google" && current?.zalo ? (
+                <button type="button" className={styles.providerButton} disabled={pending} aria-busy={pending} onClick={() => void linkGoogle()}>
+                  <Link2 size={19} aria-hidden="true" />{pending ? "Đang chuyển đến Google..." : "Liên kết Google"}
+                </button>
               ) : (
                 <span className={styles.providerPending}>{current ? "Chưa liên kết" : error ? "Chưa xác minh" : "Đang kiểm tra..."}</span>
               )}
@@ -104,6 +152,7 @@ export default function AccountSecurity() {
           );
         })}
       </div>
+      {contactPending && <button type="button" className={styles.providerButton} disabled={pending} onClick={() => void syncContact()}>Hoàn tất liên kết Google</button>}
       {notice && <p className={styles.feedback} role="status">{notice}</p>}
       {error && <p className={styles.error} role="alert">{error} <button type="button" onClick={() => setAttempt((value) => value + 1)}>Thử lại</button></p>}
     </section>

@@ -27,6 +27,7 @@ import {
   toggleSelectedOption,
 } from "@/lib/cart/options";
 import type { SelectedOption } from "@/types/cart.types";
+import { CartUtilities, type SelectedGroup } from "@/utilities/cart_order.utility";
 
 import { useCartStore } from "@/store/useCartStore";
 import { useFlyToCart } from "@/lib/cart/useFlyToCart";
@@ -54,13 +55,14 @@ export default function DishView({ restaurant, item }: Props) {
 }
 
 function DishSelection({ restaurant, item }: Props) {
-  const addCatalogItem = useCartStore((state) => state.addCatalogItem);
+  const addToDatabaseCart = useCartStore((state) => state.addToDatabaseCart);
 
   const { sourceRef, flyToCart } = useFlyToCart();
 
   const [selected, setSelected] = useState<SelectedOption[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [notice, setNotice] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
 
   const groups = item.option_groups
     .filter((group) => group.is_active)
@@ -109,9 +111,11 @@ function DishSelection({ restaurant, item }: Props) {
     setNotice("");
   }
 
-  function handleAddToCart() {
-    if (!canAdd) {
-      setNotice("Món đã hết hoặc quán đang tạm đóng cửa.");
+  async function handleAddToCart() {
+    if (!canAdd || isAdding) {
+      if (!canAdd) {
+        setNotice("Món đã hết hoặc quán đang tạm đóng cửa.");
+      }
       return;
     }
 
@@ -123,11 +127,29 @@ function DishSelection({ restaurant, item }: Props) {
       // Báo rõ nhóm nào chưa chọn hoặc lựa chọn không hợp lệ.
       resolveSelectedOptions(item, selected_options);
 
-      const result = addCatalogItem({
-        restaurant_id: restaurant.id,
-        menu_item_id: item.id,
+      const selectedGroups: SelectedGroup[] = groups
+        .map((group) => ({
+          group_id: group.id,
+          group_name: group.name,
+          options: group.options
+            .filter((option) => selectedIds.has(option.id))
+            .map((option) => ({
+              id: option.id,
+              name: option.option_name,
+              additional_price: option.additional_price,
+            })),
+        }))
+        .filter((group) => group.options.length > 0);
+
+      const optionHash = CartUtilities.generateHash(selectedGroups) || "NONE";
+
+      setIsAdding(true);
+      const result = await addToDatabaseCart({
+        menuItemId: item.id,
+        restaurantId: restaurant.id,
+        optionHash,
         quantity,
-        selected_options,
+        selectedOptions: selectedGroups,
       });
 
       if (!result.ok) {
@@ -143,6 +165,8 @@ function DishSelection({ restaurant, item }: Props) {
           ? error.message
           : "Không thể thêm món vào giỏ hàng.",
       );
+    } finally {
+      setIsAdding(false);
     }
   }
 

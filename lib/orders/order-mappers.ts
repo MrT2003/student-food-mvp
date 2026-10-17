@@ -43,9 +43,9 @@ export function formatOrderPayment(
 export function toOrderDetail(order: OrderRecord): OrderDetail {
   // Thông tin quán hiện tại chỉ để bổ sung phần hiển thị.
   // Thiếu quán không được làm mất đơn.
-  const restaurant = mockRestaurants.find(
-    (entry) => entry.id === order.restaurant_id,
-  );
+  const restaurant =
+    order.restaurant ??
+    mockRestaurants.find((entry) => entry.id === order.restaurant_id);
 
   const items: OrderDetailItem[] = order.order_items.map((item) => {
     const menuItem = mockMenuItems.find(

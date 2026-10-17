@@ -15,8 +15,8 @@ import {
   Utensils,
 } from "lucide-react";
 import useExplore, { categories, type SortBy } from "@/lib/explore/useExplore";
-import type { FoodKind } from "@/lib/explore/mock-data";
-import { popularDishCards } from "@/lib/explore/popular-data";
+import type { ExploreRestaurant, FoodKind } from "@/lib/explore/mock-data";
+import { popularDishCards, type PopularDishCard } from "@/lib/explore/popular-data";
 import styles from "@/styles/explore.module.css";
 import Link from "next/link";
 import { formatMoney as formatPrice } from "@/lib/format";
@@ -49,8 +49,14 @@ function FoodPlaceholder({ kind }: { kind: FoodKind }) {
   );
 }
 
-export default function ExploreView() {
-  const explore = useExplore();
+export default function ExploreView({
+  initialRestaurants,
+  initialPopularDishes = popularDishCards,
+}: {
+  initialRestaurants?: ExploreRestaurant[];
+  initialPopularDishes?: PopularDishCard[];
+}) {
+  const explore = useExplore(initialRestaurants);
 
   return (
     <div className={styles.explorePage}>
@@ -257,7 +263,7 @@ export default function ExploreView() {
         </div>
 
         <div className={styles.dishGrid}>
-          {popularDishCards.slice(0, 6).map((dish) => (
+          {initialPopularDishes.slice(0, 6).map((dish) => (
             <article
               key={`${dish.restaurantId}/${dish.id}`}
               className={styles.dishCard}

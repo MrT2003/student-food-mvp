@@ -28,8 +28,10 @@ function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
 export default function CartView() {
   const router = useRouter();
 
-  const updateQuantity = useCartStore((state) => state.updateCartItemQuantity);
-  const removeCartItem = useCartStore((state) => state.removeCartItem);
+  const updateQuantity = useCartStore(
+    (state) => state.updateDatabaseCartQuantity,
+  );
+  const removeCartItem = useCartStore((state) => state.removeDatabaseCartItem);
   const location = useCartStore((state) => state.location);
   const setLocation = useCartStore((state) => state.setLocation);
   const address = useCartStore((state) => state.address);
@@ -43,20 +45,18 @@ export default function CartView() {
   const deliveryFee = 0;
   const total = subtotal + deliveryFee;
 
-  function changeQuantity(id: string, change: number) {
-    const item = useCartStore
-      .getState()
-      .cart_items.find((row) => row.id === id);
+  async function changeQuantity(id: string, change: number) {
+    const item = items.find((row) => row.id === id);
     if (!item) return;
-    const result = updateQuantity(
+    const result = await updateQuantity(
       id,
       Math.min(99, Math.max(1, item.quantity + change)),
     );
     setMessage(result.ok ? "" : result.message);
   }
 
-  function removeItem(id: string) {
-    const result = removeCartItem(id);
+  async function removeItem(id: string) {
+    const result = await removeCartItem(id);
     setMessage(result.ok ? "Đã xóa món khỏi giỏ hàng." : result.message);
   }
 

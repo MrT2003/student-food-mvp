@@ -46,7 +46,9 @@ export default function OrderConfirmView() {
   const router = useRouter();
 
   const submitting = useRef(false);
-  const checkoutCart = useCartStore((state) => state.checkoutCart);
+  const checkoutDatabaseCart = useCartStore(
+    (state) => state.checkoutDatabaseCart,
+  );
 
   const { items, groups, quantity: totalQuantity, subtotal: total } = useCartSummary();
 
@@ -68,7 +70,7 @@ export default function OrderConfirmView() {
     setIsSubmitting(true);
     try {
       await cartSync.flush();
-      const result = checkoutCart();
+      const result = await checkoutDatabaseCart();
       if (!result.ok) {
         setError(result.message);
         return;
