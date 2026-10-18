@@ -1,0 +1,977 @@
+.page {
+  display: grid;
+  grid-template-columns: 125px minmax(0, 1.6fr) minmax(330px, 1fr);
+  align-items: start;
+  gap: 24px;
+  color: var(--sf-ink);
+}
+
+.stepsColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.backButton {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: #e74713;
+  text-decoration: none;
+}
+
+.steps {
+  width: 100%;
+  margin: 47px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 165px;
+  text-align: center;
+  color: #526174;
+}
+
+.steps li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 87px;
+  bottom: 0;
+  left: calc(50% - 1px);
+  width: 2px;
+  background: #d9d7d4;
+}
+
+.steps li > span {
+  display: grid;
+  place-items: center;
+  width: 49px;
+  height: 49px;
+  border-radius: 50%;
+  background: #dedbd8;
+  color: #34445c;
+  font-size: 21px;
+}
+
+.steps li > p {
+  margin: 9px 0 0;
+  font-size: 16px;
+  line-height: 23px;
+  white-space: nowrap;
+}
+
+.steps .activeStep > span {
+  background: linear-gradient(135deg, #ff8126, #ff4318);
+  color: white;
+}
+
+.steps .activeStep > p {
+  color: var(--sf-ink);
+  font-weight: 700;
+}
+
+.cartColumn {
+  min-width: 0;
+}
+
+.pageHeading {
+  margin: 0 0 21px;
+  padding-left: 15px;
+}
+
+.pageHeading h1 {
+  margin: 0;
+  color: #e74412;
+  font-size: 42px;
+  line-height: 50px;
+  font-weight: 750;
+  letter-spacing: -1px;
+}
+
+.pageHeading p {
+  margin: 3px 0 0;
+  color: #59687a;
+  font-size: 19px;
+  line-height: 27px;
+}
+
+.restaurantCard,
+.sideCard,
+.empty {
+  border: 1px solid #efece8;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgb(110 75 34 / 3%);
+}
+
+.restaurantCard {
+  padding: 12px 28px 14px;
+}
+
+.restaurantCard + .restaurantCard {
+  margin-top: 18px;
+}
+
+.restaurantHeader {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f2f1ef;
+}
+
+.restaurantImage {
+  width: 80px;
+  height: 75px;
+  flex-shrink: 0;
+}
+
+.placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 0 100%, #e9d9c7 0 20%, transparent 21%),
+    var(--sf-section);
+  color: #b59677;
+}
+
+.placeholder svg {
+  width: 38px;
+  height: 38px;
+}
+
+.restaurantTitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 13px;
+}
+
+.restaurantTitle h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+
+.openBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 5px 14px;
+  border-radius: 25px;
+  background: #e1f7df;
+  color: #25842c;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 5px 0 0;
+  color: #59687a;
+  font-size: 18px;
+}
+
+.itemList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itemRow {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 25px;
+  padding: 11px 0;
+}
+
+.itemRow + .itemRow {
+  border-top: 1px solid #f0f0f0;
+}
+
+.itemImage {
+  width: 100px;
+  min-height: 80px;
+  align-self: stretch;
+}
+
+.itemContent {
+  min-width: 0;
+}
+
+.itemContent h3 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  line-height: 25px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}
+
+.itemPrice {
+  margin: 0 0 3px;
+  color: #34445c;
+  font-size: 19px;
+  line-height: 24px;
+}
+
+.itemNote {
+  margin: 0;
+  color: #8a94a4;
+  font-size: 16px;
+  line-height: 23px;
+}
+
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.quantity {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  border: 1px solid #d8dce3;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.quantity button {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #465365;
+}
+
+.quantity button:hover:not(:disabled) {
+  background: #f6f6f6;
+}
+
+.quantity button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quantity output {
+  min-width: 30px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.removeButton {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #ff2417;
+}
+
+.removeButton:hover {
+  background: #fff1ed;
+}
+
+.restaurantSubtotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+  color: #59687a;
+  font-size: 19px;
+}
+
+.restaurantSubtotal strong {
+  color: var(--sf-ink);
+  font-size: 22px;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding-top: 66px;
+}
+
+.sideCard {
+  padding: 16px 22px;
+}
+
+.cardHeading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 14px;
+}
+
+.cardHeading h2 {
+  margin: 0;
+  font-size: 23px;
+  line-height: 29px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+
+.orangeIcon,
+.blueIcon {
+  display: grid;
+  place-items: center;
+  width: 37px;
+  height: 37px;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.orangeIcon {
+  border-radius: 11px;
+  background: linear-gradient(135deg, #ff8126, #ff4a13);
+}
+
+.blueIcon {
+  border-radius: 50%;
+  background: linear-gradient(135deg, #60b7ff, #1673ff);
+}
+
+.field + .field {
+  margin-top: 18px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 7px;
+  color: #59687a;
+  font-size: 17px;
+}
+
+.field input,
+.field select {
+  display: block;
+  width: 100%;
+  min-height: 45px;
+  padding: 10px 16px;
+  border: 1px solid #d9dce4;
+  border-radius: 10px;
+  background: #fff;
+  color: #273349;
+  font: inherit;
+  font-size: 17px;
+}
+
+.field input {
+  min-height: 53px;
+}
+
+.addressHint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0 3px;
+  color: #7a8697;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.addressHint svg {
+  flex-shrink: 0;
+  color: #ff6d14;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 8px;
+  color: #59687a;
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.summaryRow strong {
+  color: var(--sf-ink);
+}
+
+.totalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e4e8;
+  font-size: 21px;
+}
+
+.totalRow output {
+  color: #ff4614;
+  font-size: 29px;
+  line-height: 38px;
+  font-weight: 750;
+}
+
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 57px;
+  margin-top: 12px;
+  padding: 12px 16px;
+  border: 1px solid #ff6526;
+  border-radius: 14px;
+  background: linear-gradient(110deg, #ff8429, #ff351b);
+  color: #fff;
+  text-decoration: none;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.primaryButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.notes {
+  margin: 0;
+  padding-left: 23px;
+  color: #7a8697;
+  font-size: 15px;
+  line-height: 23px;
+  list-style: disc;
+}
+
+.message,
+.error {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.message {
+  color: #59739b;
+}
+
+.error {
+  color: #b42318;
+}
+
+.empty {
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.empty > svg {
+  margin: 0 auto 15px;
+  color: #ff6d14;
+}
+
+.empty h2 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.empty p {
+  color: #7a8697;
+}
+
+.empty .primaryButton {
+  width: auto;
+  font-size: 16px;
+}
+
+@media (max-width: 1399px) {
+  .page {
+    grid-template-columns: 90px minmax(0, 1fr) 335px;
+    gap: 16px;
+  }
+
+  .restaurantCard {
+    padding: 14px 18px;
+  }
+
+  .itemRow {
+    grid-template-columns: 75px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .itemImage {
+    width: 75px;
+    min-height: 85px;
+    grid-row: span 2;
+  }
+
+  .itemActions {
+    grid-column: 2;
+    justify-content: flex-end;
+  }
+
+  .restaurantHeader {
+    gap: 14px;
+  }
+
+  .restaurantTitle h2 {
+    font-size: 21px;
+  }
+
+  .steps li > p {
+    font-size: 13px;
+    white-space: normal;
+  }
+
+  .sideCard {
+    padding: 16px;
+  }
+
+  .cardHeading h2 {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 1050px) {
+  .page {
+    grid-template-columns: 85px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    grid-column: 2;
+    padding-top: 0;
+  }
+
+  .itemRow {
+    grid-template-columns: 90px minmax(0, 1fr) auto;
+  }
+
+  .itemImage {
+    width: 90px;
+    grid-row: auto;
+  }
+
+  .itemActions {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 650px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .stepsColumn {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .backButton {
+    width: 32px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+
+  .backButton svg {
+    width: 28px;
+  }
+
+  .steps {
+    display: flex;
+    margin: 0;
+  }
+
+  .steps li {
+    flex: 1;
+    min-height: 78px;
+  }
+
+  .steps li:not(:last-child)::after {
+    top: 18px;
+    bottom: auto;
+    left: calc(50% + 24px);
+    width: calc(100% - 48px);
+    height: 2px;
+  }
+
+  .steps li > span {
+    width: 37px;
+    height: 37px;
+    font-size: 17px;
+  }
+
+  .steps li > p {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 17px;
+  }
+
+  .pageHeading {
+    padding-left: 0;
+  }
+
+  .pageHeading h1 {
+    font-size: 34px;
+    line-height: 42px;
+  }
+
+  .pageHeading p {
+    font-size: 16px;
+    line-height: 23px;
+  }
+
+  .sidebar {
+    grid-column: 1;
+  }
+
+  .restaurantCard {
+    padding: 13px;
+  }
+
+  .restaurantImage {
+    width: 58px;
+    height: 60px;
+  }
+
+  .restaurantTitle {
+    gap: 6px;
+  }
+
+  .restaurantTitle h2 {
+    font-size: 20px;
+  }
+
+  .openBadge {
+    min-height: 25px;
+    padding: 3px 9px;
+    font-size: 11px;
+  }
+
+  .location {
+    font-size: 15px;
+  }
+
+  .itemRow {
+    grid-template-columns: 75px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .itemImage {
+    width: 75px;
+    grid-row: span 2;
+  }
+
+  .itemActions {
+    grid-column: 2;
+    gap: 12px;
+  }
+
+  .itemContent h3 {
+    font-size: 17px;
+    line-height: 22px;
+  }
+
+  .itemPrice {
+    font-size: 16px;
+  }
+
+  .itemNote {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .restaurantSubtotal {
+    font-size: 16px;
+  }
+
+  .restaurantSubtotal strong {
+    font-size: 19px;
+  }
+}
+
+/* Responsive cart — giữ kích thước dễ đọc */
+@media (min-width: 1024px) {
+  :global(main):has(> .page) {
+    width: min(1480px, calc(100% - 48px));
+    max-width: none;
+    margin-inline: auto;
+    padding: 18px 0 24px;
+  }
+
+  .page {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1.65fr) minmax(310px, 1fr);
+    align-items: start;
+    gap: clamp(16px, 1.4vw, 24px);
+  }
+
+  .pageHeading {
+    padding-left: 0;
+    margin-bottom: 18px;
+  }
+
+  .pageHeading h1 {
+    font-size: clamp(30px, 2.3vw, 38px);
+    line-height: 1.2;
+  }
+
+  .pageHeading p {
+    margin-top: 6px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .backButton {
+    width: 42px;
+    height: 42px;
+  }
+
+  .steps {
+    margin-top: 38px;
+  }
+
+  .steps li {
+    min-height: 160px;
+  }
+
+  .steps li:not(:last-child)::after {
+    top: 78px;
+    bottom: 8px;
+  }
+
+  .steps li > span {
+    width: 44px;
+    height: 44px;
+    font-size: 19px;
+  }
+
+  .steps p {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .restaurantCard {
+    padding: 14px 16px;
+    border-radius: 16px;
+  }
+
+  .restaurantCard + .restaurantCard {
+    margin-top: 14px;
+  }
+
+  .restaurantHeader {
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+
+  .restaurantImage {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
+
+  .restaurantTitle {
+    gap: 9px;
+  }
+
+  .restaurantTitle h2 {
+    font-size: 21px;
+    line-height: 27px;
+  }
+
+  .openBadge {
+    min-height: 28px;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+
+  .location {
+    margin-top: 3px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .itemRow {
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+  }
+
+  .itemImage {
+    grid-row: auto;
+    align-self: center;
+    width: 54px;
+    height: 54px;
+    min-height: 0;
+  }
+
+  .placeholder svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .itemContent h3 {
+    margin: 0 0 3px;
+    font-size: 17px;
+    line-height: 23px;
+  }
+
+  .itemPrice {
+    margin: 0 0 2px;
+    font-size: 16px;
+    line-height: 22px;
+  }
+
+  .itemNote {
+    margin: 0;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .itemActions {
+    grid-column: auto;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .quantity {
+    min-height: 38px;
+    border-radius: 11px;
+  }
+
+  .quantity button {
+    width: 30px;
+    height: 38px;
+  }
+
+  .quantity output {
+    min-width: 26px;
+    font-size: 16px;
+  }
+
+  .removeButton {
+    width: 30px;
+    height: 38px;
+  }
+
+  .restaurantSubtotal {
+    padding-top: 10px;
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  .restaurantSubtotal strong {
+    font-size: 20px;
+    line-height: 26px;
+  }
+
+  .sidebar {
+    grid-column: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 0;
+    min-width: 0;
+  }
+
+  .sideCard {
+    padding: clamp(16px, 1.8vh, 22px);
+    border-radius: 16px;
+  }
+
+  .cardHeading {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .cardHeading h2 {
+    font-size: 20px;
+    line-height: 1.35;
+  }
+
+  .orangeIcon,
+  .blueIcon {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+  }
+
+  .field + .field {
+    margin-top: 16px;
+  }
+
+  .field label {
+    font-size: 15px;
+    margin-bottom: 7px;
+  }
+
+  .field input,
+  .field select {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  .addressHint {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .summaryRow {
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .totalRow {
+    margin-top: 14px;
+    padding-top: 14px;
+    font-size: 19px;
+  }
+
+  .totalRow output {
+    font-size: 27px;
+    line-height: 36px;
+  }
+
+  .primaryButton {
+    min-height: 48px;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+
+  .notes {
+    font-size: 14px;
+    line-height: 22px;
+  }
+
+  .restaurantImage .placeholder svg,
+  .itemImage .placeholder svg {
+    width: 27px;
+    height: 27px;
+  }
+}

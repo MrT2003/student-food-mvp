@@ -1,0 +1,1283 @@
+.page {
+  --ink: #081447;
+  --muted: #657b9e;
+  --orange: #ff4d12;
+  --border: #e3e8f0;
+
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: stretch;
+  gap: 18px;
+  width: min(1456px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 26px 0 30px;
+  color: var(--ink);
+}
+
+.page,
+.page * {
+  box-sizing: border-box;
+}
+
+.page button,
+.page input,
+.page textarea {
+  font: inherit;
+}
+
+.page button {
+  cursor: pointer;
+}
+
+.page input[type="checkbox"],
+.page input[type="radio"] {
+  accent-color: var(--orange);
+}
+
+.page a:focus-visible,
+.page button:focus-visible,
+.page input:focus-visible,
+.page textarea:focus-visible {
+  outline: 3px solid #466db2;
+  outline-offset: 3px;
+}
+
+.intro,
+.formCard {
+  min-width: 0;
+  border: 1px solid #f0e9df;
+  border-radius: 18px;
+  box-shadow: 0 4px 18px rgb(100 64 20 / 4%);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+  background: linear-gradient(145deg, #fffcf8, #faf4eb);
+}
+
+.studentBadge {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border-radius: 30px;
+  background: #ffebdc;
+  color: var(--orange);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.intro h1 {
+  margin: 25px 0 18px;
+  font-size: clamp(28px, 2.7vw, 39px);
+  line-height: 1.2;
+  letter-spacing: -1px;
+}
+
+.intro h1 span {
+  color: var(--orange);
+}
+
+.introText {
+  margin: 0;
+  color: var(--muted);
+  font-size: 19px;
+  line-height: 1.55;
+}
+
+.benefits {
+  display: grid;
+  gap: 29px;
+  margin: 30px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.benefits li {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.benefitIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 68px;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #ffead9;
+  color: var(--orange);
+}
+
+.benefits h2 {
+  margin: 0 0 5px;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.benefits p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.bankNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-top: auto;
+  padding: 20px;
+  border: 1px solid #bddfff;
+  border-radius: 12px;
+  background: #edf6ff;
+}
+
+.bankNotice > svg {
+  flex-shrink: 0;
+  color: #0789ff;
+}
+
+.bankNotice strong {
+  font-size: 16px;
+}
+
+.bankNotice p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.formCard {
+  padding: 20px 32px;
+  background: #fff;
+}
+
+.formHeading h2 {
+  margin: 0;
+  font-size: 33px;
+  line-height: 1.2;
+  letter-spacing: -0.7px;
+}
+
+.formHeading p {
+  margin: 5px 0 15px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.form {
+  display: grid;
+  gap: 15px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.field > label,
+.uploadHeading label,
+.fieldset legend {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.field > label > span,
+.fieldset legend > span {
+  margin-left: 4px;
+  color: var(--orange);
+}
+
+.field > input,
+.textareaWrap textarea,
+.timeField input,
+.dayRow input[type="time"] {
+  width: 100%;
+  min-width: 0;
+  min-height: 43px;
+  padding: 10px 15px;
+  border: 1px solid #d8e0ec;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.page input::placeholder,
+.page textarea::placeholder {
+  color: #8b9bb7;
+}
+
+.textareaWrap {
+  position: relative;
+}
+
+.textareaWrap textarea {
+  display: block;
+  min-height: 95px;
+  padding-bottom: 27px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.counter {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.twoColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+}
+
+.locationInput {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 43px;
+  padding: 0 13px;
+  border: 1px solid #d8e0ec;
+  border-radius: 8px;
+  color: #45638f;
+}
+
+.locationInput svg {
+  flex-shrink: 0;
+}
+
+.locationInput input {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.uploadHeading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.uploadHeading > span {
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: #f1f4f8;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 91px;
+  padding: 10px;
+  border: 1px dashed #cfd9e9;
+  border-radius: 9px;
+  background: #fcfdff;
+  color: var(--muted);
+  font-size: 13px !important;
+}
+
+.imagePreview {
+  width: 82px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 7px;
+}
+
+.removeImage {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--orange);
+  font-size: 13px !important;
+  text-decoration: underline;
+}
+
+.errorText {
+  margin: 0;
+  color: #be2424;
+  font-size: 13px;
+}
+
+.errorText:empty {
+  display: none;
+}
+
+.fieldset {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.fieldset legend {
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+.radioGroup {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.radioGroup label,
+.dayPicker label,
+.dayToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.radioGroup input {
+  width: 21px;
+  height: 21px;
+  margin: 0;
+}
+
+.sameSchedule,
+.dailySchedule {
+  padding: 14px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fcfdff;
+}
+
+.sameSchedule {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  gap: 15px;
+}
+
+.timeField {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.timeField input {
+  padding-inline: 8px;
+  font-weight: 400;
+}
+
+.dayPicker {
+  padding-left: 18px;
+  border-left: 1px solid var(--border);
+}
+
+.dayPicker strong {
+  font-size: 12px;
+}
+
+.dayPicker > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 11px;
+  margin-top: 15px;
+}
+
+.dayPicker label {
+  gap: 4px;
+  font-size: 12px;
+}
+
+.dayPicker input,
+.dayToggle input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+}
+
+.dailySchedule {
+  display: grid;
+  gap: 10px;
+}
+
+.dayRow {
+  display: grid;
+  grid-template-columns: 55px 1fr auto 1fr 30px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.dayRow input:disabled {
+  background: #f1f3f6;
+  color: #8995a8;
+}
+
+.dayRow small {
+  color: var(--muted);
+}
+
+.laterNotice {
+  margin: 0 0 7px;
+  padding: 13px;
+  border-radius: 8px;
+  background: #f5f8fc;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.paymentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.paymentCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.paymentCard > input {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}
+
+.cashIcon,
+.bankIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+
+.cashIcon {
+  background: #fff0e5;
+  color: var(--orange);
+}
+
+.bankIcon {
+  background: #e3f6eb;
+  color: #319b79;
+}
+
+.paymentCard strong,
+.closedOption strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.paymentCard small,
+.closedOption small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.closedOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  cursor: pointer;
+}
+
+.switchInput {
+  position: relative;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 27px;
+  margin: 1px 0 0;
+  border: 0;
+  border-radius: 20px;
+  appearance: none;
+  background: #d2d7e0;
+  cursor: pointer;
+}
+
+.switchInput::before {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: #fff;
+  content: "";
+  transition: transform 150ms ease;
+}
+
+.switchInput:checked {
+  background: var(--orange);
+}
+
+.switchInput:checked::before {
+  transform: translateX(19px);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1.06fr;
+  gap: 16px;
+}
+
+.outlineButton,
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 9px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.3;
+}
+
+.outlineButton {
+  border: 1px solid #ff8a6a;
+  background: #fff;
+  color: var(--orange);
+}
+
+.primaryButton {
+  border: 1px solid transparent;
+  background: linear-gradient(110deg, #ff942d, #ff4d1d);
+  color: #fff;
+}
+
+.primaryButton:hover {
+  filter: brightness(0.96);
+}
+
+.outlineButton:hover {
+  background: #fff7f1;
+}
+
+.footerNote,
+.previewLabel {
+  margin: -7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.previewLabel {
+  color: #99601b;
+}
+
+.errorBox {
+  padding: 14px 16px;
+  border: 1px solid #efb6b6;
+  border-radius: 9px;
+  background: #fff3f3;
+  color: #a82828;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.errorBox ul {
+  padding-left: 20px;
+  margin: 5px 0 0;
+}
+
+.previewNotice {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid #bddfff;
+  border-radius: 9px;
+  background: #edf6ff;
+  color: #315483;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  .page {
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1fr);
+    width: calc(100% - 32px);
+  }
+
+  .intro,
+  .formCard {
+    padding: 24px;
+  }
+
+  .sameSchedule {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dayPicker {
+    grid-column: 1 / -1;
+    padding: 0;
+    border: 0;
+  }
+
+  .dayPicker > div {
+    margin-top: 10px;
+  }
+
+  .paymentCard {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .paymentCard > span:last-child {
+    flex-basis: 100%;
+  }
+
+  .benefits li {
+    gap: 15px;
+  }
+
+  .benefitIcon {
+    flex-basis: 54px;
+    width: 54px;
+    height: 54px;
+  }
+}
+
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .benefits {
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+  }
+
+  .introText {
+    font-size: 17px;
+  }
+
+  .intro h1 br {
+    display: none;
+  }
+
+  .intro h1 span::before {
+    content: " ";
+  }
+
+  .bankNotice {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .page {
+    width: calc(100% - 24px);
+    padding-top: 18px;
+  }
+
+  .intro,
+  .formCard {
+    padding: 20px 16px;
+  }
+
+  .benefits,
+  .twoColumns,
+  .paymentGrid,
+  .actions {
+    grid-template-columns: 1fr;
+  }
+
+  .formHeading h2 {
+    font-size: 28px;
+  }
+
+  .benefits h2 {
+    font-size: 18px;
+  }
+
+  .paymentCard {
+    flex-wrap: nowrap;
+  }
+
+  .paymentCard > span:last-child {
+    flex-basis: auto;
+  }
+
+  .dayRow {
+    grid-template-columns: 45px minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .dayRow small {
+    grid-column: 2 / -1;
+  }
+
+  .dayRow input[type="time"] {
+    padding-inline: 5px;
+  }
+
+  .bankNotice {
+    padding: 15px;
+    gap: 12px;
+  }
+}
+
+/* Seller registration: giữ bố cục gốc, tối ưu laptop */
+@media (min-width: 1024px) {
+  /* Chỉ ảnh hưởng layout đang chứa trang đăng ký seller. */
+  :global(main):has(> .page) {
+    width: min(1460px, calc(100% - 40px));
+    max-width: none;
+    margin-inline: auto;
+    padding: 0;
+  }
+
+  .page {
+    --panel-height: calc(100dvh - 86px);
+    --form-gap: clamp(5px, 0.85vh, 10px);
+    --control-height: clamp(30px, 4.1vh, 42px);
+    --body-size: clamp(12px, 1.7vh, 15px);
+    --helper-size: clamp(11px, 1.45vh, 12px);
+
+    width: 100%;
+    margin: 0 auto;
+    padding: 10px 0;
+    gap: 16px;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    align-items: start;
+    font-size: var(--body-size);
+    line-height: 1.35;
+  }
+
+  .intro,
+  .formCard {
+    height: auto;
+    min-height: var(--panel-height);
+    border-radius: 16px;
+  }
+
+  /* ================= CỘT TRÁI ================= */
+
+  .intro {
+    padding: clamp(18px, 2.5vh, 30px);
+  }
+
+  .studentBadge {
+    padding: 5px 12px;
+    font-size: var(--body-size);
+    line-height: 1.3;
+  }
+
+  .intro h1 {
+    margin: clamp(14px, 2.4vh, 27px) 0 14px;
+    font-size: clamp(25px, 3.8vh, 38px);
+    line-height: 1.16;
+    letter-spacing: -0.7px;
+  }
+
+  .intro h1 br {
+    display: initial;
+  }
+
+  .intro h1 span::before {
+    content: none;
+  }
+
+  .introText {
+    font-size: clamp(14px, 2vh, 18px);
+    line-height: 1.5;
+  }
+
+  .benefits {
+    grid-template-columns: 1fr;
+    gap: clamp(14px, 2.6vh, 28px);
+    margin: clamp(18px, 3vh, 30px) 0;
+  }
+
+  .benefits li {
+    gap: clamp(12px, 1.6vw, 22px);
+  }
+
+  .benefitIcon {
+    flex: 0 0 clamp(40px, 6.3vh, 65px);
+    width: clamp(40px, 6.3vh, 65px);
+    height: clamp(40px, 6.3vh, 65px);
+  }
+
+  .benefitIcon svg {
+    width: clamp(23px, 3.3vh, 31px);
+    height: clamp(23px, 3.3vh, 31px);
+  }
+
+  .benefits h2 {
+    margin: 0 0 3px;
+    font-size: clamp(14px, 2vh, 19px);
+    line-height: 1.35;
+  }
+
+  .benefits p {
+    font-size: clamp(12px, 1.7vh, 15px);
+    line-height: 1.45;
+  }
+
+  .bankNotice {
+    margin-top: auto;
+    padding: clamp(10px, 1.6vh, 18px);
+    gap: 12px;
+  }
+
+  .bankNotice > svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  .bankNotice strong {
+    font-size: var(--body-size);
+    line-height: 1.4;
+  }
+
+  .bankNotice p {
+    margin-top: 5px;
+    font-size: var(--body-size);
+    line-height: 1.45;
+  }
+
+  /* ================= CỘT FORM ================= */
+
+  .formCard {
+    display: flex;
+    flex-direction: column;
+    padding: clamp(12px, 1.8vh, 20px) clamp(16px, 1.8vw, 28px);
+  }
+
+  .formHeading h2 {
+    font-size: clamp(25px, 3.6vh, 34px);
+    line-height: 1.15;
+    letter-spacing: -0.6px;
+  }
+
+  .formHeading p {
+    margin: 3px 0 var(--form-gap);
+    font-size: var(--body-size);
+    line-height: 1.35;
+  }
+
+  /*
+   * Luôn một cột: tên riêng một hàng, mô tả riêng một hàng.
+   * Không thay đổi bố cục khi chuyển chế độ lịch.
+   */
+  .form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--form-gap);
+    align-content: start;
+    align-items: start;
+  }
+
+  .form > *,
+  .form > .field:nth-child(1),
+  .form > .field:nth-child(2) {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .field {
+    gap: 3px;
+  }
+
+  .field > label,
+  .uploadHeading label,
+  .fieldset legend {
+    font-size: var(--body-size);
+    line-height: 1.3;
+  }
+
+  .field > input:not([type="file"]),
+  .timeField input,
+  .dayRow input[type="time"] {
+    height: var(--control-height);
+    min-height: var(--control-height);
+    padding: 4px 10px;
+    font-size: var(--body-size);
+    line-height: 1.3;
+    border-radius: 7px;
+  }
+
+  .form > .field:first-child > input {
+    height: var(--control-height);
+  }
+
+  .textareaWrap textarea {
+    height: clamp(46px, 7vh, 86px);
+    min-height: clamp(46px, 7vh, 86px);
+    padding: 5px 10px 17px;
+    font-size: var(--body-size);
+    line-height: 1.35;
+    resize: vertical;
+  }
+
+  .counter {
+    right: 8px;
+    bottom: 4px;
+    font-size: var(--helper-size);
+    line-height: 1;
+  }
+
+  /* Địa điểm bên trái, ảnh đại diện bên phải. */
+  .twoColumns {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .locationInput {
+    min-height: var(--control-height);
+    padding: 0 10px;
+    gap: 7px;
+  }
+
+  .locationInput svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .locationInput input {
+    padding: 5px 0;
+    font-size: var(--body-size);
+    line-height: 1.3;
+  }
+
+  .hint {
+    font-size: var(--helper-size);
+    line-height: 1.3;
+  }
+
+  .uploadHeading {
+    gap: 5px;
+  }
+
+  .uploadHeading > span {
+    padding: 2px 5px;
+    font-size: var(--helper-size);
+    line-height: 1.2;
+  }
+
+  .upload {
+    min-height: clamp(46px, 7.2vh, 86px);
+    padding: 4px 8px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 2px;
+    font-size: var(--helper-size) !important;
+    line-height: 1.2;
+  }
+
+  .upload > svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .upload > small {
+    flex-basis: auto;
+    font-size: var(--helper-size);
+  }
+
+  .imagePreview {
+    width: 40px;
+    height: 36px;
+    border-radius: 6px;
+  }
+
+  .removeImage {
+    font-size: var(--helper-size) !important;
+  }
+
+  /* ================= GIỜ HOẠT ĐỘNG ================= */
+
+  .fieldset legend {
+    margin-bottom: 4px;
+  }
+
+  .radioGroup {
+    justify-content: space-between;
+    gap: 6px 10px;
+    margin-bottom: 5px;
+  }
+
+  .radioGroup label {
+    gap: 5px;
+    font-size: var(--body-size);
+    line-height: 1.3;
+  }
+
+  .radioGroup input {
+    width: 17px;
+    height: 17px;
+  }
+
+  .sameSchedule {
+    grid-template-columns:
+      minmax(95px, 1fr)
+      minmax(95px, 1fr)
+      minmax(220px, 2fr);
+    gap: 9px;
+    padding: 7px 9px;
+    margin-bottom: 3px;
+  }
+
+  .timeField {
+    gap: 3px;
+    font-size: var(--helper-size);
+  }
+
+  .timeField input {
+    padding-inline: 6px;
+  }
+
+  .dayPicker {
+    grid-column: auto;
+    padding-left: 9px;
+    border-left: 1px solid var(--border);
+  }
+
+  .dayPicker strong {
+    font-size: var(--helper-size);
+  }
+
+  .dayPicker > div {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .dayPicker label {
+    gap: 3px;
+    font-size: var(--helper-size);
+  }
+
+  .dayPicker input,
+  .dayToggle input {
+    width: 15px;
+    height: 15px;
+  }
+
+  /*
+   * Lịch từng ngày mở dài xuống dưới.
+   * Không thu nhỏ form, không cuộn riêng bên trong lịch.
+   */
+  .page[data-schedule="daily"] .dailySchedule {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .dayRow {
+    grid-template-columns: 45px minmax(0, 1fr) auto minmax(0, 1fr) 30px;
+    gap: 9px;
+    min-height: 38px;
+    font-size: var(--body-size);
+  }
+
+  .dayToggle {
+    gap: 5px;
+    font-size: var(--body-size);
+  }
+
+  .laterNotice {
+    margin-bottom: 3px;
+    padding: 8px 10px;
+    font-size: var(--body-size);
+  }
+
+  /* ================= THANH TOÁN ================= */
+
+  .paymentGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .paymentCard {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 6px 9px;
+  }
+
+  .paymentCard > span:last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .paymentCard > input {
+    width: 17px;
+    height: 17px;
+  }
+
+  .cashIcon,
+  .bankIcon {
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .cashIcon svg,
+  .bankIcon svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .paymentCard strong,
+  .closedOption strong {
+    font-size: var(--body-size);
+    line-height: 1.3;
+  }
+
+  .paymentCard small,
+  .closedOption small {
+    margin-top: 2px;
+    font-size: var(--helper-size);
+    line-height: 1.25;
+  }
+
+  .closedOption {
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ================= NÚT CUỐI FORM ================= */
+
+  .actions {
+    grid-template-columns: 1fr 1.06fr;
+    gap: 14px;
+  }
+
+  .page .primaryButton,
+  .page .outlineButton {
+    min-height: clamp(34px, 4.4vh, 44px);
+    padding: 6px 14px;
+    font-size: var(--body-size);
+    line-height: 1.3;
+  }
+
+  .primaryButton svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .footerNote,
+  .previewLabel {
+    margin: 0;
+    font-size: var(--helper-size);
+    line-height: 1.2;
+  }
+
+  .errorBox,
+  .previewNotice {
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+}
+
+/* Phân bổ nội dung để lấp đầy khung đăng ký seller */
+@media (min-width: 1024px) {
+  .page {
+    /* Cột trái 38%, cột phải 62%. */
+    grid-template-columns: minmax(0, 0.76fr) minmax(0, 1.24fr);
+  }
+
+  .formCard {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .formHeading {
+    flex-shrink: 0;
+    margin-bottom: 6px;
+  }
+
+  .form {
+    /* Chiếm phần chiều cao còn lại dưới tiêu đề. */
+    flex: 1 0 auto;
+
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+
+    /* Giữ nguyên chiều cao component, giãn khoảng cách giữa các khối. */
+    grid-auto-rows: max-content;
+    align-items: start;
+    align-content: space-between;
+
+    /* Khoảng cách tối thiểu khi không còn chỗ trống. */
+    row-gap: 10px;
+  }
+
+  /*
+   * Lịch từng ngày dài hơn:
+   * nội dung xếp tự nhiên, khung tăng chiều cao và trang được cuộn.
+   */
+  .page[data-schedule="daily"] .form {
+    align-content: start;
+  }
+
+  .page[data-schedule="daily"] .formCard {
+    height: auto;
+    max-height: none;
+  }
+
+  /* Tăng nhẹ vùng mô tả, tránh cảm giác form bị ép nhỏ. */
+  .textareaWrap textarea {
+    height: clamp(60px, 8vh, 90px);
+    min-height: clamp(60px, 8vh, 90px);
+  }
+
+  .upload {
+    min-height: clamp(60px, 8vh, 90px);
+  }
+}

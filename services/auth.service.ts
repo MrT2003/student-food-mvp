@@ -1,139 +1,244 @@
-import * as crypto from 'crypto';
-import 'server-only';
+"use client";
 
-export interface ZaloProfile {
-  id: string;
-  name: string | null;
-  avatar_url: string | null;
-}
+import { createClient } from "@/lib/supabase/client";
+import type { AuthProfile, UpdateProfileInput } from "@/types/auth.types";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+// Define error message
+const authErrorMessages: Record<string, string> = {
+  UNAUTHORIZED: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+  NOT_ALLOWED: "Bạn không được phép thực hiện thao tác này.",
+  ACCOUNT_INACTIVE: "Tài khoản hiện không hoạt động.",
+  USER_NOT_FOUND: "Chưa thể tải hồ sơ tài khoản. Vui lòng thử lại.",
+  NAME_REQUIRED: "Vui lòng nhập tên của bạn.",
+  VALIDATION_ERROR: "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.",
+  "23505": "Thông tin này đã được sử dụng bởi tài khoản khác.",
+};
 
-function optionalText(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function validToken(value: unknown): value is string {
-  return typeof value === 'string' && /^[\x21-\x7e]+$/.test(value);
-}
-
-type ZaloStage = 'token_exchange' | 'profile_request' | 'token_validation' | 'profile_validation';
-
-function fail(stage: ZaloStage, kind: string, details: {
-  httpStatus?: number; zaloError?: number; field?: string; networkCode?: string;
-} = {}): never {
-  // Only locally selected labels and numeric provider codes; never raw errors/data.
-  console.error('[zalo-oauth]', JSON.stringify({ stage, kind, ...details }));
-  throw new Error('ZALO_PROVIDER_REQUEST_FAILED');
-}
-
-function networkCode(error: unknown): string {
-  const cause = isRecord(error) && isRecord(error.cause) ? error.cause : error;
-  const code = isRecord(cause) ? cause.code : undefined;
-  return typeof code === 'string' && [
-    'ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', 'EACCES', 'EPERM',
-    'UND_ERR_CONNECT_TIMEOUT', 'CERT_HAS_EXPIRED', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
-    'SELF_SIGNED_CERT_IN_CHAIN', 'DEPTH_ZERO_SELF_SIGNED_CERT',
-    'UNABLE_TO_GET_ISSUER_CERT_LOCALLY', 'ERR_TLS_CERT_ALTNAME_INVALID',
-  ].includes(code) ? code : 'UNKNOWN';
-}
-
-async function requestZalo(stage: ZaloStage, url: string, options: RequestInit): Promise<Record<string, unknown>> {
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      ...options,
-      cache: 'no-store',
-      redirect: 'error',
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch (error) {
-    const timeout = isRecord(error) && ['TimeoutError', 'AbortError'].includes(String(error.name));
-    return fail(stage, timeout ? 'timeout' : 'network', { networkCode: networkCode(error) });
-  }
-  let data: unknown;
-  try {
-    data = await response.json();
-  } catch (error) {
-    const timeout = isRecord(error) && ['TimeoutError', 'AbortError'].includes(String(error.name));
-    return fail(stage, timeout ? 'timeout' : response.ok ? 'invalid_json' : 'http', { httpStatus: response.status });
-  }
-  const rawCode = isRecord(data) ? data.error : undefined;
-  const numericCode = typeof rawCode === 'number' ? rawCode
-    : typeof rawCode === 'string' && /^-?\d{1,6}$/.test(rawCode) ? Number(rawCode) : undefined;
-  const zaloError = Number.isSafeInteger(numericCode) && Math.abs(numericCode!) <= 999999 ? numericCode : undefined;
-  if (!response.ok) return fail(stage, 'http', { httpStatus: response.status, zaloError });
-  if (!isRecord(data)) return fail(stage, 'invalid_shape', { httpStatus: response.status });
-  if (data.error !== undefined && data.error !== 0 && data.error !== '0') {
-    return fail(stage, 'provider_error', { httpStatus: response.status, zaloError });
-  }
-  return data;
-}
-
-export const ZaloAuthService = {
-  generateCodeVerifier(): string {
-    return crypto.randomBytes(32).toString('base64url');
+// Create an AuthClientService module
+export const AuthClientService = {
+  isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
   },
 
-  generateCodeChallenge(codeVerifier: string): string {
-    return crypto.createHash('sha256').update(codeVerifier, 'ascii').digest('base64url');
-  },
+  // Sign out function
+  async signOut(): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.auth.signOut();
 
-  getAuthorizationUrl(codeChallenge: string, state: string): string {
-    const appId = process.env.ZALO_APP_ID;
-    const redirectUri = process.env.NODE_ENV === 'production'
-      ? process.env.ZALO_CALLBACK_URL_PRODUCT
-      : process.env.ZALO_CALLBACK_URL_DEV;
-    if (!appId || !redirectUri) throw new Error('ZALO_CONFIGURATION_MISSING');
-    const params = new URLSearchParams({
-      app_id: appId, redirect_uri: redirectUri, code_challenge: codeChallenge, state,
-    });
-    return `https://oauth.zaloapp.com/v4/permission?${params}`;
-  },
-
-  async getZaloAccessToken(code: string, codeVerifier: string): Promise<{ access_token: string }> {
-    const appId = process.env.ZALO_APP_ID;
-    const secret = process.env.ZALO_SECRET_KEY;
-    if (!appId || !secret) return fail('token_exchange', 'missing_configuration', { field: !appId ? 'ZALO_APP_ID' : 'ZALO_SECRET_KEY' });
-    const data = await requestZalo('token_exchange', 'https://oauth.zaloapp.com/v4/access_token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', secret_key: secret },
-      body: new URLSearchParams({
-        code, app_id: appId, grant_type: 'authorization_code', code_verifier: codeVerifier,
-      }),
-    });
-    if (!validToken(data.access_token)) {
-      console.error('[zalo-oauth]', JSON.stringify({ stage: 'token_validation', kind: 'invalid_field', field: 'access_token' }));
-      throw new Error('ZALO_INVALID_ACCESS_TOKEN');
+    if (error) {
+      throw error;
     }
-    return { access_token: data.access_token };
   },
 
-  async getZaloProfile(accessToken: string): Promise<ZaloProfile> {
-    if (!validToken(accessToken)) throw new Error('ZALO_INVALID_ACCESS_TOKEN');
-    const data = await requestZalo('profile_request', 'https://graph.zalo.me/v2.0/me?fields=id,name,picture', {
-      method: 'GET',
-      headers: { access_token: accessToken },
+  // Login with google function
+  async signInWithGoogle(next: string = "/"): Promise<void> {
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/google/callback?next=${encodeURIComponent(next)}`,
+        queryParams: {
+          prompt: "select_account",
+        },
+      },
     });
-    // IDs are opaque strings scoped to the app, not auth.users UUIDs.
-    if (typeof data.id !== 'string' || !data.id || /\s|[\x00-\x1f\x7f]/.test(data.id)) {
-      console.error('[zalo-oauth]', JSON.stringify({ stage: 'profile_validation', kind: 'invalid_field', field: 'id' }));
-      throw new Error('ZALO_INVALID_PROFILE');
+    if (error) {
+      throw error;
     }
-    const picture = isRecord(data.picture) && isRecord(data.picture.data) ? data.picture.data : null;
-    let avatarUrl = optionalText(picture?.url);
-    if (avatarUrl) {
-      try {
-        const url = new URL(avatarUrl);
-        if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) avatarUrl = null;
-      } catch {
-        avatarUrl = null;
-      }
+  },
+
+  singInWithZalo(): void {
+    window.location.assign("/api/auth/zalo/login");
+  },
+
+  getAuthErrorMessage(error: unknown): string {
+    const outer = AuthClientService.isRecord(error) ? error : null;
+    const detail =
+      outer && AuthClientService.isRecord(outer.error) ? outer.error : outer;
+
+    const code = detail?.code;
+
+    if (typeof code === "string" && authErrorMessages[code]) {
+      return authErrorMessages[code];
     }
-    return { id: data.id, name: optionalText(data.name), avatar_url: avatarUrl };
+
+    const message = detail?.message;
+    if (typeof message === "string" && authErrorMessages[message]) {
+      return authErrorMessages[message];
+    }
+
+    if (error instanceof TypeError) {
+      return "Không thể kết nối. Vui lòng kiểm tra mạng và thử lại.";
+    }
+
+    // Giữ thông báo validation do ứng dụng chủ động tạo.
+    if (error instanceof Error && !("code" in error)) {
+      return error.message;
+    }
+
+    return "Không thể hoàn tất thao tác. Vui lòng thử lại.";
+  },
+
+  async updateMyProfile(input: UpdateProfileInput): Promise<AuthProfile> {
+    const name = input.name.trim();
+    const phone = input.phone.replace(/[\s().-]/g, "");
+
+    if (!name) {
+      throw new Error("Vui lòng nhập tên của bạn.");
+    }
+
+    if (!/^\+?\d{9,15}$/.test(phone)) {
+      throw new Error("Số điện thoại cần có 9–15 chữ số.");
+    }
+
+    const supabase = createClient();
+
+    const { error } = await supabase.rpc("update_my_profile", {
+      p_name: name,
+      p_phone: phone,
+      p_avatar_url: input.avatarUrl ?? null,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    const updatedProfile = await getCurrentProfile();
+
+    if (!updatedProfile?.phone?.trim()) {
+      throw new Error("Chưa lưu được số điện thoại. Vui lòng thử lại.");
+    }
+
+    return updatedProfile;
   },
 };
 
-export const GoogleAuthService = {};
+export async function getCurrentProfile(): Promise<AuthProfile | null> {
+  const supabase = createClient();
+
+  // 1. Kiểm tra session
+  const { data: sessionData, error: sessionError } =
+    await supabase.auth.getSession();
+
+  if (sessionError) {
+    throw sessionError;
+  }
+
+  if (!sessionData.session) {
+    return null;
+  }
+
+  // 2. Lấy thông tin User từ Supabase Auth Engine
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !authData.user) {
+    throw authError ?? new Error("Không tìm thấy thông tin xác thực.");
+  }
+
+  const user = authData.user;
+  const meta = user.user_metadata;
+
+  // 3. Trích xuất thông tin Google Metadata làm dữ liệu dự phòng (Fallback)
+  const googleName =
+    meta?.full_name || meta?.name || user.email?.split("@")[0] || "Người dùng";
+  const googleAvatar = meta?.avatar_url || meta?.picture || null;
+
+  // 4. Query thông tin từ bảng `users` trong Database
+  const { data, error } = await supabase
+    .from("users")
+    .select("id,role,name,phone,avatar_url,status,work_for_restaurant_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  // 5. Nếu tài khoản đã có trong DB và bị khóa thì mới báo lỗi
+  if (data && data.status && data.status !== "active") {
+    throw new Error("Tài khoản hiện không hoạt động.");
+  }
+
+  // 6. Trả về Profile kết hợp (Ưu tiên dữ liệu trong DB, nếu rỗng thì dùng dữ liệu Google)
+  return {
+    id: user.id,
+    role: data?.role ?? "student",
+    name: data?.name || googleName,
+    phone: data?.phone || user.phone || "",
+    avatar_url: data?.avatar_url || googleAvatar,
+    status: data?.status ?? "active",
+    work_for_restaurant_id: data?.work_for_restaurant_id ?? null,
+    authProviders: [
+      ...(user.identities?.some((identity) => identity.provider === "google")
+        ? ["google" as const] : []),
+      // The custom Zalo callback creates Auth accounts with this email format.
+      ...(/^\d+@zalo\.app$/i.test(user.email ?? "")
+        ? ["zalo" as const] : []),
+    ],
+  };
+}
+
+export function subscribeAuthProfile(
+  onProfile: (profile: AuthProfile | null) => void,
+  onError: (message: string) => void,
+): () => void {
+  let stopped = false;
+  let revision = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const supabase = createClient();
+
+  function scheduleReload() {
+    const currentRevision = ++revision;
+
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+
+    // Không gọi các hàm auth bất đồng bộ trực tiếp
+    // bên trong callback onAuthStateChange.
+    timer = setTimeout(() => {
+      void getCurrentProfile()
+        .then((profile) => {
+          if (!stopped && currentRevision === revision) {
+            onProfile(profile);
+          }
+        })
+        .catch((error: unknown) => {
+          if (!stopped && currentRevision === revision) {
+            onError(AuthClientService.getAuthErrorMessage(error));
+          }
+        });
+    }, 0);
+  }
+
+  const { data } = supabase.auth.onAuthStateChange((event) => {
+    if (stopped) return;
+
+    if (event === "SIGNED_OUT") {
+      revision++;
+
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+
+      onProfile(null);
+      return;
+    }
+
+    scheduleReload();
+  });
+
+  scheduleReload();
+
+  return () => {
+    stopped = true;
+    revision++;
+
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+
+    data.subscription.unsubscribe();
+  };
+}
