@@ -11,6 +11,7 @@ import {
 } from "./header-preview-data";
 import styles from "@/styles/home.module.css";
 import sellerStyles from "@/styles/seller-header.module.css";
+import mobileStyles from "@/styles/student-mobile-navigation.module.css";
 import { usePathname } from "next/navigation";
 import { useCartStore } from "@/store/useCartStore";
 
@@ -27,7 +28,11 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
       ).size,
   );
   const pathname = usePathname();
-  const [panel, setPanel] = useState<Panel>(null);
+  const [panelState, setPanelState] = useState<{
+    panel: Exclude<Panel, null>;
+    pathname: string;
+  } | null>(null);
+  const panel = panelState?.pathname === pathname ? panelState.panel : null;
   const [notifications, setNotifications] = useState<HeaderNotification[]>(() =>
     headerNotifications.map((item) => ({ ...item })),
   );
@@ -39,10 +44,10 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
         event.target instanceof Node &&
         !actions.current?.contains(event.target)
       )
-        setPanel(null);
+        setPanelState(null);
     }
     function escape(event: KeyboardEvent) {
-      if (event.key === "Escape") setPanel(null);
+      if (event.key === "Escape") setPanelState(null);
     }
     document.addEventListener("pointerdown", outside);
     document.addEventListener("keydown", escape);
@@ -51,16 +56,17 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
       document.removeEventListener("keydown", escape);
     };
   }, []);
-  function toggle(next: Panel) {
-    setPanel((current) => (current === next ? null : next));
+  function toggle(next: Exclude<Panel, null>) {
+    setPanelState(panel === next ? null : { panel: next, pathname });
   }
 
   return (
-    <header className={`${styles.header} ${seller ? sellerStyles.header : ""}`}>
-      <div className={`${styles.headerInner} ${seller ? sellerStyles.inner : ""}`}>
+    <header className={`${styles.header} ${seller ? sellerStyles.header : mobileStyles.header}`}>
+      <div className={`${styles.headerInner} ${seller ? sellerStyles.inner : mobileStyles.inner}`}>
         <Link
           href="/"
-          className={`${styles.brand} ${seller ? sellerStyles.brand : ""}`}
+          className={`${styles.brand} ${seller ? sellerStyles.brand : mobileStyles.brand}`}
+          onClick={() => setPanelState(null)}
           aria-label="StudentFood - Trang chủ"
         >
           <span className={styles.brandIcon}>
@@ -73,8 +79,8 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
             <small>Món ngon, gần bạn hơn</small>
           </span>
         </Link>
-        <nav aria-label="Điều hướng chính" className={`${styles.navigation} ${seller ? sellerStyles.navigation : ""}`}>
-          <Link href="/" aria-current={pathname === "/" ? "page" : undefined}>
+        <nav aria-label="Điều hướng chính" className={`${styles.navigation} ${seller ? sellerStyles.navigation : mobileStyles.desktopNavigation}`}>
+          <Link href="/" aria-current={pathname === "/" ? "page" : undefined} onClick={() => setPanelState(null)}>
             Trang chủ
           </Link>
           <Link
@@ -86,7 +92,7 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
                 ? "page"
                 : undefined
             }
-            onClick={() => setPanel(null)}
+            onClick={() => setPanelState(null)}
           >
             Khám phá
           </Link>
@@ -97,23 +103,23 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
                 ? "page"
                 : undefined
             }
-            onClick={() => setPanel(null)}
+            onClick={() => setPanelState(null)}
           >
             Đơn hàng
           </Link>
         </nav>
-        <div ref={actions} className={`${styles.headerActions} ${seller ? sellerStyles.actions : ""}`}>
+        <div ref={actions} className={`${styles.headerActions} ${seller ? sellerStyles.actions : mobileStyles.actions}`}>
           <Link
             href="/cart"
             data-cart-target
-            className={styles.iconButton}
+            className={`${styles.iconButton} ${seller ? "" : mobileStyles.iconButton}`}
             aria-label={`Giỏ hàng, ${restaurantCount} quán`}
             aria-current={
               pathname === "/cart" || pathname.startsWith("/cart/")
                 ? "page"
                 : undefined
             }
-            onClick={() => setPanel(null)}
+            onClick={() => setPanelState(null)}
           >
             <ShoppingCart size={28} strokeWidth={1.6} aria-hidden="true" />
 
@@ -125,7 +131,7 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
           </Link>
           <button
             type="button"
-            className={styles.iconButton}
+            className={`${styles.iconButton} ${seller ? "" : mobileStyles.iconButton}`}
             aria-label={`Thông báo, ${unreadCount} chưa đọc`}
             aria-expanded={panel === "notifications"}
             aria-controls={
@@ -140,14 +146,15 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
           </button>
           <button
             type="button"
-            className={styles.accountButton}
+            className={`${styles.accountButton} ${seller ? "" : mobileStyles.accountButton}`}
+            aria-label="Mở menu tài khoản"
             aria-expanded={panel === "account"}
             aria-controls={
               panel === "account" ? "home-header-panel" : undefined
             }
             onClick={() => toggle("account")}
           >
-            <span className={styles.avatar}>{previewAccount.initial}</span>
+            <span className={`${styles.avatar} ${seller ? "" : mobileStyles.avatar}`}>{previewAccount.initial}</span>
             <span className={styles.accountName}>{previewAccount.name}</span>
             <ChevronDown size={21} aria-hidden="true" />
           </button>
@@ -172,7 +179,7 @@ export default function StudentHeader({ variant = "student" }: { variant?: "stud
             <AccountDropdown
               name={previewAccount.name}
               initial={previewAccount.initial}
-              onNavigate={() => setPanel(null)}
+              onNavigate={() => setPanelState(null)}
             />
           )}
         </div>
