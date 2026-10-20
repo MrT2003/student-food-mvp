@@ -7,12 +7,14 @@ type Props = {
   onSelect: (restaurant: PreviewRestaurant) => void;
   onReset: () => void;
   searching: boolean;
+  compact?: boolean;
 };
 export default function RestaurantSection({
   restaurants,
   onSelect,
   onReset,
   searching,
+  compact = !searching,
 }: Props) {
   return (
     <section
@@ -36,7 +38,10 @@ export default function RestaurantSection({
         Tìm thấy {restaurants.length} quán.
       </span>
       {restaurants.length ? (
-        <div className={styles.restaurantGrid}>
+        <div
+          className={styles.restaurantGrid}
+          data-compact={compact ? "true" : undefined}
+        >
           {restaurants.map((restaurant) => (
             <RestaurantCard
               key={restaurant.id}
