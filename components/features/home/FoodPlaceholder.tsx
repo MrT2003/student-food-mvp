@@ -20,10 +20,27 @@ export default function FoodPlaceholder({
   return (
     <div
       className={`${styles.foodPlaceholder} ${small ? styles.smallPlaceholder : ""}`}
-      aria-hidden="true"
+      aria-hidden={!restaurant.avatar_url}
     >
-      <span className={styles.placeholderCircle} />
-      <Icon strokeWidth={1.25} />
+      {restaurant.avatar_url ? (
+        <img
+          src={restaurant.avatar_url}
+          alt={restaurant.name}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+            position: "relative",
+            zIndex: 1,
+          }}
+        />
+      ) : (
+        <>
+          <span className={styles.placeholderCircle} />
+          <Icon strokeWidth={1.25} />
+        </>
+      )}
     </div>
   );
 }

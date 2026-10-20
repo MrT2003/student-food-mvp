@@ -22,6 +22,7 @@ import {
 } from "@/store/useSellerShopStore";
 import { useSellerMenuStore } from "@/store/useSellerMenuStore";
 import { demoSellerRestaurant } from "@/lib/mocks/seller-orders.mock";
+import { CloudinaryService } from "@/services/cloudinary.service";
 import shell from "@/styles/seller-menu.module.css";
 import styles from "@/styles/seller-shop.module.css";
 
@@ -81,18 +82,11 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
   const [demoToken, setDemoToken] = useState("");
   const [tokenUpdated, setTokenUpdated] = useState("");
   const upload = useRef<HTMLInputElement>(null);
-  const reader = useRef<FileReader | null>(null);
+  const uploadRequestId = useRef(0);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (manage) dialog.current?.showModal();
   }, [manage]);
-  useEffect(
-    () => () => {
-      reader.current?.abort();
-      reader.current = null;
-    },
-    [],
-  );
   const restaurantPath = `/restaurants/${demoSellerRestaurant.slug}`;
   const schedule = days.map((day) =>
     mode === "same" ? { ...day, opens, closes } : day,
@@ -121,46 +115,31 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
       );
     }
   }
-  function readAvatar(file?: File) {
+  async function readAvatar(file?: File) {
     if (!file) return;
-    reader.current?.abort();
-    reader.current = null;
-    setReading(false);
-    if (
-      !["image/jpeg", "image/png"].includes(file.type) ||
-      file.size > 5 * 1024 * 1024
-    ) {
-      setError("Ảnh phải là JPG/PNG và tối đa 5MB.");
-      return;
-    }
-    const next = new FileReader();
-    reader.current = next;
+    const requestId = ++uploadRequestId.current;
     setReading(true);
-    next.onload = () => {
-      const value = String(next.result),
-        probe = new window.Image();
-      probe.onload = () => {
-        if (reader.current === next) {
-          setAvatar(value);
-          setReading(false);
-          setError("");
-        }
-      };
-      probe.onerror = () => {
-        if (reader.current === next) {
-          setReading(false);
-          setError("Nội dung ảnh không hợp lệ.");
-        }
-      };
-      if (reader.current === next) probe.src = value;
-    };
-    next.onerror = () => {
-      if (reader.current === next) {
-        setReading(false);
-        setError("Không đọc được ảnh.");
+    setError("");
+    try {
+      const uploaded = await CloudinaryService.uploadImage(file, {
+        folder: "student-food/restaurants",
+      });
+      if (uploadRequestId.current === requestId) {
+        setAvatar(uploaded.secureUrl);
       }
-    };
-    next.readAsDataURL(file);
+    } catch (err) {
+      if (uploadRequestId.current === requestId) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Không thể tải ảnh đại diện lên Cloudinary.",
+        );
+      }
+    } finally {
+      if (uploadRequestId.current === requestId) {
+        setReading(false);
+      }
+    }
   }
   function saveInfo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -191,6 +170,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
           name: name.trim(),
           description: description.trim(),
           location,
+          avatar_url: avatar,
         });
     message("Đã lưu thông tin trong bản demo, chưa ghi database.");
   }
@@ -292,15 +272,15 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
             </button>
             <strong>Ảnh đại diện</strong>
             <small>
-              {reading ? "Đang đọc ảnh…" : "Không bắt buộc"}
+              {reading ? "Đang tải lên Cloudinary…" : "Không bắt buộc"}
             </small>
             <input
               ref={upload}
               type="file"
-              accept="image/jpeg,image/png"
+              accept="image/jpeg,image/png,image/webp"
               hidden
               onChange={(event) => {
-                readAvatar(event.target.files?.[0]);
+                void readAvatar(event.target.files?.[0]);
                 event.target.value = "";
               }}
             />
@@ -309,8 +289,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                 type="button"
                 className={styles.textButton}
                 onClick={() => {
-                  reader.current?.abort();
-                  reader.current = null;
+                  uploadRequestId.current++;
                   setReading(false);
                   setAvatar(null);
                 }}
@@ -637,7 +616,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
         </small>
       </section>
       <p className={styles.demo}>
-        Demo frontend · Chưa ghi DB/upload ảnh thật. Trang quán vẫn dùng dữ liệu
+        Demo frontend · Chưa ghi DB. Trang quán vẫn dùng dữ liệu
         mẫu. Liên kết giao hàng demo không hoạt động và không cấp quyền truy
         cập. Thông tin đăng ký cơ bản giữ trong phiên; các cài đặt mới ở đây mất
         khi tải lại trang.

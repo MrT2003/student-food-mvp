@@ -39,12 +39,33 @@ type Props = {
   item: MenuItemDetail;
 };
 
-function FoodPlaceholder({ drink }: { drink: boolean }) {
+function FoodPlaceholder({
+  drink,
+  imageUrl,
+  alt = "",
+}: {
+  drink: boolean;
+  imageUrl?: string | null;
+  alt?: string;
+}) {
   const Icon = drink ? CupSoda : CookingPot;
 
   return (
-    <div className={styles.placeholder} aria-hidden="true">
-      <Icon strokeWidth={1.3} />
+    <div className={styles.placeholder} aria-hidden={!imageUrl}>
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={alt}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      ) : (
+        <Icon strokeWidth={1.3} />
+      )}
     </div>
   );
 }
@@ -181,7 +202,11 @@ function DishSelection({ restaurant, item }: Props) {
         <div className={styles.mainCard}>
           <section className={styles.overview} aria-labelledby="dish-title">
             <div className={styles.heroMedia}>
-              <FoodPlaceholder drink={isDrink} />
+              <FoodPlaceholder
+                drink={isDrink}
+                imageUrl={item.image_url}
+                alt={item.name}
+              />
             </div>
 
             <div className={styles.overviewContent}>
@@ -318,7 +343,11 @@ function DishSelection({ restaurant, item }: Props) {
 
         <div className={styles.selectedDish}>
           <div ref={sourceRef} className={styles.thumbnail}>
-            <FoodPlaceholder drink={isDrink} />
+            <FoodPlaceholder
+              drink={isDrink}
+              imageUrl={item.image_url}
+              alt={item.name}
+            />
           </div>
 
           <div className={styles.selectedDishCopy}>

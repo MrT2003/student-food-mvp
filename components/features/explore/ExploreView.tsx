@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import Image from "next/image";
 import {
   ArrowRight,
+  CalendarDays,
   Check,
   CookingPot,
   CupSoda,
@@ -37,14 +40,33 @@ const categoryIcons = {
   "Món Hàn": Flame,
 };
 
-function FoodPlaceholder({ kind }: { kind: FoodKind }) {
+function FoodPlaceholder({
+  kind,
+  imageUrl,
+}: {
+  kind: FoodKind;
+  imageUrl: string | null;
+}) {
   const Icon = foodIcons[kind];
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
   return (
-    <div className={styles.placeholder} aria-hidden="true">
-      <span>
-        <Icon size={36} strokeWidth={1.4} />
-      </span>
+    <div className={styles.placeholder} data-kind={kind} aria-hidden="true">
+      {imageUrl && imageUrl !== failedUrl ? (
+        <Image
+          src={imageUrl}
+          alt=""
+          fill
+          sizes="(max-width: 760px) 45vw, 20vw"
+          className={styles.foodImage}
+          unoptimized
+          onError={() => setFailedUrl(imageUrl)}
+        />
+      ) : (
+        <span>
+          <Icon size={36} strokeWidth={1.4} />
+        </span>
+      )}
     </div>
   );
 }
@@ -97,6 +119,7 @@ export default function ExploreView({
           className={styles.filters}
           role="group"
           aria-label="Bộ lọc khám phá"
+          tabIndex={0}
         >
           <button
             type="button"
@@ -189,7 +212,9 @@ export default function ExploreView({
           <div className={styles.restaurantGrid}>
             {explore.restaurants.map((restaurant) => (
               <article className={styles.restaurantCard} key={restaurant.id}>
-                <FoodPlaceholder kind={restaurant.kind} />
+                <div className={styles.restaurantMedia}>
+                  <FoodPlaceholder kind={restaurant.kind} imageUrl={restaurant.imageUrl} />
+                </div>
 
                 <div className={styles.restaurantContent}>
                   <div className={styles.restaurantTop}>
@@ -212,7 +237,7 @@ export default function ExploreView({
 
                   <div className={styles.meta}>
                     <span>
-                      <Store size={15} aria-hidden="true" />
+                      <CalendarDays size={15} aria-hidden="true" />
                       {restaurant.menuCount} món
                     </span>
 
@@ -262,13 +287,18 @@ export default function ExploreView({
           </Link>
         </div>
 
-        <div className={styles.dishGrid}>
+        <div
+          className={styles.dishGrid}
+          role="group"
+          aria-label="Món phổ biến, cuộn ngang để xem thêm trên điện thoại"
+          tabIndex={0}
+        >
           {initialPopularDishes.slice(0, 6).map((dish) => (
             <article
               key={`${dish.restaurantId}/${dish.id}`}
               className={styles.dishCard}
             >
-              <FoodPlaceholder kind={dish.kind} />
+              <FoodPlaceholder kind={dish.kind} imageUrl={dish.imageUrl} />
 
               <div className={styles.dishContent}>
                 <h3>{dish.name}</h3>
