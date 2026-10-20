@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSellerPreviewStore } from "@/store/useSellerPreviewStore";
+import { CloudinaryService } from "@/services/cloudinary.service";
 import {
   useEffect,
   useRef,
@@ -83,24 +84,16 @@ export default function SellerRegistrationView() {
   const [bank, setBank] = useState(true);
   const [startClosed, setStartClosed] = useState(false);
 
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageError, setImageError] = useState("");
 
   const [errors, setErrors] = useState<string[]>([]);
   const [message, setMessage] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageUrlRef = useRef<string | null>(null);
+  const uploadRequestIdRef = useRef(0);
   const errorRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    return () => {
-      if (imageUrlRef.current) {
-        URL.revokeObjectURL(imageUrlRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (errors.length > 0) {
@@ -109,12 +102,8 @@ export default function SellerRegistrationView() {
   }, [errors]);
 
   function clearImage() {
-    if (imageUrlRef.current) {
-      URL.revokeObjectURL(imageUrlRef.current);
-      imageUrlRef.current = null;
-    }
-
-    setImageFile(null);
+    uploadRequestIdRef.current++;
+    setIsUploadingImage(false);
     setImagePreview("");
 
     if (fileInputRef.current) {
@@ -122,33 +111,36 @@ export default function SellerRegistrationView() {
     }
   }
 
-  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
 
     setImageError("");
     setMessage("");
 
-    if (!["image/jpeg", "image/png"].includes(file.type)) {
-      setImageError("Chỉ chấp nhận ảnh JPG hoặc PNG.");
-      event.target.value = "";
-      return;
+    const requestId = ++uploadRequestIdRef.current;
+    setIsUploadingImage(true);
+    try {
+      const uploaded = await CloudinaryService.uploadImage(file, {
+        folder: "student-food/restaurants",
+      });
+      if (uploadRequestIdRef.current === requestId) {
+        setImagePreview(uploaded.secureUrl);
+      }
+    } catch (err) {
+      if (uploadRequestIdRef.current === requestId) {
+        setImageError(
+          err instanceof Error
+            ? err.message
+            : "Không thể tải ảnh đại diện lên Cloudinary.",
+        );
+      }
+    } finally {
+      if (uploadRequestIdRef.current === requestId) {
+        setIsUploadingImage(false);
+      }
     }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setImageError("Ảnh không được vượt quá 5 MB.");
-      event.target.value = "";
-      return;
-    }
-
-    if (imageUrlRef.current) {
-      URL.revokeObjectURL(imageUrlRef.current);
-    }
-
-    const url = URL.createObjectURL(file);
-    imageUrlRef.current = url;
-    setImageFile(file);
-    setImagePreview(url);
   }
 
   function updateDay(id: string, patch: Partial<DayHours>) {
@@ -174,6 +166,9 @@ export default function SellerRegistrationView() {
     }
     if (!cash && !bank) {
       nextErrors.push("Vui lòng chọn ít nhất một phương thức thanh toán.");
+    }
+    if (isUploadingImage) {
+      nextErrors.push("Vui lòng chờ tải ảnh lên Cloudinary hoàn tất.");
     }
     if (imageError) {
       nextErrors.push("Vui lòng chọn lại ảnh hợp lệ hoặc bỏ chọn ảnh.");
@@ -209,10 +204,11 @@ export default function SellerRegistrationView() {
     if (nextErrors.length > 0) return;
 
     // Replace with a successful API response before navigating in production.
-    // Session draft does not upload images, create a restaurant or grant roles.
+    // Session draft does not create a restaurant or grant roles.
     try {
       useSellerPreviewStore.getState().registerPreview({
         name: name.trim(), description: description.trim(), location: location.trim(), cash, bank,
+        avatar_url: imagePreview || null,
         hours: scheduleMode === "later" ? "Giờ hoạt động: Chưa thiết lập" : scheduleMode === "same"
           ? `${enabledDays.map((day) => day.label).join(", ")}: ${openTime} – ${closeTime}`
           : enabledDays.map((day) => `${day.label}: ${day.open} – ${day.close}`).join("; "),
@@ -353,9 +349,9 @@ export default function SellerRegistrationView() {
                 ref={fileInputRef}
                 id="shop-image"
                 type="file"
-                accept="image/jpeg,image/png"
+                accept="image/jpeg,image/png,image/webp"
                 className={styles.srOnly}
-                onChange={handleImageChange}
+                onChange={(event) => void handleImageChange(event)}
                 aria-describedby="image-help image-error"
               />
 
@@ -381,13 +377,17 @@ export default function SellerRegistrationView() {
                 ) : (
                   <>
                     <ImagePlus size={26} aria-hidden="true" />
-                    <span>Nhấn để tải ảnh lên</span>
-                    <small>JPG, PNG, tối đa 5MB</small>
+                    <span>
+                      {isUploadingImage
+                        ? "Đang tải lên Cloudinary…"
+                        : "Nhấn để tải ảnh lên"}
+                    </span>
+                    <small>JPG, PNG, WEBP, tối đa 5MB</small>
                   </>
                 )}
               </button>
 
-              {(imageFile || imageError) && (
+              {(imagePreview || imageError) && (
                 <button
                   type="button"
                   className={styles.removeImage}
@@ -613,8 +613,12 @@ export default function SellerRegistrationView() {
             <Link href="/account" className={styles.outlineButton}>
               Quay lại
             </Link>
-            <button type="submit" className={styles.primaryButton}>
-              Tạo cửa hàng
+            <button
+              type="submit"
+              className={styles.primaryButton}
+              disabled={isUploadingImage}
+            >
+              {isUploadingImage ? "Đang tải ảnh…" : "Tạo cửa hàng"}
               <ArrowRight size={21} aria-hidden="true" />
             </button>
           </div>
@@ -624,7 +628,7 @@ export default function SellerRegistrationView() {
             quản lý cửa hàng.
           </p>
           <p className={styles.previewLabel}>
-            Bản UI mẫu: lưu thông tin bản xem trước trong phiên trình duyệt và chuyển đến Tổng quan. Chưa tạo cửa hàng, tải ảnh lên hoặc cấp quyền seller.
+            Bản UI mẫu: lưu thông tin bản xem trước trong phiên trình duyệt và chuyển đến Tổng quan.
           </p>
         </form>
       </section>

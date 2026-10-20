@@ -16,6 +16,7 @@ export type MenuItem = {
   name: string;
   description: string;
   price: number;
+  image_url: string | null;
   category: MenuCategory;
   available: boolean;
   hasOptions: boolean;
@@ -27,6 +28,7 @@ export type RestaurantDetail = {
   name: string;
   location: string;
   description: string;
+  avatar_url: string | null;
   hours: string | null;
   isOpen: boolean;
   payments: string[];
@@ -44,6 +46,7 @@ export function toMenuItemView(item: MenuItemDetail): MenuItem {
     name: item.name,
     description: item.description ?? "",
     price: item.price,
+    image_url: item.image_url,
     category: toCategory(item.category),
     available: item.is_active && item.is_available,
     hasOptions: item.option_groups.some(
@@ -62,6 +65,7 @@ export function toRestaurantView(data: RestaurantMenu): RestaurantDetail {
     name: restaurant.name,
     location: restaurant.location ?? "",
     description: restaurant.description ?? "",
+    avatar_url: restaurant.avatar_url,
     isOpen:
       restaurant.status === "active" && restaurant.operating_status === "open",
 

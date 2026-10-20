@@ -12,6 +12,9 @@ import { Camera, Info, LogOut, Settings, UserRound } from "lucide-react";
 import styles from "@/styles/account.module.css";
 import AccountSuccessModal from "./AccountSuccessModal";
 import AccountSecurity from "./AccountSecurity";
+import { CloudinaryService } from "@/services/cloudinary.service";
+import { getAuthErrorMessage, updateMyProfile } from "@/services/auth.service";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const initialProfile = {
   name: "Nguyễn Văn A",
@@ -19,22 +22,27 @@ const initialProfile = {
 };
 
 export default function AccountView() {
+  const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+
   const [name, setName] = useState(initialProfile.name);
   const [phone, setPhone] = useState(initialProfile.phone);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // Giải phóng ảnh xem trước khi đổi ảnh hoặc rời trang.
   useEffect(() => {
-    return () => {
-      if (avatarUrl) URL.revokeObjectURL(avatarUrl);
-    };
-  }, [avatarUrl]);
+    if (!user) return;
+    setName(user.name || initialProfile.name);
+    setPhone(user.phone || initialProfile.phone);
+    setAvatarUrl(user.avatar_url ?? null);
+  }, [user]);
 
-  function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
 
@@ -43,22 +51,36 @@ export default function AccountView() {
     setError("");
     setMessage("");
 
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setError("Vui lòng chọn ảnh JPG, PNG hoặc WebP.");
+    const validationError = CloudinaryService.validateImageFile(file);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Ảnh đại diện không được vượt quá 5 MB.");
-      return;
+    try {
+      setUploadingAvatar(true);
+      const uploaded = await CloudinaryService.uploadImage(file, {
+        folder: "student-food/avatars",
+      });
+      setAvatarUrl(uploaded.secureUrl);
+      setMessage(
+        "Đã tải ảnh lên Cloudinary thành công. Nhấn 'Lưu thay đổi' để cập nhật hồ sơ.",
+      );
+    } catch (uploadErr) {
+      setError(
+        uploadErr instanceof Error
+          ? uploadErr.message
+          : "Không thể tải ảnh đại diện lên Cloudinary.",
+      );
+    } finally {
+      setUploadingAvatar(false);
     }
-
-    setAvatarUrl(URL.createObjectURL(file));
-    setMessage("Ảnh đang được xem trước trên thiết bị, chưa tải lên hệ thống.");
   }
 
-  function handleSave(event: FormEvent<HTMLFormElement>) {
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving || uploadingAvatar) return;
+
     setError("");
     setMessage("");
 
@@ -77,8 +99,24 @@ export default function AccountView() {
 
     setName(trimmedName);
 
-    // UI demo: chưa gọi API, chưa lưu dữ liệu vào Supabase.
-    // Khi có API, chỉ mở popup sau khi cập nhật thành công.
+    if (user) {
+      try {
+        setSaving(true);
+        const updatedProfile = await updateMyProfile({
+          name: trimmedName,
+          phone: normalizedPhone,
+          avatarUrl,
+        });
+        setUser(updatedProfile);
+        setShowSuccessModal(true);
+      } catch (saveErr) {
+        setError(getAuthErrorMessage(saveErr));
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     setShowSuccessModal(true);
   }
 
@@ -86,6 +124,8 @@ export default function AccountView() {
     setError("");
     setMessage(`${action} chưa được kết nối API.`);
   }
+
+  const avatarInitial = (name.trim()[0] || "N").toUpperCase();
 
   return (
     <div className={styles.accountPage}>
@@ -114,14 +154,14 @@ export default function AccountView() {
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
-                    alt="Ảnh đại diện đang xem trước"
+                    alt="Ảnh đại diện"
                     fill
                     unoptimized
                     sizes="134px"
                     className={styles.avatarImage}
                   />
                 ) : (
-                  <span>N</span>
+                  <span>{avatarInitial}</span>
                 )}
               </div>
 
@@ -129,6 +169,7 @@ export default function AccountView() {
                 type="button"
                 className={styles.cameraBadge}
                 aria-label="Chọn ảnh đại diện"
+                disabled={uploadingAvatar}
                 onClick={() => fileInput.current?.click()}
               >
                 <Camera size={20} aria-hidden="true" />
@@ -146,10 +187,11 @@ export default function AccountView() {
             <button
               type="button"
               className={styles.outlineButton}
+              disabled={uploadingAvatar}
               onClick={() => fileInput.current?.click()}
             >
               <Camera size={21} aria-hidden="true" />
-              Thay đổi ảnh
+              {uploadingAvatar ? "Đang tải ảnh..." : "Thay đổi ảnh"}
             </button>
           </div>
 
@@ -199,8 +241,12 @@ export default function AccountView() {
               </p>
             </div>
 
-            <button type="submit" className={styles.primaryButton}>
-              Lưu thay đổi
+            <button
+              type="submit"
+              className={styles.primaryButton}
+              disabled={saving || uploadingAvatar}
+            >
+              {saving ? "Đang lưu..." : "Lưu thay đổi"}
             </button>
           </form>
         </div>
