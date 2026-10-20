@@ -41,8 +41,16 @@ export default function HomeView() {
         }}
         onReset={home.reset}
         searching={Boolean(home.filters.query)}
+        compact={home.isAllSelected}
       />
-      <ReorderSection />
+      <ReorderSection
+        restaurants={home.recentRestaurants}
+        onSelect={(restaurant) => {
+          if (!restaurant.slug) return;
+
+          router.push(`/restaurants/${encodeURIComponent(restaurant.slug)}`);
+        }}
+      />
       <dialog
         ref={dialog}
         className={styles.restaurantDialog}
