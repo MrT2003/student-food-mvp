@@ -30,14 +30,16 @@
   background: var(--sf-card);
 }
 .headerInner {
-  width: calc(100% - 96px);
-  max-width: 1450px;
+  width: 100%;
+  max-width: none;
   height: 100%;
-  margin: auto;
+  margin: 0;
+  padding: 0 24px;
+  box-sizing: border-box;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 30px;
+  gap: 24px;
 }
 .brand {
   display: flex;
@@ -250,7 +252,7 @@
   letter-spacing: -1.6px;
 }
 .hero h1 span {
-  color: #ff4212;
+  color: var(--sf-orange);
 }
 .hero > p {
   margin: 2px 0 0;
@@ -318,6 +320,12 @@
   flex-shrink: 0;
   border-radius: 13px;
   font-size: 18px;
+}
+.searchSubmitIcon {
+  display: none;
+}
+.searchSubmitText {
+  white-space: nowrap;
 }
 .filters {
   display: flex;
@@ -420,6 +428,9 @@
 .restaurantMedia {
   position: relative;
   height: 108px;
+}
+.foodImage {
+  object-fit: cover;
 }
 .foodPlaceholder {
   position: relative;
@@ -540,6 +551,21 @@
 .reorderSection {
   margin-top: 29px;
   scroll-margin-top: 24px;
+}
+.reorderNotice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--sf-border);
+  border-radius: 12px;
+  background: var(--sf-card);
+  font-size: 13px;
+}
+.reorderNotice p {
+  margin: 0;
 }
 .reorderCard {
   display: flex;
@@ -702,9 +728,12 @@
   .hero > p {
     font-size: 17px;
   }
-  .main,
-  .headerInner {
+  .main {
     width: calc(100% - 48px);
+  }
+  .headerInner {
+    padding: 0 20px;
+    gap: 16px;
   }
 }
 @media (max-width: 760px) {
@@ -714,7 +743,8 @@
   .headerInner {
     grid-template-columns: 1fr auto;
     gap: 0;
-    padding-top: 10px;
+    margin: auto;
+    padding: 10px 0 0;
   }
   .navigation {
     grid-row: 2;
@@ -745,68 +775,317 @@
     display: none;
   }
   .main {
-    padding-top: 26px;
+    --home-mobile-gutter: 24px;
+    padding: 18px 0 32px;
   }
   .hero h1 {
-    font-size: 31px;
-    letter-spacing: -1px;
+    max-width: 560px;
+    margin-inline: auto;
+    font-size: clamp(24px, 6.6vw, 32px);
+    line-height: 1.22;
+    letter-spacing: -0.9px;
+    text-wrap: balance;
+  }
+  .hero h1 span {
+    display: block;
+    color: var(--sf-orange);
   }
   .hero > p {
-    margin-top: 9px;
-    font-size: 16px;
-    line-height: 24px;
-  }
-  .restaurantGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    max-width: 300px;
+    margin: 7px auto 0;
+    font-size: 14px;
+    line-height: 20px;
+    text-wrap: balance;
   }
   .search {
+    height: 52px;
+    margin-top: 15px;
     gap: 9px;
-    padding-left: 12px;
+    padding: 5px 6px 5px 14px;
+    border-radius: 14px;
+    box-sizing: border-box;
+  }
+  .search > svg {
+    width: 22px;
+    height: 22px;
+    color: #426bad;
   }
   .search input {
     font-size: 15px;
   }
   .search .primaryButton {
-    width: 106px;
+    width: 52px;
+    height: 40px;
+    padding: 0;
+    border-radius: 11px;
     font-size: 15px;
   }
+  .searchSubmitIcon {
+    display: block;
+    width: 21px;
+    height: 21px;
+  }
+  .searchSubmitText {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   .filters {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
     gap: 8px;
+    margin: 12px calc(-1 * var(--home-mobile-gutter, 24px)) 0;
+    padding: 2px var(--home-mobile-gutter, 24px) 6px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-padding-inline: var(--home-mobile-gutter, 24px);
+  }
+  .filters::-webkit-scrollbar {
+    display: none;
+  }
+  .filters:focus-visible {
+    outline-offset: -2px;
   }
   .filters button {
-    padding: 0 15px;
+    flex-shrink: 0;
+    padding: 0 14px;
     font-size: 13px;
-    min-height: 40px;
-    gap: 7px;
+    min-height: 38px;
+    gap: 6px;
+    color: var(--sf-ink);
+    box-shadow: 0 2px 8px #243b6403;
+  }
+  .filters button svg {
+    width: 17px;
+    height: 17px;
+    color: #42649b;
+  }
+  .filters button[aria-pressed="true"] {
+    color: #ffffff;
+    font-weight: 700;
+  }
+  .filters button[aria-pressed="true"] svg {
+    color: #ffffff;
+  }
+  .greenDot {
+    width: 10px;
+    height: 10px;
+  }
+  .restaurantSection {
+    margin-top: 16px;
+  }
+  .reorderSection {
+    margin-top: 20px;
+  }
+  .sectionHeading {
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-bottom: 9px;
   }
   .sectionHeading h2 {
-    font-size: 23px;
-    gap: 9px;
+    min-width: 0;
+    font-size: clamp(18px, 4.8vw, 22px);
+    line-height: 1.25;
+    letter-spacing: -0.6px;
+    gap: 8px;
+  }
+  .sectionIcon {
+    width: 32px;
+    height: 32px;
+  }
+  .sectionIcon svg {
+    width: 18px;
+    height: 18px;
   }
   .seeAll {
-    font-size: 14px;
+    font-size: 13px;
+    gap: 5px;
+    color: var(--sf-orange);
+  }
+  .seeAll svg {
+    width: 16px;
+    height: 16px;
+  }
+  .restaurantGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .restaurantGrid[data-compact="true"] > :nth-child(n + 5) {
+    display: none;
+  }
+  .restaurantCard {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    border-color: #ffffff;
+    border-radius: 13px;
+    box-shadow: 0 3px 16px #5f411805;
+  }
+  .restaurantMedia {
+    height: auto;
+    aspect-ratio: 1.88;
+    overflow: hidden;
+    border-radius: 9px;
+  }
+  .foodPlaceholder {
+    min-height: 0;
+    background: linear-gradient(125deg, #fff0d8, #f5c594);
+    color: #b06b2e;
+  }
+  .foodPlaceholder[data-illustration="tea"] {
+    background: linear-gradient(125deg, #fff3df, #e0b88e);
+    color: #92613a;
+  }
+  .foodPlaceholder[data-illustration="noodles"],
+  .foodPlaceholder[data-illustration="spicy"] {
+    background: linear-gradient(125deg, #ffedd5, #edb297);
+    color: #bb5c35;
+  }
+  .foodPlaceholder[data-illustration="chicken"],
+  .foodPlaceholder[data-illustration="bread"] {
+    background: linear-gradient(125deg, #fff1d0, #f6c56f);
+    color: #b06b2e;
+  }
+  .placeholderCircle {
+    width: 46px;
+    height: 46px;
+    background: #ffffff75;
+    opacity: 1;
+  }
+  .foodPlaceholder > svg {
+    width: 30px;
+    height: 30px;
+  }
+  .openBadge {
+    top: 6px;
+    right: 6px;
+    padding: 4px 8px;
+    gap: 5px;
+    font-size: 10px;
+    line-height: 14px;
+    background: #efffe5f5;
+  }
+  .openBadge .greenDot {
+    width: 8px;
+    height: 8px;
+  }
+  .restaurantCard h3 {
+    margin: 8px 0 3px;
+    font-size: 15px;
+    line-height: 19px;
+    letter-spacing: -0.4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .location {
+    gap: 5px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+  .location svg {
+    width: 14px;
+    height: 14px;
+    color: #42649b;
+  }
+  .restaurantMeta {
+    flex-wrap: nowrap;
+    margin-top: 3px;
+    font-size: 11px;
+    line-height: 17px;
+    min-width: 0;
+  }
+  .restaurantMeta > span {
+    gap: 4px;
+    min-width: 0;
+  }
+  .restaurantMeta > span:first-child {
+    flex-shrink: 0;
+  }
+  .restaurantMeta > span + span {
+    flex: 1;
+    min-width: 0;
+    margin-left: 6px;
+    padding-left: 6px;
+    border-left: 1px solid var(--sf-border);
+    width: auto;
+  }
+  .restaurantMeta svg {
+    width: 13px;
+    height: 13px;
+    color: #42649b;
+  }
+  .restaurantCard > .primaryButton {
+    margin-top: 8px;
+    min-height: 34px;
+    border-radius: 8px;
+    font-size: 13px;
     gap: 6px;
   }
+  .restaurantCard > .primaryButton svg {
+    width: 15px;
+    height: 15px;
+  }
   .reorderCard {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: nowrap;
     gap: 8px;
-    padding: 10px;
+    padding: 8px;
+    border-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 3px 16px #5f411805;
   }
   .smallPlaceholder {
-    width: 48px;
-    height: 58px;
-    min-height: 58px;
+    width: 52px;
+    height: 52px;
+    min-height: 52px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .smallPlaceholder > svg {
+    width: 22px;
+    height: 22px;
+  }
+  .smallPlaceholder .placeholderCircle {
+    width: 34px;
+    height: 34px;
+  }
+  .reorderContent {
+    min-width: 0;
+    flex: 1;
   }
   .reorderContent h3 {
-    font-size: 13px;
+    margin: 0 0 2px;
+    font-size: 12px;
+    line-height: 16px;
   }
   .reorderContent p {
-    font-size: 12px;
+    font-size: 10px;
+    line-height: 14px;
+  }
+  .outlineButton {
+    min-height: 28px;
+    margin-top: 5px;
+    padding: 2px 6px;
+    gap: 5px;
+    border-radius: 7px;
+    font-size: 11px;
+  }
+  .outlineButton svg {
+    width: 13px;
+    height: 13px;
   }
 }
 @media (max-width: 430px) {
   .main,
   .headerInner {
+    --home-mobile-gutter: 14px;
     width: calc(100% - 28px);
   }
   .brand {
@@ -825,55 +1104,50 @@
   .iconButton {
     min-width: 29px;
   }
-  .hero h1 {
-    font-size: 29px;
-  }
   .restaurantGrid {
     gap: 9px;
   }
   .restaurantCard {
-    padding: 9px;
-  }
-  .restaurantMedia {
-    height: 105px;
+    padding: 8px;
   }
   .openBadge {
-    right: 3px;
+    right: 5px;
     top: 5px;
-    padding: 5px 6px;
+    padding: 4px 7px;
     gap: 4px;
     font-size: 10px;
   }
   .restaurantCard h3 {
-    font-size: 15px;
-    letter-spacing: -0.5px;
+    font-size: 14px;
+    letter-spacing: -0.4px;
   }
   .restaurantMeta {
-    flex-wrap: wrap;
-    font-size: 12px;
-    gap: 3px;
+    font-size: 10px;
   }
   .restaurantMeta > span + span {
-    margin: 0;
-    padding: 0;
-    border: 0;
-    width: 100%;
-  }
-  .sectionHeading h2 {
-    font-size: 21px;
-  }
-  .sectionIcon {
-    width: 35px;
-    height: 35px;
-  }
-  .reorderCard {
-    flex-wrap: wrap;
-  }
-  .reorderContent {
-    min-width: 85px;
+    margin-left: 5px;
+    padding-left: 5px;
   }
   .headerPanel {
     width: min(300px, calc(100vw - 28px));
+  }
+}
+@media (max-width: 360px) {
+  .hero h1 {
+    font-size: 22px;
+  }
+  .restaurantCard,
+  .reorderCard {
+    padding: 7px;
+  }
+  .smallPlaceholder {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+  .restaurantMeta > span + span {
+    margin-left: 4px;
+    padding-left: 4px;
   }
 }
 

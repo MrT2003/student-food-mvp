@@ -2,14 +2,43 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Compass, House, UserRound } from "lucide-react";
+import {
+  CompassActiveIcon,
+  CompassInactiveIcon,
+  HomeActiveIcon,
+  HomeInactiveIcon,
+  OrderActiveIcon,
+  OrderInactiveIcon,
+  UserActiveIcon,
+  UserInactiveIcon,
+} from "@/components/BottomNavIcons";
 import styles from "@/styles/student-mobile-navigation.module.css";
 
 const destinations = [
-  { href: "/", label: "Trang chủ", icon: House },
-  { href: "/explore", label: "Khám phá", icon: Compass },
-  { href: "/orders", label: "Đơn hàng", icon: ClipboardList },
-  { href: "/account", label: "Tài khoản", icon: UserRound },
+  {
+    href: "/",
+    label: "Trang chủ",
+    activeIcon: HomeActiveIcon,
+    inactiveIcon: HomeInactiveIcon,
+  },
+  {
+    href: "/explore",
+    label: "Khám phá",
+    activeIcon: CompassActiveIcon,
+    inactiveIcon: CompassInactiveIcon,
+  },
+  {
+    href: "/orders",
+    label: "Đơn hàng",
+    activeIcon: OrderActiveIcon,
+    inactiveIcon: OrderInactiveIcon,
+  },
+  {
+    href: "/account",
+    label: "Tài khoản",
+    activeIcon: UserActiveIcon,
+    inactiveIcon: UserInactiveIcon,
+  },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -26,7 +55,7 @@ export default function StudentBottomNavigation() {
 
   return (
     <nav className={styles.navigation} aria-label="Điều hướng chính trên điện thoại">
-      {destinations.map(({ href, label, icon: Icon }) => {
+      {destinations.map(({ href, label, activeIcon: ActiveIcon, inactiveIcon: InactiveIcon }) => {
         const active = isActive(pathname, href);
         return (
           <Link
@@ -35,12 +64,11 @@ export default function StudentBottomNavigation() {
             className={styles.link}
             aria-current={active ? "page" : undefined}
           >
-            <Icon
-              size={25}
-              strokeWidth={active ? 2.2 : 1.7}
-              fill={active && href === "/" ? "currentColor" : "none"}
-              aria-hidden="true"
-            />
+            {active ? (
+              <ActiveIcon aria-hidden="true" />
+            ) : (
+              <InactiveIcon aria-hidden="true" />
+            )}
             <span>{label}</span>
           </Link>
         );
