@@ -1,6 +1,7 @@
 .explorePage {
   width: 100%;
   color: var(--sf-ink);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .hero {
@@ -17,7 +18,7 @@
 }
 
 .hero h1 span {
-  color: #ff4212;
+  color: var(--sf-orange);
 }
 
 .hero > p {
@@ -38,7 +39,7 @@
   padding: 6px 8px 6px 20px;
   border: 1px solid var(--sf-border);
   border-radius: 17px;
-  background: #fff;
+  background: var(--sf-card);
   color: #426bad;
 }
 
@@ -108,7 +109,7 @@
   padding: 0 23px;
   border: 1px solid #efefef;
   border-radius: 28px;
-  background: #fff;
+  background: var(--sf-card);
   color: #42649b;
   white-space: nowrap;
   font-size: 14px;
@@ -118,6 +119,11 @@
   border-color: #ff6526;
   background: linear-gradient(110deg, #ff8429, #ff351b);
   color: #fff;
+  font-weight: 700;
+}
+
+.filters button[aria-pressed="true"] svg {
+  color: #fff;
 }
 
 .filters button:hover:not([aria-pressed="true"]) {
@@ -125,6 +131,8 @@
 }
 
 .greenDot {
+  display: inline-block;
+  flex-shrink: 0;
   width: 13px;
   height: 13px;
   border-radius: 50%;
@@ -180,7 +188,7 @@
   padding: 0 12px;
   border: 1px solid #dde3ed;
   border-radius: 9px;
-  background: #fff;
+  background: var(--sf-card);
   color: var(--sf-ink);
   font: inherit;
   font-size: 16px;
@@ -202,7 +210,7 @@
   padding: 12px;
   border: 1px solid #f0eeea;
   border-radius: 13px;
-  background: #fff;
+  background: var(--sf-card);
 }
 
 .restaurantMedia {
@@ -268,6 +276,9 @@
   font-weight: 700;
   line-height: 18px;
   letter-spacing: -0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .openBadge {
@@ -285,6 +296,12 @@
   white-space: nowrap;
 }
 
+.openBadge .greenDot {
+  width: 9px;
+  height: 9px;
+  background: #32b843;
+}
+
 .openBadge svg {
   padding: 1px;
   border-radius: 50%;
@@ -297,6 +314,7 @@
   color: #727272;
 }
 
+.closedBadge .greenDot,
 .closedBadge svg {
   background: #999;
 }
@@ -360,7 +378,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #ff4212;
+  color: var(--sf-orange);
   font-size: 16px;
   white-space: nowrap;
 }
@@ -380,7 +398,7 @@
   padding: 10px;
   border: 1px solid #f0eeea;
   border-radius: 12px;
-  background: #fff;
+  background: var(--sf-card);
 }
 
 .dishContent {
@@ -395,11 +413,14 @@
   font-weight: 700;
   line-height: 17px;
   letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .price {
   margin: 0 0 5px;
-  color: #ff3816;
+  color: var(--sf-orange);
   font-size: 15px;
   line-height: 19px;
   font-weight: 700;
@@ -426,8 +447,8 @@
   padding: 4px 7px;
   border: 1px solid #ff9c85;
   border-radius: 8px;
-  background: #fff;
-  color: #ff4212;
+  background: var(--sf-card);
+  color: var(--sf-orange);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -440,7 +461,7 @@
   padding: 36px 20px;
   border: 1px solid var(--sf-border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--sf-card);
   text-align: center;
 }
 
@@ -451,7 +472,7 @@
 .empty button {
   border: 0;
   background: transparent;
-  color: #ff4212;
+  color: var(--sf-orange);
   text-decoration: underline;
 }
 
@@ -464,7 +485,7 @@
   padding: 12px 16px;
   border: 1px solid var(--sf-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--sf-card);
   color: var(--sf-muted);
   font-size: 14px;
 }
@@ -477,7 +498,7 @@
   flex-shrink: 0;
   border: 0;
   background: transparent;
-  color: #ff4212;
+  color: var(--sf-orange);
 }
 
 .srOnly {
@@ -522,10 +543,11 @@
 
   .hero h1 span {
     display: block;
+    color: var(--sf-orange);
   }
 
   .hero > p {
-    max-width: 540px;
+    max-width: 340px;
     margin: 8px auto 0;
     font-size: 14px;
     line-height: 21px;
@@ -548,7 +570,7 @@
   }
 
   .search input {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .search .primaryButton {
@@ -643,6 +665,10 @@
     gap: 9px;
   }
 
+  .restaurantGrid[data-compact="true"] > :nth-child(n + 7) {
+    display: none;
+  }
+
   .restaurantCard {
     position: relative;
     display: flex;
@@ -720,6 +746,12 @@
     box-shadow: 0 1px 6px #23452409;
   }
 
+  .openBadge .greenDot {
+    width: 8px;
+    height: 8px;
+    background: #06c84c;
+  }
+
   .openBadge svg {
     width: 8px;
     height: 8px;
@@ -732,6 +764,7 @@
     background: #f0f0f0f5;
   }
 
+  .closedBadge .greenDot,
   .closedBadge svg {
     background: #999;
   }
@@ -750,17 +783,26 @@
   }
 
   .meta {
+    flex-wrap: nowrap;
     gap: 5px;
     margin-bottom: 6px;
     font-size: 10px;
     line-height: 17px;
+    min-width: 0;
   }
 
   .meta > span {
     gap: 3px;
+    min-width: 0;
+  }
+
+  .meta > span:first-child {
+    flex-shrink: 0;
   }
 
   .meta > span + span {
+    flex: 1;
+    min-width: 0;
     padding-left: 5px;
   }
 
@@ -825,10 +867,11 @@
   }
 
   .dishCard .outlineButton {
-    min-height: 30px;
-    padding: 3px;
+    min-height: 28px;
+    padding: 3px 6px;
     gap: 3px;
     border-color: #ff6b48;
+    border-radius: 999px;
     font-size: 10px;
   }
 
@@ -861,8 +904,13 @@
 }
 
 @media (max-width: 380px) {
-  .sort label {
-    display: none;
+  .sort {
+    gap: 4px;
+  }
+
+  .sort select {
+    width: 88px;
+    padding-inline: 6px;
   }
 
   .restaurantTop h3 {
@@ -881,6 +929,21 @@
   .popular .sectionIcon {
     width: 27px;
     height: 27px;
+  }
+}
+
+@media (max-width: 360px) {
+  .hero h1 {
+    font-size: 22px;
+  }
+
+  .restaurantCard,
+  .dishCard {
+    padding: 6px;
+  }
+
+  .meta > span + span {
+    padding-left: 4px;
   }
 }
 
