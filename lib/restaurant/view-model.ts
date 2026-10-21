@@ -123,6 +123,7 @@ export function toExploreRestaurants(menus: RestaurantMenu[]): ExploreRestaurant
         restaurant.status === "active" && restaurant.operating_status === "open",
       popularity: Math.max(10, 100 - index * 5),
       kind,
+      imageUrl: restaurant.avatar_url,
       searchTerms: activeItems.map((item) => item.name),
     };
   });
@@ -152,6 +153,7 @@ export function toPopularDishCards(menus: RestaurantMenu[]): PopularDishCard[] {
         name: item.name,
         price: item.price,
         kind: getDishKind(item.category, fallbackKind),
+        imageUrl: item.image_url,
         categories,
         rank: rank++,
         href: dishHref(restaurant.slug, item.slug || item.id),
