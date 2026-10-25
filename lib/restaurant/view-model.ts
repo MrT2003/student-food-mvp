@@ -1,4 +1,4 @@
-import type { MenuItemDetail, RestaurantMenu } from "@/types/restaurant.types";
+import type { CatalogItem, RestaurantCatalog, MenuItemDetail, RestaurantMenu } from "@/types/restaurant.types";
 import type { PreviewRestaurant } from "@/lib/home/mock-data";
 import type { ExploreRestaurant, FoodKind } from "@/lib/explore/mock-data";
 import { dishHref, type PopularDishCard } from "@/lib/explore/popular-data";
@@ -66,7 +66,7 @@ function inferVisuals(
   return { kind: "rice", illustration: "rice" };
 }
 
-function deriveCategories(items: MenuItemDetail[], restaurantName: string): string[] {
+function deriveCategories(items: CatalogItem[], restaurantName: string): string[] {
   const raw = [
     ...new Set(
       items
@@ -83,7 +83,7 @@ function deriveCategories(items: MenuItemDetail[], restaurantName: string): stri
   return ["Cơm", "Món Việt"];
 }
 
-export function toHomeRestaurants(menus: RestaurantMenu[]): PreviewRestaurant[] {
+export function toHomeRestaurants(menus: RestaurantCatalog[]): PreviewRestaurant[] {
   return menus.map(({ restaurant, items }) => {
     const activeItems = items.filter((item) => item.is_active);
     const categories = deriveCategories(activeItems, restaurant.name);
@@ -106,7 +106,7 @@ export function toHomeRestaurants(menus: RestaurantMenu[]): PreviewRestaurant[] 
   });
 }
 
-export function toExploreRestaurants(menus: RestaurantMenu[]): ExploreRestaurant[] {
+export function toExploreRestaurants(menus: RestaurantCatalog[]): ExploreRestaurant[] {
   return menus.map(({ restaurant, items }, index) => {
     const activeItems = items.filter((item) => item.is_active);
     const categories = deriveCategories(activeItems, restaurant.name);
@@ -129,7 +129,7 @@ export function toExploreRestaurants(menus: RestaurantMenu[]): ExploreRestaurant
   });
 }
 
-export function toPopularDishCards(menus: RestaurantMenu[]): PopularDishCard[] {
+export function toPopularDishCards(menus: RestaurantCatalog[]): PopularDishCard[] {
   let rank = 0;
   return menus.flatMap(({ restaurant, items }) => {
     const activeItems = items.filter((item) => item.is_active && item.is_available);

@@ -5,7 +5,7 @@ import {
   toPopularDishCards,
 } from "@/lib/restaurant/view-model";
 import { RestaurantService } from "@/services/restaurant.service";
-import type { RestaurantMenu } from "@/types/restaurant.types";
+import { catalogTimer } from "@/lib/restaurant/timing";
 
 export const metadata: Metadata = {
   title: "Khám phá | StudentFood",
@@ -13,17 +13,12 @@ export const metadata: Metadata = {
 };
 
 export default async function ExplorePage() {
-  const list = await RestaurantService.listRestaurants();
-  const menus = (
-    await Promise.all(
-      list.map((restaurant) => RestaurantService.getRestaurantMenu(restaurant.slug)),
-    )
-  ).filter((entry): entry is RestaurantMenu => entry !== null);
-
-  return (
-    <ExploreView
-      initialRestaurants={toExploreRestaurants(menus)}
-      initialPopularDishes={toPopularDishCards(menus)}
-    />
-  );
+  // Catalog gọn dùng chung cho danh sách; không fetch menu/options riêng cho từng quán.
+  const menus = await RestaurantService.getCatalog();
+  const mappingDone = catalogTimer("explore.view-model");
+  // Dùng cùng catalog cho cả hai danh sách, không phát sinh truy vấn mới.
+  const restaurants = toExploreRestaurants(menus);
+  const dishes = toPopularDishCards(menus);
+  mappingDone({ restaurants: restaurants.length, dishes: dishes.length });
+  return <ExploreView initialRestaurants={restaurants} initialPopularDishes={dishes} />;
 }
