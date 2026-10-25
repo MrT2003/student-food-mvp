@@ -1,15 +1,15 @@
 import { RestaurantService } from "@/services/restaurant.service";
-import { useParams } from "next/navigation";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
-	const {slugParam} = useParams()
-	const slug = slugParam?.toString() as string
+	// Static API route has no dynamic params; read the requested restaurant slug.
+	const slug = request.nextUrl.searchParams.get("slugParam")?.trim();
+	if (!slug) return NextResponse.json({error: "slugParam is required"}, {status: 400});
 	try {
-		const data = RestaurantService.getRestaurantMenu(slug)
+		const data = await RestaurantService.getRestaurantMenu(slug)
 		if (!data) throw new Error("Cannot get menu of restaurant !")
 		return NextResponse.json({data} , {status: 200});
-	}catch(error: any){
-		return NextResponse.json({error: error.message || error}, {status: 500})
+	}catch{
+		return NextResponse.json({error: "Cannot get menu of restaurant !"}, {status: 500})
 	}
 }
