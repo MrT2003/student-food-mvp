@@ -39,16 +39,19 @@ export default function OrderConfirmView() {
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const addressInput = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
 
   const submitting = useRef(false);
-  const checkoutCart = useCartStore((state) => state.checkoutCart);
+  const checkoutDatabaseCart = useCartStore(
+    (state) => state.checkoutDatabaseCart,
+  );
 
   const { items, groups, quantity: totalQuantity, subtotal: total } = useCartSummary();
 
-  function handleConfirm(event: FormEvent<HTMLFormElement>) {
+  async function handleConfirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (submitting.current) return;
@@ -63,16 +66,20 @@ export default function OrderConfirmView() {
     }
 
     submitting.current = true;
-
-    const result = checkoutCart();
-
-    if (!result.ok) {
+    setIsSubmitting(true);
+    try {
+      const result = await checkoutDatabaseCart();
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      router.replace("/cart/success");
+    } catch {
+      setError("Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.");
+    } finally {
       submitting.current = false;
-      setError(result.message);
-      return;
+      setIsSubmitting(false);
     }
-
-    router.replace("/cart/success");
   }
 
   return (
@@ -371,9 +378,9 @@ export default function OrderConfirmView() {
           <button
             type="submit"
             className={styles.primaryButton}
-            disabled={items.length === 0}
+            disabled={items.length === 0 || isSubmitting}
           >
-            Xác nhận đặt hàng
+            {isSubmitting ? "Đang xử lý…" : "Xác nhận đặt hàng"}
             <ArrowRight size={23} aria-hidden="true" />
           </button>
 

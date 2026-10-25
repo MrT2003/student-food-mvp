@@ -1,19 +1,22 @@
--- Apply manually in Supabase SQL Editor. Existing six-argument signature is preserved.
--- Each p_checkout_items entry MUST include expected_unit_price (base + options, before quantity).
--- Amounts are VND. p_expected_total is mandatory at runtime; defaults preserve the RPC signature.
+-- Merged RPC: grouped cart options, per-restaurant preferences, expected prices.
+-- total_price = base + options PER UNIT; line amount = total_price * quantity.
 BEGIN;
+ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS total_price numeric;
+COMMENT ON COLUMN public.order_items.total_price IS
+  'Snapshot price per unit including options; line amount = total_price * quantity. Historical rows may be NULL.';
 CREATE OR REPLACE FUNCTION public.create_checkout_orders(
   p_checkout_items jsonb,
   p_delivery_address text,
-  p_customer_notes text DEFAULT '',
-  p_payment_method text DEFAULT 'cash',
-  p_expected_total numeric DEFAULT NULL,
+  p_restaurant_preferences jsonb,
+  p_expected_total numeric,
   p_checkout_session_id uuid DEFAULT NULL
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   v_user uuid := auth.uid();
   v_session uuid := coalesce(p_checkout_session_id, gen_random_uuid());
   v_request jsonb;
+  v_preference jsonb;
+  v_cart_id uuid;
   v_group jsonb;
   v_choice jsonb;
   v_cart public.cart_items%ROWTYPE;
@@ -41,11 +44,25 @@ BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
   -- Serializes checkout requests from this user, including multiple tabs.
   PERFORM pg_advisory_xact_lock(hashtextextended('checkout:' || v_user::text, 0));
-  PERFORM 1 FROM public.users WHERE id=v_user AND role='student' AND status='active' FOR SHARE;
+  PERFORM 1 FROM public.users WHERE id=v_user AND role IN ('student','staff') AND status='active' FOR SHARE;
   IF NOT FOUND THEN RAISE EXCEPTION 'ACCOUNT_NOT_ALLOWED'; END IF;
   IF nullif(btrim(p_delivery_address), '') IS NULL THEN RAISE EXCEPTION 'ADDRESS_REQUIRED'; END IF;
-  IF p_payment_method IS NULL OR p_payment_method NOT IN ('cash','bank_transfer') THEN
-    RAISE EXCEPTION 'INVALID_PAYMENT_METHOD';
+  IF jsonb_typeof(p_restaurant_preferences) IS DISTINCT FROM 'array' THEN
+    RAISE EXCEPTION 'RESTAURANT_PREFERENCES_INVALID';
+  END IF;
+  FOR v_preference IN SELECT value FROM jsonb_array_elements(p_restaurant_preferences) LOOP
+    IF jsonb_typeof(v_preference) IS DISTINCT FROM 'object'
+      OR coalesce(v_preference->>'restaurant_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      OR coalesce(v_preference->>'payment_method','') NOT IN ('cash','bank_transfer') THEN
+      RAISE EXCEPTION 'RESTAURANT_PREFERENCE_INVALID';
+    END IF;
+    IF v_preference ? 'customer_notes' AND jsonb_typeof(v_preference->'customer_notes') NOT IN ('string','null') THEN
+      RAISE EXCEPTION 'CUSTOMER_NOTES_INVALID';
+    END IF;
+  END LOOP;
+  IF (SELECT count(DISTINCT (value->>'restaurant_id')::uuid) FROM jsonb_array_elements(p_restaurant_preferences))
+      <> jsonb_array_length(p_restaurant_preferences) THEN
+    RAISE EXCEPTION 'DUPLICATE_RESTAURANT_PREFERENCE';
   END IF;
   IF p_expected_total IS NULL OR p_expected_total < 0 OR p_expected_total::text IN ('NaN','Infinity','-Infinity') THEN
     RAISE EXCEPTION 'EXPECTED_TOTAL_REQUIRED';
@@ -58,7 +75,7 @@ BEGIN
   -- Validate before taking cart/catalog locks; reject duplicate cart IDs.
   FOR v_request IN SELECT value FROM jsonb_array_elements(p_checkout_items) LOOP
     IF jsonb_typeof(v_request) IS DISTINCT FROM 'object'
-      OR nullif(v_request->>'cart_item_id','') IS NULL
+      OR coalesce(v_request->>'cart_item_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
       OR coalesce(v_request->>'quantity','') !~ '^[1-9][0-9]*$'
       OR jsonb_typeof(v_request->'expected_unit_price') IS DISTINCT FROM 'number' THEN
       RAISE EXCEPTION 'INVALID_CHECKOUT_ITEM';
@@ -67,6 +84,9 @@ BEGIN
   END LOOP;
   IF (SELECT count(DISTINCT (value->>'cart_item_id')::uuid) FROM jsonb_array_elements(p_checkout_items))
       <> jsonb_array_length(p_checkout_items) THEN RAISE EXCEPTION 'DUPLICATE_CART_ITEM'; END IF;
+
+  SELECT id INTO v_cart_id FROM public.carts WHERE student_id=v_user FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'CART_NOT_FOUND'; END IF;
 
   -- Freeze selected cart rows against quantity/options updates until commit.
   PERFORM ci.id FROM public.cart_items ci JOIN public.carts c ON c.id=ci.cart_id
@@ -79,7 +99,7 @@ BEGIN
       WHERE ci.id=(v_request->>'cart_item_id')::uuid AND c.student_id=v_user;
     IF NOT FOUND THEN RAISE EXCEPTION 'SOME_ITEMS_NOT_FOUND_OR_INVALID_OWNER'; END IF;
     v_quantity := (v_request->>'quantity')::integer;
-    IF v_quantity > v_cart.quantity THEN RAISE EXCEPTION 'INVALID_QUANTITY_TO_BUY'; END IF;
+    IF v_cart.quantity IS NULL OR v_quantity > v_cart.quantity THEN RAISE EXCEPTION 'INVALID_QUANTITY_TO_BUY'; END IF;
 
     SELECT * INTO v_restaurant FROM public.restaurants WHERE id=v_cart.restaurant_id FOR SHARE;
     IF NOT FOUND THEN RAISE EXCEPTION 'RESTAURANT_UNAVAILABLE'; END IF;
@@ -154,19 +174,30 @@ BEGIN
     RAISE EXCEPTION 'PRICE_MISMATCH: expected total %, current %',p_expected_total,v_total;
   END IF;
 
+  -- Match preferences to purchased restaurants, not all restaurants in the cart.
+  IF (SELECT count(DISTINCT (value->>'restaurant_id')::uuid) FROM jsonb_array_elements(v_lines))
+       <> jsonb_array_length(p_restaurant_preferences)
+    OR EXISTS (
+      SELECT 1 FROM jsonb_array_elements(p_restaurant_preferences) p
+      WHERE NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_lines) l
+        WHERE (l.value->>'restaurant_id')::uuid=(p.value->>'restaurant_id')::uuid)
+    ) THEN RAISE EXCEPTION 'RESTAURANT_PREFERENCES_MISMATCH'; END IF;
+
   -- Write only AFTER every row has passed validation. Reuse the same snapshots used for pricing.
   FOR v_restaurant_id IN SELECT DISTINCT (value->>'restaurant_id')::uuid FROM jsonb_array_elements(v_lines) ORDER BY 1 LOOP
     SELECT sum((value->>'unit_price')::numeric*(value->>'quantity')::integer) INTO v_subtotal
       FROM jsonb_array_elements(v_lines) WHERE (value->>'restaurant_id')::uuid=v_restaurant_id;
+    SELECT value INTO v_preference FROM jsonb_array_elements(p_restaurant_preferences)
+      WHERE (value->>'restaurant_id')::uuid=v_restaurant_id;
     v_order_code := 'ORD-' || replace(gen_random_uuid()::text,'-','');
     INSERT INTO public.orders(session_checkout_id,order_code,student_id,restaurant_id,order_status,
       payment_method,subtotal,total,delivery_address,customer_notes)
-    VALUES(v_session,v_order_code,v_user,v_restaurant_id,'pending',p_payment_method::public.payment_method_type,
-      v_subtotal,v_subtotal,btrim(p_delivery_address),coalesce(p_customer_notes,'')) RETURNING id INTO v_order_id;
+    VALUES(v_session,v_order_code,v_user,v_restaurant_id,'pending',(v_preference->>'payment_method')::public.payment_method_type,
+      v_subtotal,v_subtotal,btrim(p_delivery_address),nullif(btrim(coalesce(v_preference->>'customer_notes','')),'')) RETURNING id INTO v_order_id;
     FOR v_line IN SELECT value FROM jsonb_array_elements(v_lines) WHERE (value->>'restaurant_id')::uuid=v_restaurant_id LOOP
-      INSERT INTO public.order_items(order_id,menu_item_id,image_url,item_name_snapshot,unit_price_snapshot,quantity,option_snapshot_price)
+      INSERT INTO public.order_items(order_id,menu_item_id,image_url,item_name_snapshot,unit_price_snapshot,total_price,quantity,option_snapshot_price)
       VALUES(v_order_id,(v_line->>'menu_item_id')::uuid,v_line->>'image_url',v_line->>'name',
-        (v_line->>'base_price')::numeric,(v_line->>'quantity')::integer,v_line->'options');
+        (v_line->>'base_price')::numeric,(v_line->>'unit_price')::numeric,(v_line->>'quantity')::integer,v_line->'options');
       -- Base price snapshot excludes options; option_snapshot_price holds option prices.
       DELETE FROM public.cart_items WHERE id=(v_line->>'cart_item_id')::uuid AND quantity=(v_line->>'quantity')::integer;
       IF NOT FOUND THEN
@@ -180,6 +211,7 @@ BEGIN
   RETURN jsonb_build_object('sessionCheckoutId',v_session,'orders',v_orders);
 END;
 $$;
-REVOKE ALL ON FUNCTION public.create_checkout_orders(jsonb,text,text,text,numeric,uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.create_checkout_orders(jsonb,text,text,text,numeric,uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.create_checkout_orders(jsonb,text,jsonb,numeric,uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_checkout_orders(jsonb,text,jsonb,numeric,uuid) TO authenticated;
+NOTIFY pgrst, 'reload schema';
 COMMIT;

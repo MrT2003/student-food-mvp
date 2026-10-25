@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,32 +27,41 @@ function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
 export default function CartView() {
   const router = useRouter();
 
-  const updateQuantity = useCartStore((state) => state.updateCartItemQuantity);
-  const removeCartItem = useCartStore((state) => state.removeCartItem);
+  const updateQuantity = useCartStore(
+    (state) => state.updateDatabaseCartQuantity,
+  );
+  const removeCartItem = useCartStore((state) => state.removeDatabaseCartItem);
   const location = useCartStore((state) => state.location);
   const setLocation = useCartStore((state) => state.setLocation);
   const address = useCartStore((state) => state.address);
   const setAddress = useCartStore((state) => state.setAddress);
   const [message, setMessage] = useState("");
   const [addressError, setAddressError] = useState("");
-  const { items, groups, quantity, subtotal, unknownRestaurantIds } = useCartSummary();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const submitting = useRef(false);
+  const { items, groups, quantity, subtotal, unknownRestaurantIds } =
+    useCartSummary();
   const deliveryFee = 0;
   const total = subtotal + deliveryFee;
 
-  function changeQuantity(id: string, change: number) {
+  async function changeQuantity(id: string, change: number) {
     const item = items.find((row) => row.id === id);
     if (!item) return;
-    const result = updateQuantity(id, Math.min(99, Math.max(1, item.quantity + change)));
+    const result = await updateQuantity(
+      id,
+      Math.min(99, Math.max(1, item.quantity + change)),
+    );
     setMessage(result.ok ? "" : result.message);
   }
 
-  function removeItem(id: string) {
-    const result = removeCartItem(id);
+  async function removeItem(id: string) {
+    const result = await removeCartItem(id);
     setMessage(result.ok ? "Đã xóa món khỏi giỏ hàng." : result.message);
   }
 
   function handleCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting.current) return;
     setMessage("");
     setAddressError("");
 
@@ -71,7 +80,16 @@ export default function CartView() {
     }
 
     setAddress(address.trim());
-    router.push("/cart/confirm");
+    submitting.current = true;
+    setIsSyncing(true);
+    try {
+      if (useCartStore.getState().cart_items.length > 0) {
+        router.push("/cart/confirm");
+      }
+    } finally {
+      submitting.current = false;
+      setIsSyncing(false);
+    }
   }
   return (
     <div className={styles.page}>
@@ -166,7 +184,6 @@ export default function CartView() {
                             + {extra.name} (+{money(extra.price)})
                           </p>
                         ))}
-
                       </div>
 
                       <div className={styles.itemActions}>
@@ -302,9 +319,9 @@ export default function CartView() {
           <button
             type="submit"
             className={styles.primaryButton}
-            disabled={items.length === 0}
+            disabled={items.length === 0 || isSyncing}
           >
-            Xác nhận đơn hàng
+            {isSyncing ? "Đang cập nhật giỏ hàng…" : "Xác nhận đơn hàng"}
             <ArrowRight size={23} aria-hidden="true" />
           </button>
 

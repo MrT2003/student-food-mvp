@@ -408,8 +408,7 @@ export default function OrdersView() {
           onClick={() =>
             setNotice(
               "Giỏ hàng có món từ nhiều cửa hàng sẽ được tách thành " +
-                "các đơn riêng. Mỗi cửa hàng xác nhận và xử lý đơn của mình. " +
-                "Phiên bản hiện tại chỉ hiển thị dữ liệu mẫu.",
+                "các đơn riêng. Mỗi cửa hàng xác nhận và xử lý đơn của mình.",
             )
           }
         >
@@ -456,11 +455,6 @@ export default function OrdersView() {
           )}
         </section>
       )}
-
-      <p className={styles.demoNote}>
-        Bản xem trước giao diện — chưa kết nối API đơn hàng hoặc cập nhật trạng
-        thái thời gian thực.
-      </p>
     </main>
   );
 }

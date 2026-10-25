@@ -104,9 +104,16 @@ export default function OrderTestPanel() {
     busy.current = true; setAction('checkout'); setError('');
     setCheckoutAttempted(true);
     try {
+      const restaurantIds = [...new Set(checkoutTestItems.map(item => item.restaurantId))];
       const response = await OrderServices.createOrder({
         items: checkoutTestItems.map(item => ({cartItemId: rows[item.key].id, quantity: item.quantity, expectedUnitPrice: prices[item.key]})),
-        deliveryAddress: address.trim(), customerNotes: 'TEST: 2 quán, mỗi quán 2 cấu hình món',
+        deliveryAddress: address.trim(),
+        restaurantPreferences: restaurantIds.map(restaurant_id => ({
+          restaurant_id,
+          payment_method: 'cash',
+          customer_notes: 'TEST: 2 quán, mỗi quán 2 cấu hình món',
+        })),
+        customerNotes: 'TEST: 2 quán, mỗi quán 2 cấu hình món',
         paymentMethod: 'cash', expectedTotal: expectedTotal + priceOffset,
       });
       setResult(response);

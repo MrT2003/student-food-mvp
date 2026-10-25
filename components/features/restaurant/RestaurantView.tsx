@@ -34,14 +34,35 @@ const categoryIcons = {
   "Món chính": Utensils,
 };
 
-function FoodPlaceholder({ category = "Cơm" }: { category?: MenuCategory }) {
+function FoodPlaceholder({
+  category = "Cơm",
+  imageUrl,
+  alt = "",
+}: {
+  category?: MenuCategory;
+  imageUrl?: string | null;
+  alt?: string;
+}) {
   const Icon = categoryIcons[category];
 
   return (
-    <div className={styles.placeholder} aria-hidden="true">
-      <span>
-        <Icon size={38} strokeWidth={1.4} />
-      </span>
+    <div className={styles.placeholder} aria-hidden={!imageUrl}>
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={alt}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      ) : (
+        <span>
+          <Icon size={38} strokeWidth={1.4} />
+        </span>
+      )}
     </div>
   );
 }
@@ -84,7 +105,10 @@ export default function RestaurantView({
 
         <section className={styles.summary} aria-labelledby="restaurant-title">
           <div className={styles.cover}>
-            <FoodPlaceholder />
+            <FoodPlaceholder
+              imageUrl={restaurant.avatar_url}
+              alt={restaurant.name}
+            />
           </div>
 
           <div className={styles.summaryContent}>
@@ -215,7 +239,11 @@ export default function RestaurantView({
             {filteredMenu.map((item) => (
               <article key={item.id} className={styles.menuCard}>
                 <div className={styles.itemMedia}>
-                  <FoodPlaceholder category={item.category} />
+                  <FoodPlaceholder
+                    category={item.category}
+                    imageUrl={item.image_url}
+                    alt={item.name}
+                  />
 
                   <span
                     className={`${styles.itemBadge} ${

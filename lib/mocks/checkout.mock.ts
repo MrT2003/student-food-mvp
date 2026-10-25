@@ -10,6 +10,7 @@ import type {
   RestaurantPublic,
 } from "@/types/restaurant.types";
 import { resolveSelectedOptions } from "@/lib/cart/options";
+import { nextMockOrderCode } from "@/lib/mocks/order-codes.mock";
 
 type MockCheckoutContext = {
   customer: {
@@ -21,6 +22,7 @@ type MockCheckoutContext = {
   cart_items: CartItem[];
   restaurants: RestaurantPublic[];
   menu_items: MenuItemDetail[];
+  existing_orders?: OrderDetail[];
 };
 
 export type MockCheckoutOutput = {
@@ -141,7 +143,7 @@ export function simulateCheckout(
           image_url: menuItem.image_url,
           quantity: item.quantity,
           unit_price_snapshot: unitPrice,
-          option_snapshot_price: snapshots,
+          selected_options: snapshots,
         };
       });
 
@@ -154,8 +156,8 @@ export function simulateCheckout(
       id: orderId,
       session_checkout_id: sessionId,
 
-      // Mã demo, không phải quy tắc cấp mã của backend.
-      order_code: `DEMO-${orderId}`,
+      // Per-browser demo sequence; backend will allocate the real code.
+      order_code: nextMockOrderCode(restaurantId, context.existing_orders ?? []),
 
       student_id: customer.id,
       restaurant_id: restaurantId,

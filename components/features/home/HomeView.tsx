@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { MapPin, X } from "lucide-react";
 import { useHome } from "@/lib/home/useHome";
+import type { PreviewRestaurant } from "@/lib/home/mock-data";
 import HomeHero from "./HomeHero";
 import HomeFilters from "./HomeFilters";
 import RestaurantSection from "./RestaurantSection";
@@ -11,9 +12,13 @@ import FoodPlaceholder from "./FoodPlaceholder";
 import styles from "@/styles/home.module.css";
 import { useRouter } from "next/navigation";
 
-export default function HomeView() {
+export default function HomeView({
+  initialRestaurants,
+}: {
+  initialRestaurants?: PreviewRestaurant[];
+}) {
   const router = useRouter();
-  const home = useHome();
+  const home = useHome(initialRestaurants);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (home.selected && !dialog.current?.open) dialog.current?.showModal();
@@ -41,8 +46,16 @@ export default function HomeView() {
         }}
         onReset={home.reset}
         searching={Boolean(home.filters.query)}
+        compact={home.isAllSelected}
       />
-      <ReorderSection />
+      <ReorderSection
+        restaurants={home.recentRestaurants}
+        onSelect={(restaurant) => {
+          if (!restaurant.slug) return;
+
+          router.push(`/restaurants/${encodeURIComponent(restaurant.slug)}`);
+        }}
+      />
       <dialog
         ref={dialog}
         className={styles.restaurantDialog}

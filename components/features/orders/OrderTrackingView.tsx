@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import TransferContent from "@/components/ui/TransferContent";
 import type { ReactNode } from "react";
 import {
   Check,
@@ -346,6 +347,7 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
                 <dd>{formatOrderMoney(total)}</dd>
               </div>
             </dl>
+            {order.transferContent && <TransferContent value={order.transferContent} />}
           </section>
 
           <section className={`${styles.card} ${styles.sideCard}`}>

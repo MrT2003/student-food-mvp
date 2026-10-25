@@ -21,9 +21,13 @@ import type {
 } from "@/types/restaurant.types";
 
 import {
+  clearSelectedOptionGroup,
   normalizeSelectedOptions,
   resolveSelectedOptions,
+  toggleSelectedOption,
 } from "@/lib/cart/options";
+import type { SelectedOption } from "@/types/cart.types";
+import { CartUtilities, type SelectedGroup } from "@/utilities/cart_order.utility";
 
 import { useCartStore } from "@/store/useCartStore";
 import { useFlyToCart } from "@/lib/cart/useFlyToCart";
@@ -35,24 +39,51 @@ type Props = {
   item: MenuItemDetail;
 };
 
-function FoodPlaceholder({ drink }: { drink: boolean }) {
+function FoodPlaceholder({
+  drink,
+  imageUrl,
+  alt = "",
+}: {
+  drink: boolean;
+  imageUrl?: string | null;
+  alt?: string;
+}) {
   const Icon = drink ? CupSoda : CookingPot;
 
   return (
-    <div className={styles.placeholder} aria-hidden="true">
-      <Icon strokeWidth={1.3} />
+    <div className={styles.placeholder} aria-hidden={!imageUrl}>
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={alt}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      ) : (
+        <Icon strokeWidth={1.3} />
+      )}
     </div>
   );
 }
 
 export default function DishView({ restaurant, item }: Props) {
-  const addCatalogItem = useCartStore((state) => state.addCatalogItem);
+  // Different dishes must not inherit the previous dish's option IDs or quantity.
+  return <DishSelection key={item.id} restaurant={restaurant} item={item} />;
+}
+
+function DishSelection({ restaurant, item }: Props) {
+  const addToDatabaseCart = useCartStore((state) => state.addToDatabaseCart);
 
   const { sourceRef, flyToCart } = useFlyToCart();
 
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selected, setSelected] = useState<SelectedOption[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [notice, setNotice] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
 
   const groups = item.option_groups
     .filter((group) => group.is_active)
@@ -61,17 +92,14 @@ export default function DishView({ restaurant, item }: Props) {
       options: group.options.filter((option) => option.is_active),
     }));
 
+  const selectedIds = new Set(selected.map((option) => option.option_id));
   const selectedOptions = groups.flatMap((group) =>
     group.options
-      .filter((option) => selectedIds.includes(option.id))
+      .filter((option) => selectedIds.has(option.id))
       .map((option) => ({
         ...option,
         groupName: group.name,
       })),
-  );
-
-  const selected = normalizeSelectedOptions(
-    selectedIds.map((option_id) => ({ option_id })),
   );
 
   // Hiển thị giá tạm tính trong lúc người dùng đang chọn.
@@ -93,46 +121,56 @@ export default function DishView({ restaurant, item }: Props) {
   const restaurantHref = `/restaurants/${encodeURIComponent(restaurant.slug)}`;
 
   function toggleOption(group: MenuOptionGroupDetail, optionId: string) {
-    setSelectedIds((current) => {
-      if (group.is_multiple) {
-        return current.includes(optionId)
-          ? current.filter((id) => id !== optionId)
-          : [...current, optionId];
-      }
-
-      const groupIds = new Set(group.options.map((option) => option.id));
-
-      const otherGroups = current.filter((id) => !groupIds.has(id));
-
-      return [...otherGroups, optionId];
-    });
+    setSelected((current) => toggleSelectedOption(current, group, optionId));
 
     setNotice("");
   }
 
   function clearGroup(group: MenuOptionGroupDetail) {
-    const groupIds = new Set(group.options.map((option) => option.id));
-
-    setSelectedIds((current) => current.filter((id) => !groupIds.has(id)));
+    setSelected((current) => clearSelectedOptionGroup(current, group));
 
     setNotice("");
   }
 
-  function handleAddToCart() {
-    if (!canAdd) {
-      setNotice("Món đã hết hoặc quán đang tạm đóng cửa.");
+  async function handleAddToCart() {
+    if (!canAdd || isAdding) {
+      if (!canAdd) {
+        setNotice("Món đã hết hoặc quán đang tạm đóng cửa.");
+      }
       return;
     }
 
     try {
+      // Allowlist payload fields: names/prices are for display only.
+      const selected_options = normalizeSelectedOptions(
+        selected.map(({ option_id }) => ({ option_id })),
+      );
       // Báo rõ nhóm nào chưa chọn hoặc lựa chọn không hợp lệ.
-      resolveSelectedOptions(item, selected);
+      resolveSelectedOptions(item, selected_options);
 
-      const result = addCatalogItem({
-        restaurant_id: restaurant.id,
-        menu_item_id: item.id,
+      const selectedGroups: SelectedGroup[] = groups
+        .map((group) => ({
+          group_id: group.id,
+          group_name: group.name,
+          options: group.options
+            .filter((option) => selectedIds.has(option.id))
+            .map((option) => ({
+              id: option.id,
+              name: option.option_name,
+              additional_price: option.additional_price,
+            })),
+        }))
+        .filter((group) => group.options.length > 0);
+
+      const optionHash = CartUtilities.generateHash(selectedGroups) || "NONE";
+
+      setIsAdding(true);
+      const result = await addToDatabaseCart({
+        menuItemId: item.id,
+        restaurantId: restaurant.id,
+        optionHash,
         quantity,
-        selected_options: selected,
+        selectedOptions: selectedGroups,
       });
 
       if (!result.ok) {
@@ -148,6 +186,8 @@ export default function DishView({ restaurant, item }: Props) {
           ? error.message
           : "Không thể thêm món vào giỏ hàng.",
       );
+    } finally {
+      setIsAdding(false);
     }
   }
 
@@ -162,7 +202,11 @@ export default function DishView({ restaurant, item }: Props) {
         <div className={styles.mainCard}>
           <section className={styles.overview} aria-labelledby="dish-title">
             <div className={styles.heroMedia}>
-              <FoodPlaceholder drink={isDrink} />
+              <FoodPlaceholder
+                drink={isDrink}
+                imageUrl={item.image_url}
+                alt={item.name}
+              />
             </div>
 
             <div className={styles.overviewContent}>
@@ -222,13 +266,13 @@ export default function DishView({ restaurant, item }: Props) {
                   <label
                     key={option.id}
                     className={styles.radioOption}
-                    data-selected={selectedIds.includes(option.id)}
+                    data-selected={selectedIds.has(option.id)}
                   >
                     <input
                       type={group.is_multiple ? "checkbox" : "radio"}
                       name={`option-group-${group.id}`}
                       value={option.id}
-                      checked={selectedIds.includes(option.id)}
+                      checked={selectedIds.has(option.id)}
                       onChange={() => toggleOption(group, option.id)}
                     />
 
@@ -299,7 +343,11 @@ export default function DishView({ restaurant, item }: Props) {
 
         <div className={styles.selectedDish}>
           <div ref={sourceRef} className={styles.thumbnail}>
-            <FoodPlaceholder drink={isDrink} />
+            <FoodPlaceholder
+              drink={isDrink}
+              imageUrl={item.image_url}
+              alt={item.name}
+            />
           </div>
 
           <div className={styles.selectedDishCopy}>

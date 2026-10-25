@@ -9,11 +9,17 @@ type Props = {
 };
 export default function HomeFilters({ filters, onChange, onReset }: Props) {
   const isAll =
+    !filters.query.trim() &&
     !filters.openOnly &&
     filters.location === "all" &&
     filters.category === "all";
   return (
-    <div className={styles.filters} role="group" aria-label="Lọc quán ăn">
+    <div
+      className={styles.filters}
+      role="group"
+      aria-label="Lọc quán ăn"
+      tabIndex={0}
+    >
       <button type="button" aria-pressed={isAll} onClick={onReset}>
         Tất cả
       </button>
@@ -24,7 +30,7 @@ export default function HomeFilters({ filters, onChange, onReset }: Props) {
           onChange((value) => ({ ...value, openOnly: !value.openOnly }))
         }
       >
-        <span className={styles.greenDot} />
+        <span className={styles.greenDot} aria-hidden="true" />
         Đang mở
       </button>
       {(["KTX A", "KTX B"] as const).map((location) => (

@@ -205,6 +205,14 @@
   background: #fff;
 }
 
+.restaurantMedia {
+  min-width: 0;
+}
+
+.foodImage {
+  object-fit: cover;
+}
+
 .placeholder {
   position: relative;
   display: grid;
@@ -499,107 +507,380 @@
 }
 
 @media (max-width: 760px) {
+  .explorePage {
+    --explore-mobile-gutter: 24px;
+  }
+
   .hero h1 {
-    font-size: 31px;
-    letter-spacing: -1px;
+    max-width: 560px;
+    margin-inline: auto;
+    font-size: clamp(22px, 6vw, 32px);
+    line-height: 1.23;
+    letter-spacing: -0.9px;
+    text-wrap: balance;
+  }
+
+  .hero h1 span {
+    display: block;
   }
 
   .hero > p {
-    font-size: 16px;
-    line-height: 24px;
+    max-width: 540px;
+    margin: 8px auto 0;
+    font-size: 14px;
+    line-height: 21px;
+    text-wrap: balance;
   }
 
   .search {
-    gap: 10px;
+    height: 54px;
+    margin-top: 16px;
+    gap: 8px;
     padding-left: 12px;
+    padding-right: 5px;
+    border-radius: 13px;
+    box-sizing: border-box;
+  }
+
+  .search > svg {
+    width: 23px;
+    height: 23px;
   }
 
   .search input {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .search .primaryButton {
-    width: 105px;
-    font-size: 15px;
+    width: 86px;
+    height: 42px;
+    padding-inline: 10px;
+    font-size: 14px;
+    border-radius: 10px;
   }
 
   .filters {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
     gap: 8px;
+    margin: 10px calc(-1 * var(--explore-mobile-gutter)) 0;
+    padding: 2px var(--explore-mobile-gutter) 7px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-padding-inline: var(--explore-mobile-gutter);
+  }
+
+  .filters::-webkit-scrollbar,
+  .dishGrid::-webkit-scrollbar {
+    display: none;
   }
 
   .filters button {
-    min-height: 40px;
-    padding: 0 14px;
-    gap: 7px;
-    font-size: 13px;
+    flex-shrink: 0;
+    min-height: 38px;
+    padding: 0 13px;
+    gap: 6px;
+    font-size: 12px;
+    box-shadow: 0 2px 8px #243b6403;
+  }
+
+  .filters button svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .greenDot {
+    width: 9px;
+    height: 9px;
+    flex-shrink: 0;
+  }
+
+  .results {
+    margin-top: 16px;
   }
 
   .sectionHeading {
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 12px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-bottom: 9px;
   }
 
   .sectionHeading h2 {
-    gap: 10px;
-    font-size: 23px;
-    line-height: 38px;
+    min-width: 0;
+    gap: 7px;
+    font-size: clamp(17px, 4.5vw, 24px);
+    line-height: 1.25;
+    letter-spacing: -0.6px;
   }
 
   .sectionIcon {
-    width: 38px;
-    height: 38px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .sectionIcon svg {
+    width: 19px;
+    height: 19px;
   }
 
   .sort {
+    flex-shrink: 0;
+    gap: 6px;
     margin-left: auto;
+    font-size: 11px;
+  }
+
+  .sort select {
+    width: 96px;
+    min-height: 34px;
+    padding-inline: 7px;
+    font-size: 12px;
   }
 
   .restaurantGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .restaurantCard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 0;
+    padding: 7px;
+    border-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 3px 16px #5f411804;
+  }
+
+  .restaurantMedia {
+    aspect-ratio: 2.25;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+
+  .placeholder {
+    min-height: 0;
+    background: linear-gradient(125deg, #fff0d8, #f5c594);
+    color: #b06b2e;
+  }
+
+  .placeholder[data-kind="tea"] {
+    background: linear-gradient(125deg, #fff3df, #e0b88e);
+    color: #92613a;
+  }
+
+  .placeholder[data-kind="noodles"] {
+    background: linear-gradient(125deg, #ffedd5, #edb297);
+    color: #bb5c35;
+  }
+
+  .placeholder[data-kind="snack"] {
+    background: linear-gradient(125deg, #fff1d0, #f6c56f);
+  }
+
+  .placeholder > span {
+    width: 46px;
+    height: 46px;
+    background: #ffffff75;
+  }
+
+  .placeholder > span svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .restaurantContent {
+    flex: 1;
+  }
+
+  .restaurantTop {
+    min-height: 0;
+    padding-top: 5px;
+  }
+
+  .restaurantTop h3 {
+    font-size: 15px;
+    line-height: 20px;
+    letter-spacing: -0.5px;
+  }
+
+  .openBadge {
+    position: absolute;
+    top: 12px;
+    right: 11px;
+    z-index: 1;
+    min-height: 24px;
+    padding: 3px 8px;
+    font-size: 10px;
+    gap: 5px;
+    background: #eefff0f5;
+    box-shadow: 0 1px 6px #23452409;
+  }
+
+  .openBadge svg {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    stroke: transparent;
+    background: #06c84c;
+  }
+
+  .closedBadge {
+    background: #f0f0f0f5;
+  }
+
+  .closedBadge svg {
+    background: #999;
+  }
+
+  .location {
+    gap: 5px;
+    margin: 2px 0 4px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .location svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+  }
+
+  .meta {
+    gap: 5px;
+    margin-bottom: 6px;
+    font-size: 10px;
+    line-height: 17px;
+  }
+
+  .meta > span {
+    gap: 3px;
+  }
+
+  .meta > span + span {
+    padding-left: 5px;
+  }
+
+  .meta svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .restaurantContent > .primaryButton {
+    min-height: 36px;
+    padding: 5px 8px;
+    border-radius: 7px;
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .popular {
+    margin-top: 18px;
   }
 
   .dishGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(160px, calc((100% - 18px) / 3));
+    gap: 9px;
+    overflow-x: auto;
+    padding-bottom: 7px;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
   }
 
   .dishCard {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    grid-template-columns: 39% minmax(0, 1fr);
+    min-height: 104px;
+    padding: 6px;
+    gap: 6px;
+    scroll-snap-align: start;
   }
 
   .dishCard .placeholder {
-    height: 105px;
-    min-height: 105px;
+    height: 100%;
+    min-height: 82px;
   }
 
   .dishContent h3 {
-    font-size: 14px;
+    margin: 0 0 3px;
+    font-size: 10px;
+    line-height: 14px;
+  }
+
+  .price {
+    margin-bottom: 2px;
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .restaurantName {
+    margin-bottom: 4px;
+    font-size: 10px;
+    line-height: 14px;
+  }
+
+  .dishCard .outlineButton {
+    min-height: 30px;
+    padding: 3px;
+    gap: 3px;
+    border-color: #ff6b48;
+    font-size: 10px;
+  }
+
+  .dishCard .outlineButton svg {
+    width: 13px;
+    height: 13px;
   }
 
   .seeAll {
-    font-size: 14px;
+    gap: 5px;
+    font-size: 12px;
+    text-decoration: none;
+  }
+
+  .seeAll svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .filters:focus-visible,
+  .dishGrid:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+@media (max-width: 430px) {
+  .explorePage {
+    --explore-mobile-gutter: 14px;
   }
 }
 
 @media (max-width: 380px) {
-  .restaurantCard {
-    gap: 10px;
+  .sort label {
+    display: none;
   }
 
-  .restaurantTop {
-    flex-wrap: wrap;
-    justify-content: flex-start;
+  .restaurantTop h3 {
+    font-size: 14px;
   }
 
-  .meta {
-    flex-wrap: wrap;
-    gap: 4px;
+  .popular .sectionHeading h2 {
+    gap: 5px;
+    font-size: 16px;
   }
 
-  .meta > span + span {
-    padding-left: 0;
-    border-left: 0;
+  .popular .seeAll {
+    font-size: 11px;
+  }
+
+  .popular .sectionIcon {
+    width: 27px;
+    height: 27px;
   }
 }
 
