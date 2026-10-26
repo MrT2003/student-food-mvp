@@ -1,6 +1,7 @@
 /* Các class chỉ áp dụng cho Login và Register */
 .page {
   width: 100%;
+  font-family: var(--font-body);
 }
 
 .authCard,
@@ -11,6 +12,13 @@
 .switchAccount,
 .registerNotice {
   min-width: 0;
+}
+
+.introWrapper h2,
+.formHeading h1,
+.introWrapper li h3,
+.page > section h3 {
+  font-family: var(--font-display);
 }
 
 @media (min-width: 1024px) {
@@ -68,13 +76,15 @@
   .introWrapper h2 {
     margin-top: 18px;
     font-size: clamp(32px, 4.3dvh, 42px);
-    line-height: 1.12;
+    line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: -0.9px;
   }
 
   .introWrapper > section > h2 + p {
     margin-top: 14px;
     font-size: 16px;
-    line-height: 24px;
+    line-height: 25px;
   }
 
   .introWrapper ul {
@@ -107,6 +117,7 @@
   .introWrapper li h3 {
     font-size: 16px;
     line-height: 23px;
+    font-weight: 700;
   }
 
   .introWrapper li p {
@@ -123,6 +134,8 @@
   .formHeading h1 {
     font-size: clamp(32px, 4.3dvh, 42px);
     line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: -0.9px;
   }
 
   .formHeading p {
@@ -149,7 +162,7 @@
     min-height: 54px;
     padding: 8px 18px;
     border-radius: 12px;
-    font-size: 17px;
+    font-size: 16px;
     line-height: 24px;
   }
 
@@ -159,7 +172,7 @@
   }
 
   .providers button > span:only-child > span {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   /* Logo Zalo và khung logo Google */
@@ -231,6 +244,7 @@
   .page > section h3 {
     font-size: 15px;
     line-height: 21px;
+    font-weight: 700;
   }
 
   .page > section p {

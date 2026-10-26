@@ -4,9 +4,7 @@
   background:
     radial-gradient(ellipse at 0 85%, #ffecd8 0, transparent 30%),
     radial-gradient(ellipse at 100% 12%, #fff0df 0, transparent 26%), #fffbf6;
-  font:
-    14px/1.5 Arial,
-    sans-serif;
+  font: 14px/1.5 var(--font-body);
   color-scheme: light;
 }
 .page button,
@@ -69,7 +67,9 @@
   padding: 0 4px 22px;
 }
 .shop strong {
+  font-family: var(--font-display);
   font-size: 18px;
+  font-weight: 700;
 }
 .shop span {
   display: block;
@@ -98,10 +98,13 @@
 .sidebar nav {
   display: grid;
   gap: 6px;
+  font-family: var(--font-display);
 }
 .sidebar nav :is(a, button) {
   min-height: 50px;
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
   display: flex;
   gap: 14px;
   align-items: center;
@@ -116,7 +119,7 @@
 .sidebar nav a[aria-current] {
   color: #ff4d12;
   background: rgba(255,233,216,.65);
-  font-weight: bold;
+  font-weight: 700;
 }
 .back {
   margin-top: auto;
@@ -126,6 +129,8 @@
   gap: 10px;
   align-items: center;
   color: #37598b;
+  font-family: var(--font-display);
+  font-weight: 500;
   text-decoration: none;
 }
 .content {
@@ -135,10 +140,12 @@
   margin: 0 0 14px;
 }
 .heading h1 {
+  font-family: var(--font-display);
   font-size: clamp(26px, 2.2vw, 36px);
   line-height: 1.15;
   margin: 0 0 6px;
-  font-weight: 750;
+  font-weight: 800;
+  letter-spacing: -0.6px;
 }
 .heading p {
   color: #5a78a5;
@@ -245,6 +252,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  font-family: var(--font-display);
   font-size: 20px;
   font-weight: 700;
 }
@@ -298,8 +306,9 @@
 }
 .orderCode button {
   color: #081447;
+  font-family: var(--font-display);
   font-size: 20px;
-  font-weight: 750;
+  font-weight: 700;
   background: none;
   border: 0;
   padding: 0;
@@ -493,6 +502,7 @@
 .bill h2,
 .help h2 {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 22px;
   font-weight: 700;
 }
@@ -519,13 +529,16 @@
   gap: 8px;
 }
 .billTitle > strong {
+  font-family: var(--font-display);
   font-size: 21px;
+  font-weight: 700;
   overflow-wrap: anywhere;
 }
 .bill h3 {
   display: flex;
   align-items: center;
   gap: 10px;
+  font-family: var(--font-display);
   font-weight: 700;
   margin: 0 0 9px;
   font-size: 16px;
