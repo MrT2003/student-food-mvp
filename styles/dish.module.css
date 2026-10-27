@@ -7,7 +7,7 @@
   max-width: 1280px;
   margin: 0 auto;
   color: var(--sf-ink);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
 }
 
 .leftColumn {
@@ -77,6 +77,11 @@
   color: #bb987b;
 }
 
+.placeholder > svg {
+  width: 64px;
+  height: 64px;
+}
+
 .heroSvg {
   width: 100%;
   height: 100%;
@@ -99,10 +104,11 @@
 
 .titleRow h1 {
   margin: 0;
+  font-family: var(--font-display);
   color: var(--sf-ink);
   font-size: 24px;
-  line-height: 1.22;
-  letter-spacing: -0.5px;
+  line-height: 1.24;
+  letter-spacing: -0.4px;
   font-weight: 800;
 }
 
@@ -141,9 +147,7 @@
   font-size: 26px;
   line-height: 1.18;
   font-weight: 800;
-  text-decoration: underline;
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 3px;
+  text-decoration: none;
 }
 
 .metadata {
@@ -154,7 +158,7 @@
   margin-bottom: 8px;
   color: #1f57c9;
   font-size: 13px;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .metadata > a,
@@ -176,7 +180,7 @@
   margin: 0;
   color: #1c51bf;
   font-size: 13.5px;
-  line-height: 1.48;
+  line-height: 1.5;
 }
 
 .infoCard {
@@ -193,7 +197,7 @@
   background: #eaf2ff;
   color: #1553cf;
   font-size: 13.5px;
-  line-height: 1.42;
+  line-height: 1.45;
   font-weight: 500;
 }
 
@@ -227,17 +231,18 @@
 
 .optionHeading h2 {
   margin: 0;
+  font-family: var(--font-display);
   color: var(--sf-ink);
   font-size: 18px;
-  line-height: 1.25;
-  font-weight: 800;
+  line-height: 1.28;
+  font-weight: 700;
 }
 
 .optionHeading p {
   margin: 2px 0 0;
   color: #2b62cc;
   font-size: 13px;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .srOnlyInput {
@@ -252,7 +257,7 @@
   border: 0;
 }
 
-/* Topping & Food Extra Grid */
+/* Topping & Food Extra Grid (Horizontal cards) */
 .toppingGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -262,11 +267,14 @@
 .toppingOption {
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  text-align: center;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: left;
   min-width: 0;
-  padding: 10px 7px 11px;
+  min-height: 58px;
+  padding: 10px 12px;
   border: 1px solid #dde7fa;
   border-radius: 12px;
   background: #ffffff;
@@ -290,13 +298,11 @@
 }
 
 .checkIndicator {
-  position: absolute;
-  top: 8px;
-  left: 8px;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
   box-sizing: border-box;
   border-radius: 50%;
   border: 1.8px solid #1864d9;
@@ -329,16 +335,16 @@
 .toppingCopy {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 3px;
   min-width: 0;
-  width: 100%;
+  flex: 1;
 }
 
 .toppingCopy strong {
   color: var(--sf-ink);
   font-size: 13px;
-  line-height: 1.25;
+  line-height: 1.3;
   font-weight: 600;
 }
 
@@ -346,27 +352,28 @@
   color: #f01d14;
   font-size: 14px;
   line-height: 1.25;
-  font-weight: 800;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  font-weight: 700;
+  text-decoration: none;
 }
 
-/* Sugar Grid (5 columns matching mockup) */
+/* Sugar Grid (Horizontal cards) */
 .sugarGrid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 7px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
 }
 
 .sugarOption {
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-height: 60px;
-  padding: 8px 4px;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: left;
+  min-width: 0;
+  min-height: 56px;
+  padding: 10px 12px;
   border: 1px solid #dde7fa;
   border-radius: 10px;
   background: #ffffff;
@@ -379,25 +386,27 @@
 }
 
 .sugarTop {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .sugarTop strong {
   color: var(--sf-ink);
   font-size: 13.5px;
-  line-height: 1.2;
-  font-weight: 800;
+  line-height: 1.25;
+  font-weight: 700;
 }
 
 .sugarSub {
   display: block;
   color: #2b62cc;
-  font-size: 11px;
-  line-height: 1.2;
-  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.25;
+  text-align: left;
 }
 
 /* Radio Indicator */
@@ -425,21 +434,24 @@
   background: #ff2511;
 }
 
-/* Ice Grid (3 columns matching mockup) */
+/* Ice Grid (Horizontal cards) */
 .iceGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 9px;
 }
 
 .iceOption {
   position: relative;
   display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 46px;
-  padding: 9px 10px;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: left;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px;
   border: 1px solid #dde7fa;
   border-radius: 10px;
   background: #ffffff;
@@ -449,6 +461,15 @@
 .iceOption[data-selected="true"] {
   border: 1.5px solid #ff6438;
   background: #fff6f1;
+}
+
+.iceCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .iceOption strong {
@@ -494,10 +515,11 @@
 }
 
 .quantityLabel {
+  font-family: var(--font-display);
   color: var(--sf-ink);
   font-size: 18px;
-  line-height: 1.25;
-  font-weight: 800;
+  line-height: 1.28;
+  font-weight: 700;
 }
 
 .quantity {
@@ -542,7 +564,7 @@
   text-align: center;
   color: var(--sf-ink);
   font-size: 19px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 /* Sticky Bottom Action Bar matching mockup */
@@ -571,7 +593,7 @@
 .bottomTotalLabel {
   color: #657fb1;
   font-size: 13.5px;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .bottomTotalValue {
@@ -579,9 +601,7 @@
   font-size: 25px;
   line-height: 1.18;
   font-weight: 800;
-  text-decoration: underline;
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 3px;
+  text-decoration: none;
 }
 
 .bottomDivider {
@@ -649,9 +669,10 @@
 
 .summaryHeading h2 {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 21px;
-  line-height: 1.25;
-  font-weight: 800;
+  line-height: 1.28;
+  font-weight: 700;
 }
 
 .selectedDish {
@@ -669,6 +690,11 @@
   overflow: hidden;
 }
 
+.thumbnail .placeholder > svg {
+  width: 29px;
+  height: 29px;
+}
+
 .selectedDishCopy {
   flex: 1;
   min-width: 0;
@@ -676,6 +702,7 @@
 
 .selectedDishCopy h3 {
   margin: 0 0 3px;
+  font-family: var(--font-display);
   font-size: 15px;
   line-height: 1.3;
   font-weight: 700;
@@ -725,6 +752,7 @@
   color: #f01d14;
   font-size: 24px;
   font-weight: 800;
+  text-decoration: none;
 }
 
 .addButton,
@@ -799,6 +827,11 @@
     padding: 12px;
   }
 
+  .placeholder > svg {
+    width: 56px;
+    height: 56px;
+  }
+
   .titleRow h1 {
     font-size: 20px;
   }
@@ -819,7 +852,7 @@
 
   .description {
     font-size: 12.5px;
-    line-height: 1.42;
+    line-height: 1.45;
   }
 
   .bottomBar {
@@ -834,6 +867,11 @@
     grid-template-columns: 144px minmax(0, 1fr);
     gap: 11px;
     padding: 11px;
+  }
+
+  .placeholder > svg {
+    width: 52px;
+    height: 52px;
   }
 
   .titleRow h1 {
@@ -853,12 +891,9 @@
   }
 
   .toppingOption {
-    padding: 9px 5px 10px;
-  }
-
-  .toppingArt {
-    width: 46px;
-    height: 46px;
+    min-height: 52px;
+    padding: 8px 8px;
+    gap: 7px;
   }
 
   .toppingCopy strong {
@@ -866,16 +901,17 @@
   }
 
   .toppingPrice {
-    font-size: 13.5px;
+    font-size: 13px;
   }
 
   .sugarGrid {
-    gap: 5px;
+    gap: 7px;
   }
 
   .sugarOption {
-    min-height: 56px;
-    padding: 7px 3px;
+    min-height: 50px;
+    padding: 8px 8px;
+    gap: 7px;
   }
 
   .sugarTop strong {
@@ -887,13 +923,13 @@
   }
 
   .iceGrid {
-    gap: 6px;
+    gap: 7px;
   }
 
   .iceOption {
-    min-height: 42px;
-    padding: 8px 6px;
-    gap: 6px;
+    min-height: 44px;
+    padding: 8px 8px;
+    gap: 7px;
   }
 
   .iceOption strong {
@@ -918,6 +954,11 @@
     padding: 10px;
   }
 
+  .placeholder > svg {
+    width: 46px;
+    height: 46px;
+  }
+
   .titleRow h1 {
     font-size: 17.5px;
   }
@@ -935,15 +976,15 @@
   }
 
   .checkIndicator {
-    top: 6px;
-    left: 6px;
-    width: 19px;
-    height: 19px;
+    width: 17px;
+    height: 17px;
   }
 
-  .toppingArt {
-    width: 42px;
-    height: 42px;
+  .toppingOption,
+  .sugarOption,
+  .iceOption {
+    padding: 7px 6px;
+    gap: 6px;
   }
 
   .toppingCopy strong {
@@ -951,7 +992,7 @@
   }
 
   .toppingPrice {
-    font-size: 12.5px;
+    font-size: 12px;
   }
 
   .radioIndicator {
@@ -964,7 +1005,7 @@
   }
 
   .sugarSub {
-    font-size: 9.5px;
+    font-size: 10px;
   }
 
   .iceOption strong {
@@ -998,11 +1039,11 @@
   }
 
   .sugarGrid {
-    gap: 4px;
+    gap: 5px;
   }
 
   .sugarOption {
-    padding: 6px 2px;
+    padding: 6px 5px;
   }
 
   .quantity {

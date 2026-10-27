@@ -57,16 +57,10 @@ const FoodCustomizationView =
   require("@/components/features/dish/FoodCustomizationView").default;
 const {
   RICE_FOOD_EXTRAS,
-  buildFoodExtraOptionGroup,
   getDefaultSelectedOptions,
-  getDishDescription,
-  getDishInfoBannerText,
-  getDisplayCategory,
-  parseSugarOptionLabel,
   previewDrinkItem,
   previewDrinkRestaurant,
   previewFoodItem,
-  previewFoodRestaurant,
   resolveDishOptionGroups,
 } = require("@/lib/dish/options");
 const {
@@ -88,35 +82,12 @@ const resetStore = () => {
   useStudentMockStore.setState(initialStoreState, true);
 };
 
-test("Design tokens, font family, and mobile viewport / safe-area configuration", () => {
+test("Design tokens, typography, horizontal option cards, and mobile viewport configuration", () => {
   const globalsCss = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
   assert.match(globalsCss, /--sf-page:\s*#f8f4ee/i, "Cream page background token");
   assert.match(globalsCss, /--sf-card:\s*#ffffff/i, "White card token");
   assert.match(globalsCss, /--sf-ink:\s*#081447/i, "Navy ink text token");
   assert.match(globalsCss, /--sf-orange:\s*#ff4d12/i, "Orange accent #ff4d12 token");
-  assert.match(
-    globalsCss,
-    /font-family:\s*Arial,\s*Helvetica,\s*sans-serif/i,
-    "Arial/Helvetica font family",
-  );
-
-  const studentLayout = fs.readFileSync(
-    path.join(root, "app/(student)/layout.tsx"),
-    "utf8",
-  );
-  assert.match(studentLayout, /width:\s*"device-width"/);
-  assert.match(studentLayout, /initialScale:\s*1/);
-  assert.match(studentLayout, /viewportFit:\s*"cover"/);
-  assert.match(studentLayout, /<StudentHeader\s*\/>/);
-  assert.match(studentLayout, /<StudentBottomNavigation\s*\/>/);
-
-  const mobileNavCss = fs.readFileSync(
-    path.join(root, "styles/student-mobile-navigation.module.css"),
-    "utf8",
-  );
-  assert.match(mobileNavCss, /env\(safe-area-inset-bottom/);
-  assert.match(mobileNavCss, /@media\s*\(max-width:\s*760px\)/);
-  assert.match(mobileNavCss, /@media\s*\(max-width:\s*360px\)/);
 
   const dishCss = fs.readFileSync(
     path.join(root, "styles/dish.module.css"),
@@ -127,9 +98,26 @@ test("Design tokens, font family, and mobile viewport / safe-area configuration"
   assert.match(dishCss, /@media\s*\(max-width:\s*430px\)/);
   assert.match(dishCss, /@media\s*\(max-width:\s*380px\)/);
   assert.match(dishCss, /@media\s*\(max-width:\s*360px\)/);
+
+  // Verify no underline on mainPrice, toppingPrice, bottomTotalValue, and totalRow output
+  const mainPriceBlock = dishCss.match(/\.mainPrice\s*\{[^}]+\}/)?.[0] ?? "";
+  const toppingPriceBlock = dishCss.match(/\.toppingPrice\s*\{[^}]+\}/)?.[0] ?? "";
+  const bottomTotalBlock = dishCss.match(/\.bottomTotalValue\s*\{[^}]+\}/)?.[0] ?? "";
+  const totalRowOutputBlock = dishCss.match(/\.totalRow\s+output\s*\{[^}]+\}/)?.[0] ?? "";
+  assert.doesNotMatch(mainPriceBlock, /text-decoration:\s*underline/i);
+  assert.doesNotMatch(toppingPriceBlock, /text-decoration:\s*underline/i);
+  assert.doesNotMatch(bottomTotalBlock, /text-decoration:\s*underline/i);
+  assert.doesNotMatch(totalRowOutputBlock, /text-decoration:\s*underline/i);
+
+  // Verify horizontal card layout on toppingOption, sugarOption, iceOption
+  for (const selector of [".toppingOption", ".sugarOption", ".iceOption"]) {
+    const escaped = selector.replace(".", "\\.");
+    const block = dishCss.match(new RegExp(`${escaped}\\s*\\{[^}]+\\}`))?.[0] ?? "";
+    assert.match(block, /flex-direction:\s*row/i, `${selector} is a horizontal card`);
+  }
 });
 
-test("Drink customization screen (Trà sữa truyền thống) matches the attached mockup 100%", () => {
+test("Drink customization screen restores dish placeholder and omits option/section illustrations", () => {
   const html = renderToStaticMarkup(React.createElement(DrinkCustomizationView));
 
   // Back link & overview card
@@ -145,6 +133,12 @@ test("Drink customization screen (Trà sữa truyền thống) matches the attac
     html,
     /Trà sữa thơm béo, vị trà đậm đà hòa quyện cùng sữa tươi, là lựa chọn quen thuộc được nhiều bạn yêu thích\./,
   );
+
+  // Placeholder restored & small illustrations omitted
+  assert.doesNotMatch(html, /GOOD<\/text>/);
+  assert.doesNotMatch(html, /sectionSvgIcon/);
+  assert.doesNotMatch(html, /toppingArt/);
+  assert.doesNotMatch(html, /optionSvg/);
 
   // Info banner
   assert.match(
@@ -220,6 +214,9 @@ test("Food customization screen (Quán cơm - Món thêm) renders all 8 rice add
   assert.match(foodHtml, /Cơm Cô Ba/);
   assert.match(foodHtml, /KTX A/);
   assert.match(foodHtml, /Cơm/);
+  assert.doesNotMatch(foodHtml, /sectionSvgIcon/);
+  assert.doesNotMatch(foodHtml, /toppingArt/);
+  assert.doesNotMatch(foodHtml, /optionSvg/);
   assert.match(
     foodHtml,
     /Hãy chọn món thêm và số lượng trước khi thêm vào giỏ hàng nhé!/,

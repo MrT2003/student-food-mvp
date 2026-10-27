@@ -7,6 +7,7 @@
   border-radius: 14px;
   background: #fff;
   color: var(--sf-ink);
+  font-family: var(--font-body);
   box-shadow: 0 12px 38px #50371918;
   overflow: visible;
 }
@@ -42,6 +43,7 @@
 
 .heading h2 {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.6px;
@@ -128,6 +130,7 @@
 }
 
 .copy strong {
+  font-family: var(--font-display);
   font-size: 17px;
   color: var(--sf-ink);
   font-weight: 700;
@@ -170,7 +173,9 @@
   border-radius: 50%;
   background: #ffad96;
   color: #fff;
+  font-family: var(--font-display);
   font-size: 26px;
+  font-weight: 700;
 }
 
 .avatarImage {
@@ -179,6 +184,7 @@
 
 .identity strong {
   display: block;
+  font-family: var(--font-display);
   font-size: 18px;
   font-weight: 700;
 }
@@ -192,6 +198,7 @@
 .accountLinks {
   padding: 10px 0;
   border-bottom: 1px solid #eee;
+  font-family: var(--font-display);
 }
 
 .account button {
@@ -205,6 +212,7 @@
   color: #405984;
   text-align: left;
   font-size: 17px;
+  font-weight: 500;
 }
 
 .account button:disabled {
@@ -235,9 +243,11 @@
   width: 100%;
   padding: 13px 3px;
   border-radius: 8px;
+  font-family: var(--font-display);
   color: #405984;
   text-decoration: none;
-  font-size: 17px;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .accountLinks a:hover {
