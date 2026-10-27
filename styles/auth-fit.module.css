@@ -1,4 +1,4 @@
-/* Các class chỉ áp dụng cho Login và Register */
+/* Các class chỉ áp dụng cho trang xác thực (Auth) */
 .page {
   width: 100%;
   font-family: var(--font-body);
@@ -22,7 +22,7 @@
 }
 
 @media (min-width: 1024px) {
-  /* Không ảnh hưởng onboarding hoặc các trang student */
+  /* Không ảnh hưởng các trang student */
   :global(.sf-auth):has(.page) {
     --auth-header-height: 81px;
     --auth-padding-top: 18px;
@@ -132,8 +132,8 @@
   }
 
   .formHeading h1 {
-    font-size: clamp(32px, 4.3dvh, 42px);
-    line-height: 1.15;
+    font-size: clamp(28px, 3.8dvh, 36px);
+    line-height: 1.2;
     font-weight: 800;
     letter-spacing: -0.9px;
   }
@@ -145,15 +145,8 @@
   }
 
   .providers {
-    max-width: 430px;
-    margin-top: clamp(18px, 3dvh, 30px);
-  }
-
-  /* Dòng “Tiếp tục nhanh với” */
-  .providers > div > p:first-child {
-    margin-bottom: 10px;
-    font-size: 14px;
-    line-height: 21px;
+    max-width: 440px;
+    margin-top: clamp(18px, 3dvh, 28px);
   }
 
   /* Hai nút social */
@@ -197,23 +190,13 @@
   }
 
   .switchAccount {
-    margin-top: 20px;
-    font-size: 15px;
-    line-height: 23px;
+    margin-top: 18px;
+    font-size: 14px;
+    line-height: 21px;
   }
 
   .registerNotice {
-    margin-top: 20px;
-    padding: 12px 14px;
-    gap: 10px;
-  }
-
-  .registerNotice > svg {
-    width: 22px;
-    height: 22px;
-  }
-
-  .registerNotice p {
+    margin-top: 24px;
     font-size: 13px;
     line-height: 20px;
   }
@@ -264,13 +247,13 @@
     --auth-panel-padding-x: 28px;
   }
 
-  .introWrapper h2,
-  .formHeading h1 {
+  .introWrapper h2 {
     font-size: 32px;
+    margin-top: 14px;
   }
 
-  .introWrapper h2 {
-    margin-top: 14px;
+  .formHeading h1 {
+    font-size: 30px;
   }
 
   .introWrapper > section > h2 + p {

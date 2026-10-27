@@ -958,9 +958,9 @@
   }
   .restaurantMedia {
     height: auto;
-    aspect-ratio: 1.88;
+    aspect-ratio: 1.62;
     overflow: hidden;
-    border-radius: 9px;
+    border-radius: 10px;
   }
   .foodPlaceholder {
     min-height: 0;
@@ -1063,19 +1063,19 @@
   }
   .reorderCard {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     flex-wrap: nowrap;
-    gap: 8px;
-    padding: 8px;
+    gap: 9px;
+    padding: 9px;
     border-color: #ffffff;
     border-radius: 12px;
     box-shadow: 0 3px 16px #5f411805;
   }
   .smallPlaceholder {
-    width: 52px;
-    height: 52px;
-    min-height: 52px;
-    border-radius: 8px;
+    width: 62px;
+    height: 62px;
+    min-height: 62px;
+    border-radius: 10px;
     flex-shrink: 0;
   }
   .smallPlaceholder > svg {

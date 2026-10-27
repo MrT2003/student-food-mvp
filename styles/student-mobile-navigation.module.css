@@ -135,13 +135,11 @@
     font-size: 18px;
   }
 
-  /* Anchor dropdowns to the header so notifications fit narrow viewports. */
+  /* Anchor dropdowns right below the header action icons like the mobile design. */
   .header .actions > section {
-    position: fixed;
-    top: 70px;
-    right: max(14px, env(safe-area-inset-right, 0px));
-    max-width: calc(100vw - 28px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
-    max-height: calc(100dvh - 90px - var(--student-navigation-height) - env(safe-area-inset-bottom, 0px));
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
     box-sizing: border-box;
   }
 }

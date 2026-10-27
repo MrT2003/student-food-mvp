@@ -6,8 +6,8 @@ export default function AuthHeader() {
     <header className="relative z-10 border-b border-orange-100/70 bg-white">
       <div className="mx-auto flex min-h-20 max-w-[1380px] items-center justify-between gap-5 px-5 sm:px-8">
         <Link
-          href="/auth/register"
-          aria-label="StudentFood - Trang đăng ký"
+          href="/auth/login"
+          aria-label="StudentFood - Trang đăng nhập"
           className="flex items-center gap-3"
         >
           <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6d23] to-[#ff3c00] text-white shadow-sm">
