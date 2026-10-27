@@ -42,7 +42,7 @@ const destinations = [
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
+  if (href === "/") return pathname === "/" || pathname === "/open-restaurants";
   if (pathname === href || pathname.startsWith(`${href}/`)) return true;
   if (href === "/explore") return pathname.startsWith("/restaurants/");
   if (href === "/orders") return pathname === "/cart/success";

@@ -3,7 +3,7 @@ import { MapPin, ReceiptText, Store } from "lucide-react";
 const features = [
   {
     icon: MapPin,
-    title: "Khám phá món quanh trường",
+    title: "Khám phá món ngon quanh trường",
     description: "Tìm món hợp gu, gần khu học tập của bạn.",
   },
   {

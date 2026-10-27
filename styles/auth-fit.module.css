@@ -1,3 +1,148 @@
+/* Mobile authentication: two independent cards, matching the welcome design. */
+@media (max-width: 1023px) {
+  :global(.sf-auth):has(.page) {
+    background: #fffbf5;
+    min-height: 100dvh;
+  }
+
+  :global(.sf-auth):has(.page) > header {
+    background: transparent;
+    border: 0;
+  }
+
+  :global(.sf-auth):has(.page) > header > div {
+    width: min(560px, 100%);
+    min-height: 0;
+    padding: 32px 28px 36px;
+    margin-inline: auto;
+  }
+
+  :global(.sf-auth):has(.page) > header nav { display: none; }
+  :global(.sf-auth):has(.page) > header a { gap: 12px; }
+  :global(.sf-auth):has(.page) > header a > span:first-child {
+    width: 46px;
+    height: 46px;
+    box-shadow: none;
+  }
+  :global(.sf-auth):has(.page) > header a > span:first-child svg { width: 28px; height: 28px; }
+  :global(.sf-auth):has(.page) > header a > span:last-child > span:first-child {
+    font-size: clamp(25px, 6vw, 30px);
+    color: #071b58;
+  }
+  :global(.sf-auth):has(.page) > header a > span:last-child > span:last-child {
+    font-size: 13px;
+    color: #7185ad;
+  }
+
+  :global(.sf-auth):has(.page) > main {
+    width: min(560px, 100%);
+    margin-inline: auto;
+    padding: 0 20px calc(32px + env(safe-area-inset-bottom, 0px));
+  }
+  :global(.sf-auth):has(.page) > div[aria-hidden="true"]:nth-of-type(1) {
+    top: -70px; left: -70px; width: 180px; height: 180px;
+  }
+  :global(.sf-auth):has(.page) > div[aria-hidden="true"]:nth-of-type(2) {
+    top: 50px; right: -100px; width: 200px; height: 200px;
+  }
+
+  .page .authCard {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .page .formPanel {
+    padding: 40px 21px 30px;
+    border: 1px solid #fff;
+    border-radius: 22px;
+    background: rgb(255 255 255 / 90%);
+    box-shadow: 0 10px 25px rgb(194 115 53 / 7%);
+  }
+  .page .formHeading h1 {
+    font-size: clamp(27px, 7.7vw, 40px);
+    line-height: 1.2;
+    letter-spacing: -1.1px;
+    font-weight: 750;
+    color: #071b58;
+  }
+  .page .formHeading p {
+    margin-top: 16px;
+    color: #7185ad;
+    font-size: clamp(13px, 3.7vw, 18px);
+    line-height: 1.5;
+    letter-spacing: -.4px;
+  }
+  .page .providers { max-width: none; margin-top: 22px; }
+  .page .providers button {
+    min-height: 60px;
+    padding: 10px 16px;
+    border-radius: 11px;
+    box-shadow: none;
+    font-size: clamp(15px, 4.2vw, 21px);
+    font-weight: 600;
+  }
+  .page .providers > div > button:first-child {
+    background: linear-gradient(105deg, #168eff, #187aff);
+    gap: 14px;
+  }
+  .page .providers button > span:first-child:not(:only-child) {
+    width: 38px; height: 38px; border-radius: 13px 13px 13px 4px; font-size: 14px;
+  }
+  .page .providers button > span:only-child { min-height: 38px; gap: 14px; }
+  .page .providers button > span:only-child > span:first-child { width: 38px; height: 38px; }
+  .page .providers button > span:only-child > span:first-child svg { width: 34px; height: 34px; }
+  .page .providers button > span:only-child > span:nth-child(3) { font-size: inherit; font-weight: 600; color: #071b58; }
+  .page .providers > div > div { margin-block: 20px; color: #7185ad; font-size: 15px; gap: 13px; }
+  .page .switchAccount {
+    margin-top: 17px;
+    color: #7185ad;
+    font-size: clamp(12px, 3.1vw, 15px);
+    line-height: 1.5;
+    letter-spacing: -.25px;
+  }
+  .page .registerNotice {
+    margin-top: 36px;
+    font-size: clamp(12px, 3.05vw, 15px);
+    line-height: 1.6;
+    color: #7185ad;
+    letter-spacing: -.3px;
+  }
+  .page .registerNotice span { color: #ff4d0a; }
+
+  .page .introWrapper > section {
+    padding: 17px 24px;
+    border: 1px solid #fff;
+    border-radius: 22px;
+    background: rgb(255 255 255 / 65%);
+  }
+  .page .introWrapper > section > p,
+  .page .introWrapper > section > h2,
+  .page > section { display: none; }
+  .page .introWrapper ul { margin: 0; display: grid; gap: 16px; }
+  .page .introWrapper li { margin: 0; align-items: center; gap: 20px; }
+  .page .introWrapper li > span { width: 52px; height: 52px; background: #ffebdf; color: #ff4d0a; }
+  .page .introWrapper li > span svg { width: 28px; height: 28px; stroke-width: 2.5; }
+  .page .introWrapper li > div { padding: 0; min-width: 0; }
+  .page .introWrapper h3 { font-size: clamp(13px, 3.4vw, 17px); line-height: 1.4; letter-spacing: -.25px; color: #071b58; }
+  .page .introWrapper li p { margin-top: 1px; font-size: clamp(12px, 3.15vw, 16px); line-height: 1.5; color: #7185ad; letter-spacing: -.2px; }
+}
+
+@media (max-width: 360px) {
+  :global(.sf-auth):has(.page) > main { padding-inline: 14px; }
+  .page .formPanel { padding-inline: 16px; }
+  .page .introWrapper > section { padding-inline: 16px; }
+  .page .introWrapper li { gap: 12px; }
+  .page .introWrapper li > span { width: 44px; height: 44px; }
+  .page .providers button { padding-inline: 10px; }
+  .page .providers > div > button:first-child,
+  .page .providers button > span:only-child { gap: 9px; }
+}
+
 /* Các class chỉ áp dụng cho trang xác thực (Auth) */
 .page {
   width: 100%;
