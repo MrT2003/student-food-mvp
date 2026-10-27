@@ -6,8 +6,8 @@ export default function AuthHeader() {
     <header className="relative z-10 border-b border-orange-100/70 bg-white">
       <div className="mx-auto flex min-h-20 max-w-[1380px] items-center justify-between gap-5 px-5 sm:px-8">
         <Link
-          href="/auth/register"
-          aria-label="StudentFood - Trang đăng ký"
+          href="/auth/login"
+          aria-label="StudentFood - Trang đăng nhập"
           className="flex items-center gap-3"
         >
           <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6d23] to-[#ff3c00] text-white shadow-sm">
@@ -15,10 +15,10 @@ export default function AuthHeader() {
           </span>
 
           <span>
-            <span className="block text-2xl leading-tight font-bold tracking-tight">
+            <span className="block font-[var(--font-display)] text-xl leading-tight font-extrabold tracking-tight sm:text-2xl">
               Student<span className="text-[#ff4d0a]">Food</span>
             </span>
-            <span className="block text-sm text-[#526a9e]">
+            <span className="block text-xs text-[#526a9e] sm:text-sm">
               Món ngon, gần bạn hơn
             </span>
           </span>
@@ -26,7 +26,7 @@ export default function AuthHeader() {
 
         <nav
           aria-label="Thông tin StudentFood"
-          className="hidden items-center gap-10 md:flex"
+          className="hidden items-center gap-10 font-[var(--font-display)] md:flex"
         >
           {["Về StudentFood", "Hỗ trợ", "Liên hệ"].map((label) => (
             <button

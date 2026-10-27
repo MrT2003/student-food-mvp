@@ -103,7 +103,7 @@ export default function StudentHeader({
         >
           <Link
             href="/"
-            aria-current={pathname === "/" ? "page" : undefined}
+            aria-current={pathname === "/" || pathname === "/open-restaurants" ? "page" : undefined}
             onClick={() => setPanelState(null)}
           >
             Trang chủ

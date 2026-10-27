@@ -1,11 +1,11 @@
 .header { height:64px; background:rgba(255,255,255,.92); border-bottom:1px solid #f4eee8; }
 .header .inner { width:100%; max-width:none; margin:0; padding:0 24px; box-sizing:border-box; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:24px; }
 .header .brand { justify-self:start; grid-column:1; grid-row:1; gap:10px; }
-.header .brand strong { font-size:24px; line-height:27px; letter-spacing:-.7px; }
-.header .brand small { font-size:12px; line-height:16px; }
+.header .brand strong { font-family:var(--font-display); font-size:24px; line-height:27px; font-weight:800; letter-spacing:-.6px; }
+.header .brand small { font-family:var(--font-body); font-size:12px; line-height:16px; }
 .header .brand>span:first-child { width:48px; height:48px; flex-shrink:0; }
-.header .navigation { display:flex; grid-column:2; grid-row:1; justify-self:center; gap:48px; }
-.header .navigation a { color:#174c9b; font-size:16px; }
+.header .navigation { display:flex; grid-column:2; grid-row:1; justify-self:center; gap:48px; font-family:var(--font-display); }
+.header .navigation a { font-family:var(--font-display); color:#174c9b; font-size:16px; font-weight:500; }
 .header .actions { grid-column:3; grid-row:1; justify-self:end; margin-left:0; gap:16px; color:#3e6da5; }
 .header .actions>button:last-of-type { padding-left:6px; }
 @media(max-width:1050px) { .header .inner { gap:16px; padding:0 20px; }.header .navigation { gap:26px; }.header .actions { gap:12px; }.header .actions>button:last-of-type>span:nth-child(2) { display:none; } }

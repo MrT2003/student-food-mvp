@@ -6,7 +6,7 @@
   color-scheme: light;
   background: var(--sf-page);
   color: var(--sf-ink);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
 }
 .page button,
 .page input {
@@ -60,38 +60,45 @@
 }
 .brand strong {
   display: block;
+  font-family: var(--font-display);
   font-size: 26px;
   line-height: 28px;
-  font-weight: 750;
-  letter-spacing: -1.1px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
 }
 .brand strong span {
   color: #ff400e;
 }
 .brand small {
   display: block;
+  font-family: var(--font-body);
   color: var(--sf-muted);
-  font-size: 14px;
-  line-height: 19px;
-  letter-spacing: -0.25px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+  letter-spacing: -0.1px;
 }
 .navigation {
   display: flex;
   align-items: stretch;
   gap: 48px;
   height: 100%;
+  font-family: var(--font-display);
 }
 .navigation a {
   position: relative;
   display: flex;
   align-items: center;
+  font-family: var(--font-display);
   color: var(--sf-muted);
   text-decoration: none;
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 500;
   white-space: nowrap;
 }
 .navigation a[aria-current="page"] {
   color: #ff3d10;
+  font-weight: 700;
 }
 .navigation a[aria-current="page"]::after {
   content: "";
@@ -133,6 +140,7 @@
   background: var(--sf-orange);
   color: white;
   font-size: 11px;
+  font-weight: 600;
 }
 .accountButton {
   display: flex;
@@ -144,7 +152,9 @@
   white-space: nowrap;
 }
 .accountName {
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -160,7 +170,9 @@
   border-radius: 50%;
   background: #ffad96;
   color: white;
+  font-family: var(--font-display);
   font-size: 20px;
+  font-weight: 700;
 }
 .avatarImage {
   object-fit: cover;
@@ -178,6 +190,7 @@
   color: var(--sf-ink);
 }
 .headerPanel h2 {
+  font-family: var(--font-display);
   font-weight: 700;
   font-size: 18px;
   margin: 0 0 10px;
@@ -246,18 +259,21 @@
 }
 .hero h1 {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 42px;
-  line-height: 1.25;
-  font-weight: 750;
-  letter-spacing: -1.6px;
+  line-height: 1.22;
+  font-weight: 800;
+  letter-spacing: -1.2px;
 }
 .hero h1 span {
   color: var(--sf-orange);
 }
 .hero > p {
-  margin: 2px 0 0;
-  font-size: 20px;
-  line-height: 28px;
+  margin: 4px 0 0;
+  font-family: var(--font-body);
+  font-size: 18px;
+  line-height: 1.55;
+  font-weight: 400;
   color: var(--sf-muted);
 }
 .search {
@@ -285,7 +301,7 @@
   border: 0;
   background: transparent;
   color: var(--sf-ink);
-  font-size: 18px;
+  font-size: 17px;
 }
 .search input::placeholder {
   color: var(--sf-muted);
@@ -319,7 +335,8 @@
   width: 157px;
   flex-shrink: 0;
   border-radius: 13px;
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 600;
 }
 .searchSubmitIcon {
   display: none;
@@ -345,6 +362,7 @@
   border: 1px solid #eeebe6;
   background: var(--sf-card);
   font-size: 14px;
+  font-weight: 500;
   white-space: nowrap;
   transition: background 0.15s;
 }
@@ -352,6 +370,7 @@
   background: linear-gradient(110deg, #ff8429, #ff3718);
   border-color: #ff6526;
   color: white;
+  font-weight: 600;
 }
 .filters button:hover:not([aria-pressed="true"]) {
   background: var(--sf-section);
@@ -380,10 +399,11 @@
   align-items: center;
   gap: 12px;
   margin: 0;
+  font-family: var(--font-display);
   font-size: 26px;
-  line-height: 42px;
-  font-weight: 750;
-  letter-spacing: -0.8px;
+  line-height: 1.35;
+  font-weight: 700;
+  letter-spacing: -0.6px;
 }
 .sectionIcon {
   display: grid;
@@ -405,7 +425,8 @@
   background: none;
   color: #ff3c13;
   text-decoration: none;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 500;
   white-space: nowrap;
 }
 .seeAll:hover {
@@ -490,6 +511,7 @@
   background: #efffe5;
   color: #087712;
   font-size: 12px;
+  font-weight: 500;
   line-height: 16px;
   white-space: nowrap;
 }
@@ -499,10 +521,11 @@
 }
 .restaurantCard h3 {
   margin: 11px 0 7px;
+  font-family: var(--font-display);
   font-size: 17px;
-  line-height: 21px;
+  line-height: 22px;
   font-weight: 700;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.4px;
 }
 .location {
   display: flex;
@@ -547,6 +570,7 @@
   width: 100%;
   min-height: 38px;
   font-size: 15px;
+  font-weight: 600;
 }
 .reorderSection {
   margin-top: 29px;
@@ -597,10 +621,11 @@
 }
 .reorderContent h3 {
   margin: 1px 0 3px;
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 700;
-  line-height: 19px;
-  letter-spacing: -0.25px;
+  line-height: 20px;
+  letter-spacing: -0.2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -608,7 +633,7 @@
 .reorderContent p {
   margin: 0;
   font-size: 13px;
-  line-height: 22px;
+  line-height: 21px;
   color: var(--sf-muted);
 }
 .reorderCategories {
@@ -629,6 +654,7 @@
   background: var(--sf-card);
   color: #ff3c13;
   font-size: 14px;
+  font-weight: 500;
 }
 .outlineButton:hover {
   background: var(--sf-section);
@@ -666,8 +692,11 @@
   margin-bottom: 20px;
 }
 .dialogContent h2 {
-  font-size: 26px;
+  font-family: var(--font-display);
+  font-size: 25px;
   font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
   margin-bottom: 10px;
 }
 .dialogContent > p {
@@ -726,7 +755,7 @@
     font-size: 36px;
   }
   .hero > p {
-    font-size: 17px;
+    font-size: 16px;
   }
   .main {
     width: calc(100% - 48px);
@@ -755,6 +784,7 @@
   }
   .brand strong {
     font-size: 22px;
+    letter-spacing: -0.6px;
   }
   .brand small {
     font-size: 11px;
@@ -781,9 +811,9 @@
   .hero h1 {
     max-width: 560px;
     margin-inline: auto;
-    font-size: clamp(24px, 6.6vw, 32px);
-    line-height: 1.22;
-    letter-spacing: -0.9px;
+    font-size: clamp(24px, 6.4vw, 32px);
+    line-height: 1.24;
+    letter-spacing: -0.7px;
     text-wrap: balance;
   }
   .hero h1 span {
@@ -791,10 +821,10 @@
     color: var(--sf-orange);
   }
   .hero > p {
-    max-width: 300px;
+    max-width: 310px;
     margin: 7px auto 0;
     font-size: 14px;
-    line-height: 20px;
+    line-height: 21px;
     text-wrap: balance;
   }
   .search {
@@ -890,8 +920,8 @@
   .sectionHeading h2 {
     min-width: 0;
     font-size: clamp(18px, 4.8vw, 22px);
-    line-height: 1.25;
-    letter-spacing: -0.6px;
+    line-height: 1.28;
+    letter-spacing: -0.5px;
     gap: 8px;
   }
   .sectionIcon {
@@ -928,9 +958,9 @@
   }
   .restaurantMedia {
     height: auto;
-    aspect-ratio: 1.88;
+    aspect-ratio: 1.62;
     overflow: hidden;
-    border-radius: 9px;
+    border-radius: 10px;
   }
   .foodPlaceholder {
     min-height: 0;
@@ -977,8 +1007,8 @@
   .restaurantCard h3 {
     margin: 8px 0 3px;
     font-size: 15px;
-    line-height: 19px;
-    letter-spacing: -0.4px;
+    line-height: 20px;
+    letter-spacing: -0.3px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1033,19 +1063,19 @@
   }
   .reorderCard {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     flex-wrap: nowrap;
-    gap: 8px;
-    padding: 8px;
+    gap: 9px;
+    padding: 9px;
     border-color: #ffffff;
     border-radius: 12px;
     box-shadow: 0 3px 16px #5f411805;
   }
   .smallPlaceholder {
-    width: 52px;
-    height: 52px;
-    min-height: 52px;
-    border-radius: 8px;
+    width: 62px;
+    height: 62px;
+    min-height: 62px;
+    border-radius: 10px;
     flex-shrink: 0;
   }
   .smallPlaceholder > svg {
@@ -1062,12 +1092,12 @@
   }
   .reorderContent h3 {
     margin: 0 0 2px;
-    font-size: 12px;
-    line-height: 16px;
+    font-size: 13px;
+    line-height: 17px;
   }
   .reorderContent p {
-    font-size: 10px;
-    line-height: 14px;
+    font-size: 11px;
+    line-height: 15px;
   }
   .outlineButton {
     min-height: 28px;
@@ -1119,7 +1149,7 @@
   }
   .restaurantCard h3 {
     font-size: 14px;
-    letter-spacing: -0.4px;
+    letter-spacing: -0.3px;
   }
   .restaurantMeta {
     font-size: 10px;
