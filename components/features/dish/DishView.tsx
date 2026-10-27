@@ -52,11 +52,7 @@ import {
 import { useCartStore } from "@/store/useCartStore";
 import { useFlyToCart } from "@/lib/cart/useFlyToCart";
 import { formatMoney as money } from "@/lib/format";
-import {
-  DishHeroMedia,
-  OptionItemArtwork,
-  SectionGroupIcon,
-} from "@/components/features/dish/DishMedia";
+import { DishHeroMedia } from "@/components/features/dish/DishMedia";
 import styles from "@/styles/dish.module.css";
 
 export type DishViewProps = {
@@ -321,7 +317,6 @@ function DishSelection({
                 aria-labelledby={`group-${group.id}`}
               >
                 <div className={styles.optionHeading}>
-                  <SectionGroupIcon kind={groupKind} />
                   <div>
                     <h2 id={`group-${group.id}`}>{group.name}</h2>
                     <p>{getOptionGroupSubtitle(group)}</p>
@@ -359,10 +354,6 @@ function DishSelection({
                             {isSelected ? (
                               <Check size={14} strokeWidth={3} />
                             ) : null}
-                          </span>
-
-                          <span className={styles.toppingArt} aria-hidden="true">
-                            <OptionItemArtwork optionName={option.option_name} />
                           </span>
 
                           <span className={styles.toppingCopy}>
@@ -405,18 +396,18 @@ function DishSelection({
                             className={styles.srOnlyInput}
                           />
 
-                          <span className={styles.sugarTop}>
-                            <span
-                              className={styles.radioIndicator}
-                              data-checked={isSelected}
-                              aria-hidden="true"
-                            />
-                            <strong>{percentLabel}</strong>
-                          </span>
+                          <span
+                            className={styles.radioIndicator}
+                            data-checked={isSelected}
+                            aria-hidden="true"
+                          />
 
-                          <small className={styles.sugarSub}>
-                            {tasteLabel}
-                          </small>
+                          <span className={styles.sugarTop}>
+                            <strong>{percentLabel}</strong>
+                            <small className={styles.sugarSub}>
+                              {tasteLabel}
+                            </small>
+                          </span>
                         </label>
                       );
                     })}
@@ -452,7 +443,7 @@ function DishSelection({
                             aria-hidden="true"
                           />
 
-                          <span>
+                          <span className={styles.iceCopy}>
                             <strong>{option.option_name}</strong>
                             {option.additional_price > 0 && (
                               <small>+{money(option.additional_price)}</small>
@@ -483,7 +474,6 @@ function DishSelection({
           >
             <div className={styles.quantityRow}>
               <div className={styles.quantityHeading}>
-                <SectionGroupIcon kind="quantity" />
                 <span className={styles.quantityLabel}>Số lượng</span>
               </div>
 
