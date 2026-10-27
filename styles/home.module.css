@@ -1200,3 +1200,14 @@
   line-height: 1;
   pointer-events: none;
 }
+
+/* Thẻ lịch sử theo từng món: ảnh/tên mờ khi ngừng bán, vẫn bấm xem được. */
+.snapshotCard { flex-direction: column; }
+.snapshotDetails { display: flex; gap: 12px; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.snapshotInfo { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 5px; font-size: 13px; }
+.snapshotInfo strong { font-size: 15px; overflow-wrap: anywhere; }
+.snapshotPrice { color: #c2410c; font-weight: 700; }
+.snapshotNotice { color: #8b3434; font-size: 12px; font-weight: 600; }
+.snapshotCard[data-dimmed="true"] { background: #f3f4f6; border-color: #d1d5db; }
+.snapshotCard[data-dimmed="true"] .snapshotDetails { filter: grayscale(1); opacity: .7; }
+.snapshotDetails:focus-visible { outline: 2px solid #ea580c; outline-offset: 5px; border-radius: 5px; }

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import { CreateOrderInput, CreateOrderResponse } from "@/types/order.types";
+import type { CreateOrderInput, CreateOrderResponse, OrderedSummary } from "@/types/order.types";
 
 export const OrderServices = {
 	// Create order from the selected list of cart_items 
@@ -69,5 +69,29 @@ export const OrderServices = {
 			throw new Error(error.message || 'Tạo đơn hàng thất bại.');
 		}
 		return data as CreateOrderResponse
+	},
+
+	// N là số dòng món, không phải số đơn. Không gộp các lần đặt cùng món.
+	async fetchOrdered(fetchItems: number): Promise<OrderedSummary[]> {
+		if (!Number.isInteger(fetchItems) || fetchItems < 1 || fetchItems > 100) {
+			throw new Error("Số món cần lấy phải là số nguyên từ 1 đến 100.");
+		}
+		const client = createClient();
+		const { data: { user }, error: authError } = await client.auth.getUser();
+		if (authError || !user) throw new Error("Vui lòng đăng nhập lại để xem món đã đặt.");
+		// RPC tự lấy auth.uid(), giữ RLS và chỉ đọc trạng thái quán/món, chưa đọc options.
+		const { data, error } = await client.rpc("fetch_ordered_items", { p_fetch_items: fetchItems });
+		if (error) throw new Error("Không thể tải món đã đặt: " + error.message);
+		if (!Array.isArray(data)) throw new Error("Dữ liệu món đã đặt không hợp lệ.");
+		type RpcItem = Omit<OrderedSummary, "isDimmed" | "notices">;
+		return (data as RpcItem[]).map((item) => {
+			const notices: string[] = [];
+			if (item.restaurantAvailability === "closed") notices.push("Quán tạm ngưng nhận đơn");
+			if (item.restaurantAvailability === "unavailable") notices.push("Quán hiện không khả dụng");
+			if (item.menuAvailability === "paused") notices.push("Món tạm ngưng phục vụ");
+			if (item.menuAvailability === "unavailable") notices.push("Món hiện không còn khả dụng");
+			// Làm mờ nhưng vẫn cho click xem lịch sử; giá null không được hiển thị thành 0đ.
+			return { ...item, isDimmed: notices.length > 0, notices };
+		});
 	}
 }

@@ -1,9 +1,11 @@
 import "server-only";
+import { catalogTimer } from "@/lib/restaurant/timing";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.types";
-import type { MenuItemDetail, RestaurantMenu, RestaurantServiceType } from "@/types/restaurant.types";
+import type { MenuItemDetail, RestaurantMenu, RestaurantServiceType, RestaurantCatalog } from "@/types/restaurant.types";
 import { mockMenuItemDetails, mockMenuRouteAliases, mockRestaurants } from "@/lib/mocks/catalog.mock";
+
 // import type { StudentService } from "@/types/student-service.types";
 
 // Chỉ lấy các cột công khai, không trả owner_id hoặc delivery_token ra frontend.
@@ -51,7 +53,66 @@ function mapPublicMenuItem(item: MenuItemDetail): MenuItemDetail {
   };
 }
 
-export const RestaurantService: RestaurantServiceType = {
+export const RestaurantService: RestaurantServiceType & {
+  getCatalog(): Promise<RestaurantCatalog[]>;
+} = {
+  // Hai luồng đọc theo lô thay vì 1 + 2N truy vấn. Chỉ trang chi tiết mới tải options.
+  async getCatalog() {
+    const done = catalogTimer("catalog.total");
+    try {
+      const clientDone = catalogTimer("catalog.client");
+      const client = await getDatabaseClient();
+      clientDone();
+
+      // Phân trang theo lô để không âm thầm mất dữ liệu khi chạm giới hạn response Supabase.
+      // Trả thứ tự ổn định; tiếp tục đến trang rỗng (không đoán cấu hình max_rows của DB).
+      async function readBatches<T>(label: string, read: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>) {
+        const rows: T[] = [];
+        for (;;) {
+          const batchDone = catalogTimer(label);
+          const { data, error } = await read(rows.length, rows.length + 50);
+          batchDone({ rows: data?.length ?? 0 });
+          if (error) throw new Error(`Không thể tải catalog: ${error.message}`);
+          if (!data?.length) return rows;
+          rows.push(...data);
+        }
+      }
+
+      // Độc lập nên đọc song song. Inner join ở query món chỉ lấy quán active có quyền xem.
+      // Bước 1: Promise.all chờ cả hai danh sách; tại đây CHƯA ghép món vào quán.
+      // restaurants nhận kết quả truy vấn thứ nhất, menuItems nhận kết quả thứ hai.
+      const [restaurants, menuItems] = await Promise.all([
+        readBatches("catalog.restaurants.batch", (from, to) => client.from("restaurants")
+          .select(restaurantFields).eq("status", "active").order("name").order("id").range(from, to)),
+        readBatches("catalog.items.batch", (from, to) => client.from("menu_items")
+          .select("id, slug, name, price, image_url, category, is_active, is_available, restaurant_id, restaurant:restaurants!menu_items_restaurant_id_fkey!inner(id)")
+          .eq("is_active", true).eq("restaurant.status", "active")
+          .order("name").order("id").range(from, to)),
+      ]);
+
+      const mappingDone = catalogTimer("catalog.group");
+      // Bước 2: Tạo bảng tra trong bộ nhớ server: restaurant_id -> danh sách món.
+      // Ví dụ: "quan-A" -> [món 1, món 2], "quan-B" -> [món 3]. Không ghi vào DB.
+      const grouped = new Map<string, RestaurantCatalog["items"]>();
+      // Bỏ object restaurant phụ từ JOIN; giữ restaurant_id và các field của món.
+      for (const { restaurant: _restaurant, ...item } of menuItems) {
+        // Lấy mảng món của quán này; nếu chưa có thì khởi tạo mảng rỗng.
+        const bucket = grouped.get(item.restaurant_id) ?? [];
+        // Thêm món vào đúng quán rồi lưu mảng vào Map bằng restaurant_id làm khóa.
+        bucket.push(item);
+        grouped.set(item.restaurant_id, bucket);
+      }
+      // Bước 3: Đây là chỗ GHÉP hai danh sách: restaurant.id khớp item.restaurant_id.
+      // Mỗi quán trở thành { restaurant: thông tin quán, items: các món thuộc quán }.
+      // Quán không có món vẫn được giữ lại với items: [], không bị loại khỏi kết quả.
+      const result = restaurants.map((restaurant) => ({ restaurant, items: grouped.get(restaurant.id) ?? [] }));
+      mappingDone({ restaurants: restaurants.length, items: menuItems.length, optionsFetched: 0 });
+      return result;
+    } finally {
+      done();
+    }
+  },
+  
   // Lấy danh sách quán active; quán tạm đóng vẫn được trả cùng operating_status.
   async listRestaurants() {
     const client = await getDatabaseClient();
