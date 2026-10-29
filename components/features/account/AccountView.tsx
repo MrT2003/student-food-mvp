@@ -15,6 +15,7 @@ import {
   type FormEvent,
 } from "react";
 import AccountSecurity from "./AccountSecurity";
+import AccountStoreJoin from "./AccountStoreJoin";
 import AccountSuccessModal from "./AccountSuccessModal";
 
 export default function AccountView() {
@@ -259,6 +260,8 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
           </form>
         </div>
       </section>
+
+      <AccountStoreJoin />
 
       <AccountSecurity />
 
