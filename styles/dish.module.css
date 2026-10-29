@@ -212,6 +212,27 @@
   color: #ffffff;
 }
 
+.infoClosed {
+  background: #fff3ed;
+  color: #c2380b;
+}
+
+.infoClosed .infoBadge {
+  background: #e04819;
+}
+
+.optionSectionDisabled {
+  opacity: 0.58;
+}
+
+.toppingOption[data-disabled="true"],
+.sugarOption[data-disabled="true"],
+.iceOption[data-disabled="true"],
+.clearButton:disabled {
+  cursor: not-allowed;
+  background: #f8f9fc;
+}
+
 .optionSection {
   padding: 14px 13px;
 }

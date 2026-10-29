@@ -142,20 +142,27 @@ function DishSelection({
   const description = getDishDescription(item);
   const infoBannerText = getDishInfoBannerText(item, groups);
 
-  const canAdd =
-    restaurant.status === "active" &&
-    restaurant.operating_status === "open" &&
-    item.is_active &&
-    item.is_available;
+  const isRestaurantOpen =
+    restaurant.status === "active" && restaurant.operating_status === "open";
+
+  const canAdd = isRestaurantOpen && item.is_active && item.is_available;
+
+  const dishBadgeLabel = !isRestaurantOpen
+    ? "Quán tạm đóng cửa"
+    : item.is_available && item.is_active
+      ? "Đang bán"
+      : "Hết món";
 
   const restaurantHref = `/restaurants/${encodeURIComponent(restaurant.slug)}`;
 
   function toggleOption(group: MenuOptionGroupDetail, optionId: string) {
+    if (!canAdd) return;
     setSelected((current) => toggleSelectedOption(current, group, optionId));
     setNotice("");
   }
 
   function clearGroup(group: MenuOptionGroupDetail) {
+    if (!canAdd) return;
     setSelected((current) => clearSelectedOptionGroup(current, group));
     setNotice("");
   }
@@ -268,11 +275,11 @@ function DishSelection({
 
                 <span
                   className={`${styles.badge} ${
-                    !item.is_available ? styles.unavailable : ""
+                    !canAdd ? styles.unavailable : ""
                   }`}
                 >
                   <span aria-hidden="true" />
-                  {item.is_available ? "Đang bán" : "Hết món"}
+                  {dishBadgeLabel}
                 </span>
               </div>
 
@@ -298,11 +305,21 @@ function DishSelection({
           </section>
 
           <div className={styles.infoCard}>
-            <div className={styles.info}>
+            <div
+              className={`${styles.info} ${
+                !canAdd ? styles.infoClosed : ""
+              }`}
+            >
               <span className={styles.infoBadge} aria-hidden="true">
                 <Info size={16} strokeWidth={2.4} />
               </span>
-              <span>{infoBannerText}</span>
+              <span>
+                {!isRestaurantOpen
+                  ? "Quán hiện đang tạm đóng cửa nên chưa thể chọn tùy chọn hoặc đặt món lúc này."
+                  : !item.is_available || !item.is_active
+                    ? "Món ăn này hiện đã hết hàng, bạn vui lòng chọn món khác của quán nhé."
+                    : infoBannerText}
+              </span>
             </div>
           </div>
 
@@ -312,7 +329,9 @@ function DishSelection({
             return (
               <section
                 key={group.id}
-                className={styles.optionSection}
+                className={`${styles.optionSection} ${
+                  !canAdd ? styles.optionSectionDisabled : ""
+                }`}
                 data-group-kind={groupKind}
                 aria-labelledby={`group-${group.id}`}
               >
@@ -330,18 +349,20 @@ function DishSelection({
                     aria-labelledby={`group-${group.id}`}
                   >
                     {group.options.map((option) => {
-                      const isSelected = selectedIds.has(option.id);
+                      const isSelected = canAdd && selectedIds.has(option.id);
                       return (
                         <label
                           key={option.id}
                           className={styles.toppingOption}
                           data-selected={isSelected}
+                          data-disabled={!canAdd}
                         >
                           <input
                             type={group.is_multiple ? "checkbox" : "radio"}
                             name={`option-group-${group.id}`}
                             value={option.id}
                             checked={isSelected}
+                            disabled={!canAdd}
                             onChange={() => toggleOption(group, option.id)}
                             className={styles.srOnlyInput}
                           />
@@ -377,7 +398,7 @@ function DishSelection({
                     aria-labelledby={`group-${group.id}`}
                   >
                     {group.options.map((option) => {
-                      const isSelected = selectedIds.has(option.id);
+                      const isSelected = canAdd && selectedIds.has(option.id);
                       const { percentLabel, tasteLabel } =
                         parseSugarOptionLabel(option.option_name);
 
@@ -386,12 +407,14 @@ function DishSelection({
                           key={option.id}
                           className={styles.sugarOption}
                           data-selected={isSelected}
+                          data-disabled={!canAdd}
                         >
                           <input
                             type="radio"
                             name={`option-group-${group.id}`}
                             value={option.id}
                             checked={isSelected}
+                            disabled={!canAdd}
                             onChange={() => toggleOption(group, option.id)}
                             className={styles.srOnlyInput}
                           />
@@ -421,18 +444,20 @@ function DishSelection({
                     aria-labelledby={`group-${group.id}`}
                   >
                     {group.options.map((option) => {
-                      const isSelected = selectedIds.has(option.id);
+                      const isSelected = canAdd && selectedIds.has(option.id);
                       return (
                         <label
                           key={option.id}
                           className={styles.iceOption}
                           data-selected={isSelected}
+                          data-disabled={!canAdd}
                         >
                           <input
                             type={group.is_multiple ? "checkbox" : "radio"}
                             name={`option-group-${group.id}`}
                             value={option.id}
                             checked={isSelected}
+                            disabled={!canAdd}
                             onChange={() => toggleOption(group, option.id)}
                             className={styles.srOnlyInput}
                           />
@@ -459,6 +484,7 @@ function DishSelection({
                   <button
                     type="button"
                     className={styles.clearButton}
+                    disabled={!canAdd}
                     onClick={() => clearGroup(group)}
                   >
                     Bỏ lựa chọn
@@ -469,7 +495,9 @@ function DishSelection({
           })}
 
           <section
-            className={`${styles.optionSection} ${styles.quantitySection}`}
+            className={`${styles.optionSection} ${styles.quantitySection} ${
+              !canAdd ? styles.optionSectionDisabled : ""
+            }`}
             aria-label="Số lượng món"
           >
             <div className={styles.quantityRow}>
@@ -482,7 +510,7 @@ function DishSelection({
                   type="button"
                   className={styles.minusButton}
                   aria-label="Giảm số lượng"
-                  disabled={quantity <= 1}
+                  disabled={!canAdd || quantity <= 1}
                   onClick={() =>
                     setQuantity((current) => Math.max(1, current - 1))
                   }
@@ -498,7 +526,7 @@ function DishSelection({
                   type="button"
                   className={styles.plusButton}
                   aria-label="Tăng số lượng"
-                  disabled={quantity >= 99}
+                  disabled={!canAdd || quantity >= 99}
                   onClick={() =>
                     setQuantity((current) => Math.min(99, current + 1))
                   }
