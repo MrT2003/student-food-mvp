@@ -242,4 +242,3 @@ export function subscribeAuthProfile(
     data.subscription.unsubscribe();
   };
 }
-
