@@ -159,23 +159,23 @@ test("Summary statistics and preview orders match the attached mockup 100%", () 
     [
       {
         orderCode: "SF0123",
-        restaurantName: "Cơm Cô Ba",
+        restaurantName: "CÆ¡m CÃ´ Ba",
         location: "KTX A",
         status: "pending",
         itemCount: 2,
-        paymentShort: "Chuyển khoản",
-        firstItem: "Cơm gà chiên",
+        paymentShort: "Chuyá»ƒn khoáº£n",
+        firstItem: "CÆ¡m gÃ  chiÃªn",
         otherItemCount: 1,
         total: 100000,
       },
       {
         orderCode: "SF0124",
-        restaurantName: "Trà Sữa Nhà Làm",
+        restaurantName: "TrÃ  Sá»¯a NhÃ  LÃ m",
         location: "KTX B",
         status: "accepted",
         itemCount: 2,
-        paymentShort: "Thanh toán khi nhận",
-        firstItem: "Trà sữa truyền thống",
+        paymentShort: "Thanh toÃ¡n khi nháº­n",
+        firstItem: "TrÃ  sá»¯a truyá»n thá»‘ng",
         otherItemCount: 1,
         total: 45000,
       },
@@ -195,20 +195,20 @@ test("Summary statistics and preview orders match the attached mockup 100%", () 
     [
       {
         orderCode: "SF0101",
-        restaurantName: "Bún Chả Hà Nội",
+        restaurantName: "BÃºn Cháº£ HÃ  Ná»™i",
         status: "completed",
         dateShort: "06/09/2026",
         itemCount: 1,
-        paymentShort: "Tiền mặt",
+        paymentShort: "Tiá»n máº·t",
         total: 52000,
       },
       {
         orderCode: "SF0098",
-        restaurantName: "Mì Cay Seoul",
+        restaurantName: "MÃ¬ Cay Seoul",
         status: "cancelled",
         dateShort: "04/09/2026",
         itemCount: 2,
-        paymentShort: "Tiền mặt",
+        paymentShort: "Tiá»n máº·t",
         total: 65000,
       },
     ],
@@ -324,10 +324,10 @@ test("Order filter, search (code/restaurant/diacritics), date filter, and cancel
 
 test("OrdersHero and OrdersFilterBar render exact texts, tabs, search box, date filter, and 4 summary cards", () => {
   const heroHtml = renderToStaticMarkup(React.createElement(OrdersHero));
-  assert.match(heroHtml, /Đơn hàng của tôi/);
+  assert.match(heroHtml, /ÄÆ¡n hÃ ng cá»§a tÃ´i/);
   assert.match(
     heroHtml,
-    /Theo dõi các đơn hàng hiện tại và xem lại lịch sử đặt món của bạn\./,
+    /Theo dÃµi cÃ¡c Ä‘Æ¡n hÃ ng hiá»‡n táº¡i vÃ  xem láº¡i lá»‹ch sá»­ Ä‘áº·t mÃ³n cá»§a báº¡n\./,
   );
 
   const filterBarHtml = renderToStaticMarkup(
@@ -342,7 +342,7 @@ test("OrdersHero and OrdersFilterBar render exact texts, tabs, search box, date 
     }),
   );
 
-  assert.match(filterBarHtml, /aria-pressed="true"[^>]*>Tất cả<\/button>/);
+  assert.match(filterBarHtml, /aria-pressed="true"[^>]*>Táº¥t cáº£<\/button>/);
   for (const tab of orderStatusTabs) {
     assert.ok(
       filterBarHtml.includes(tab.label),
@@ -351,7 +351,7 @@ test("OrdersHero and OrdersFilterBar render exact texts, tabs, search box, date 
   }
   assert.match(
     filterBarHtml,
-    /placeholder="Tìm theo mã đơn hoặc tên quán\.\.\."/,
+    /placeholder="TÃ¬m theo mÃ£ Ä‘Æ¡n hoáº·c tÃªn quÃ¡n\.\.\."/,
   );
   for (const opt of orderDateOptions) {
     assert.ok(
@@ -383,18 +383,18 @@ test("CurrentOrderCard and HistoryOrderCard render exact mockup content and acti
       onContact: () => {},
     }),
   );
-  assert.match(pendingCardHtml, /Cơm Cô Ba/);
-  assert.match(pendingCardHtml, /Đang chờ xác nhận/);
-  assert.match(pendingCardHtml, /Đơn hàng #SF0123/);
+  assert.match(pendingCardHtml, /CÆ¡m CÃ´ Ba/);
+  assert.match(pendingCardHtml, /Äang chá» xÃ¡c nháº­n/);
+  assert.match(pendingCardHtml, /ÄÆ¡n hÃ ng #SF0123/);
   assert.match(pendingCardHtml, /KTX A/);
-  assert.match(pendingCardHtml, /2 món/);
-  assert.match(pendingCardHtml, /Chuyển khoản/);
-  assert.match(pendingCardHtml, /Cơm gà chiên/);
-  assert.match(pendingCardHtml, /và 1 món khác/);
-  assert.match(pendingCardHtml, /Tổng tiền/);
-  assert.match(pendingCardHtml, /100\.000đ/);
-  assert.match(pendingCardHtml, /Hủy đơn/);
-  assert.match(pendingCardHtml, /Xem chi tiết/);
+  assert.match(pendingCardHtml, /2 mÃ³n/);
+  assert.match(pendingCardHtml, /Chuyá»ƒn khoáº£n/);
+  assert.match(pendingCardHtml, /CÆ¡m gÃ  chiÃªn/);
+  assert.match(pendingCardHtml, /vÃ  1 mÃ³n khÃ¡c/);
+  assert.match(pendingCardHtml, /Tá»•ng tiá»n/);
+  assert.match(pendingCardHtml, /100\.000Ä‘/);
+  assert.match(pendingCardHtml, /Há»§y Ä‘Æ¡n/);
+  assert.match(pendingCardHtml, /Xem chi tiáº¿t/);
 
   const acceptedCardHtml = renderToStaticMarkup(
     React.createElement(CurrentOrderCard, {
@@ -403,17 +403,17 @@ test("CurrentOrderCard and HistoryOrderCard render exact mockup content and acti
       onContact: () => {},
     }),
   );
-  assert.match(acceptedCardHtml, /Trà Sữa Nhà Làm/);
-  assert.match(acceptedCardHtml, /Đã chấp nhận/);
-  assert.match(acceptedCardHtml, /Đơn hàng #SF0124/);
+  assert.match(acceptedCardHtml, /TrÃ  Sá»¯a NhÃ  LÃ m/);
+  assert.match(acceptedCardHtml, /ÄÃ£ cháº¥p nháº­n/);
+  assert.match(acceptedCardHtml, /ÄÆ¡n hÃ ng #SF0124/);
   assert.match(acceptedCardHtml, /KTX B/);
-  assert.match(acceptedCardHtml, /2 món/);
-  assert.match(acceptedCardHtml, /Thanh toán khi nhận/);
-  assert.match(acceptedCardHtml, /Trà sữa truyền thống/);
-  assert.match(acceptedCardHtml, /và 1 món khác/);
-  assert.match(acceptedCardHtml, /45\.000đ/);
-  assert.match(acceptedCardHtml, /Liên hệ quán/);
-  assert.match(acceptedCardHtml, /Xem chi tiết/);
+  assert.match(acceptedCardHtml, /2 mÃ³n/);
+  assert.match(acceptedCardHtml, /Thanh toÃ¡n khi nháº­n/);
+  assert.match(acceptedCardHtml, /TrÃ  sá»¯a truyá»n thá»‘ng/);
+  assert.match(acceptedCardHtml, /vÃ  1 mÃ³n khÃ¡c/);
+  assert.match(acceptedCardHtml, /45\.000Ä‘/);
+  assert.match(acceptedCardHtml, /LiÃªn há»‡ quÃ¡n/);
+  assert.match(acceptedCardHtml, /Xem chi tiáº¿t/);
 
   const completedHistoryHtml = renderToStaticMarkup(
     React.createElement(HistoryOrderCard, {
@@ -422,15 +422,15 @@ test("CurrentOrderCard and HistoryOrderCard render exact mockup content and acti
       added: false,
     }),
   );
-  assert.match(completedHistoryHtml, /Bún Chả Hà Nội/);
-  assert.match(completedHistoryHtml, /Hoàn thành/);
-  assert.match(completedHistoryHtml, /Đơn hàng #SF0101/);
+  assert.match(completedHistoryHtml, /BÃºn Cháº£ HÃ  Ná»™i/);
+  assert.match(completedHistoryHtml, /HoÃ n thÃ nh/);
+  assert.match(completedHistoryHtml, /ÄÆ¡n hÃ ng #SF0101/);
   assert.match(completedHistoryHtml, /06\/09\/2026/);
-  assert.match(completedHistoryHtml, /1 món/);
-  assert.match(completedHistoryHtml, /Tiền mặt/);
-  assert.match(completedHistoryHtml, /52\.000đ/);
-  assert.match(completedHistoryHtml, /Xem chi tiết/);
-  assert.match(completedHistoryHtml, /class="primaryButton"[^>]*>.*Đặt lại/);
+  assert.match(completedHistoryHtml, /1 mÃ³n/);
+  assert.match(completedHistoryHtml, /Tiá»n máº·t/);
+  assert.match(completedHistoryHtml, /52\.000Ä‘/);
+  assert.match(completedHistoryHtml, /Xem chi tiáº¿t/);
+  assert.match(completedHistoryHtml, /class="primaryButton"[^>]*>.*Äáº·t láº¡i/);
 
   const cancelledHistoryHtml = renderToStaticMarkup(
     React.createElement(HistoryOrderCard, {
@@ -439,18 +439,18 @@ test("CurrentOrderCard and HistoryOrderCard render exact mockup content and acti
       added: false,
     }),
   );
-  assert.match(cancelledHistoryHtml, /Mì Cay Seoul/);
-  assert.match(cancelledHistoryHtml, /Đã hủy/);
-  assert.match(cancelledHistoryHtml, /Đơn hàng #SF0098/);
+  assert.match(cancelledHistoryHtml, /MÃ¬ Cay Seoul/);
+  assert.match(cancelledHistoryHtml, /ÄÃ£ há»§y/);
+  assert.match(cancelledHistoryHtml, /ÄÆ¡n hÃ ng #SF0098/);
   assert.match(cancelledHistoryHtml, /04\/09\/2026/);
-  assert.match(cancelledHistoryHtml, /2 món/);
-  assert.match(cancelledHistoryHtml, /Tiền mặt/);
-  assert.match(cancelledHistoryHtml, /65\.000đ/);
-  assert.match(cancelledHistoryHtml, /Xem chi tiết/);
-  assert.match(cancelledHistoryHtml, /class="outlineButton"[^>]*>.*Đặt lại/);
+  assert.match(cancelledHistoryHtml, /2 mÃ³n/);
+  assert.match(cancelledHistoryHtml, /Tiá»n máº·t/);
+  assert.match(cancelledHistoryHtml, /65\.000Ä‘/);
+  assert.match(cancelledHistoryHtml, /Xem chi tiáº¿t/);
+  assert.match(cancelledHistoryHtml, /class="outlineButton"[^>]*>.*Äáº·t láº¡i/);
 });
 
-test("Full OrdersView preserves Desktop UI and renders shared FilterBar + Mobile UI with counts (2) and (3), 'Xem tất cả' link, and store integration", () => {
+test("Full OrdersView preserves Desktop UI and renders shared FilterBar + Mobile UI with counts (2) and (3), 'Xem táº¥t cáº£' link, and store integration", () => {
   resetStore();
   const fullHtml = renderToStaticMarkup(React.createElement(OrdersView));
   // Shared filter bar (Quick tabs -> Search + Date row -> Summary dashboard)
@@ -461,23 +461,23 @@ test("Full OrdersView preserves Desktop UI and renders shared FilterBar + Mobile
 
   // Preserved Desktop UI elements
   assert.match(fullHtml, /class="desktopView"/);
-  assert.match(fullHtml, /Theo dõi đơn/);
-  assert.match(fullHtml, /Mỗi cửa hàng là một đơn hàng riêng/);
-  assert.match(fullHtml, /Tìm hiểu thêm/);
+  assert.match(fullHtml, /Theo dÃµi Ä‘Æ¡n/);
+  assert.match(fullHtml, /Má»—i cá»­a hÃ ng lÃ  má»™t Ä‘Æ¡n hÃ ng riÃªng/);
+  assert.match(fullHtml, /TÃ¬m hiá»ƒu thÃªm/);
 
   // Mobile UI elements
   assert.match(fullHtml, /class="mobileView"/);
-  assert.match(fullHtml, /Đơn hàng của tôi/);
-  assert.match(fullHtml, /Đơn hàng hiện tại/);
+  assert.match(fullHtml, /ÄÆ¡n hÃ ng cá»§a tÃ´i/);
+  assert.match(fullHtml, /ÄÆ¡n hÃ ng hiá»‡n táº¡i/);
   assert.match(fullHtml, /\(2\)/);
-  assert.match(fullHtml, /Lịch sử đơn hàng/);
+  assert.match(fullHtml, /Lá»‹ch sá»­ Ä‘Æ¡n hÃ ng/);
   assert.match(fullHtml, /\(3\)/);
   assert.match(fullHtml, /href="\/orders\/history"/);
-  assert.match(fullHtml, /Xem tất cả/);
-  assert.match(fullHtml, /Cơm Cô Ba/);
-  assert.match(fullHtml, /Trà Sữa Nhà Làm/);
-  assert.match(fullHtml, /Bún Chả Hà Nội/);
-  assert.match(fullHtml, /Mì Cay Seoul/);
+  assert.match(fullHtml, /Xem táº¥t cáº£/);
+  assert.match(fullHtml, /CÆ¡m CÃ´ Ba/);
+  assert.match(fullHtml, /TrÃ  Sá»¯a NhÃ  LÃ m/);
+  assert.match(fullHtml, /BÃºn Cháº£ HÃ  Ná»™i/);
+  assert.match(fullHtml, /MÃ¬ Cay Seoul/);
 
   // Simulate a store checkout and verify OrdersView renders store orders
   const simpleItem = mockMenuItemDetails.find(
@@ -489,7 +489,7 @@ test("Full OrdersView preserves Desktop UI and renders shared FilterBar + Mobile
     quantity: 2,
     selected_options: [],
   });
-  useStudentMockStore.getState().setAddress("Phòng 204");
+  useStudentMockStore.getState().setAddress("PhÃ²ng 204");
   const checkout = useStudentMockStore.getState().checkoutCart();
   assert.equal(checkout.ok, true);
   useStudentMockStore.getInitialState().orderRecords =
@@ -498,11 +498,11 @@ test("Full OrdersView preserves Desktop UI and renders shared FilterBar + Mobile
   const { toOrderDetail } = require("@/lib/orders/order-mappers");
   const rawOrder = Object.values(useStudentMockStore.getState().orderRecords)[0];
   const mappedCard = toOrderCardViewModel(toOrderDetail(rawOrder));
-  assert.equal(mappedCard.restaurantName, "Cơm Cô Ba");
+  assert.equal(mappedCard.restaurantName, "CÆ¡m CÃ´ Ba");
   assert.equal(mappedCard.orderCode, "SF-01-0001");
 
   const storeHtml = renderToStaticMarkup(React.createElement(OrdersView));
-  assert.match(storeHtml, /Cơm Cô Ba/);
+  assert.match(storeHtml, /CÆ¡m CÃ´ Ba/);
   assert.match(storeHtml, /SF-01-0001/);
   resetStore();
 });

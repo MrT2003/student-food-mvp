@@ -23,16 +23,6 @@ export default function HomeFilters({ filters, onChange, onReset }: Props) {
       <button type="button" aria-pressed={isAll} onClick={onReset}>
         Tất cả
       </button>
-      <button
-        type="button"
-        aria-pressed={filters.openOnly}
-        onClick={() =>
-          onChange((value) => ({ ...value, openOnly: !value.openOnly }))
-        }
-      >
-        <span className={styles.greenDot} aria-hidden="true" />
-        Đang mở
-      </button>
       {(["KTX A", "KTX B"] as const).map((location) => (
         <button
           key={location}

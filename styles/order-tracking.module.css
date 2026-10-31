@@ -624,128 +624,387 @@
   }
 }
 
-@media (max-width: 560px) {
+.backLink {
+  display: none;
+}
+
+.mobileItemsTotal,
+.mobileBottomActions {
+  display: none;
+}
+
+.compactSideCard {
+  display: block;
+}
+
+.compactSideCard > .sectionIcon {
+  display: none;
+}
+
+.compactCardTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
+}
+
+@media (max-width: 768px) {
   .page {
-    padding-top: 22px;
+    width: calc(100% - 28px);
+    padding: 14px 0 28px;
+  }
+
+  .heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .backLink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    margin-top: 1px;
+    margin-left: -6px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .headingText {
+    min-width: 0;
+  }
+
+  .heading h1 {
+    font-size: 24px;
+    line-height: 1.25;
+    letter-spacing: -0.6px;
   }
 
   .heading p {
-    font-size: 16px;
+    margin-top: 3px;
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+
+  .columns,
+  .leftColumn,
+  .rightColumn {
+    gap: 12px;
+  }
+
+  .card {
+    border-radius: 16px;
+    box-shadow: 0 3px 12px rgb(8 20 71 / 4%);
   }
 
   .restaurantCard {
-    grid-template-columns: 74px minmax(0, 1fr);
-    padding: 16px;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: start;
+    padding: 14px;
     gap: 14px;
   }
 
   .restaurantImage {
-    width: 74px;
+    width: 96px;
     align-self: start;
   }
 
+  .restaurantTitle {
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
   .restaurantTitle h2 {
-    font-size: 20px;
+    font-size: 18px;
+    line-height: 1.25;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .badge {
-    padding: 7px 9px;
-    font-size: 13px;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .badge svg {
+    width: 14px;
+    height: 14px;
   }
 
   .orderCode {
-    font-size: 15px;
+    margin-top: 2px;
+    font-size: 14px;
   }
 
   .metadata {
-    gap: 10px;
-    margin-top: 16px;
-    font-size: 14px;
+    gap: 6px 0;
+    margin-top: 8px;
+    font-size: 13px;
   }
 
-  .metadata > span + span {
-    margin: 0;
-    padding: 0;
-    border: 0;
+  .metadata > span {
+    gap: 6px;
+  }
+
+  .metadata > span:nth-child(2) {
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 1px solid var(--border);
+  }
+
+  .metadata > span:nth-child(3) {
+    flex-basis: 100%;
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .metadata svg,
+  .placedAt svg {
+    width: 16px;
+    height: 16px;
   }
 
   .placedAt {
-    margin-top: 14px;
-    font-size: 14px;
+    margin-top: 6px;
+    gap: 6px;
+    font-size: 13px;
   }
 
   .trackingCard {
-    padding: 18px 16px;
+    padding: 16px;
+  }
+
+  .sectionTitle,
+  .sideCard .sectionTitle {
+    gap: 10px;
+    font-size: 18px;
+  }
+
+  .sectionIcon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .sectionIcon svg {
+    width: 18px;
+    height: 18px;
   }
 
   .timeline {
-    padding-left: 0;
+    margin: 16px 0;
+    padding-left: 24px;
   }
 
   .step {
-    gap: 15px;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 14px;
+    min-height: 82px;
+    padding-bottom: 14px;
+  }
+
+  .step:last-child {
+    min-height: 54px;
+    padding-bottom: 0;
+  }
+
+  .stepMarker {
+    width: 28px;
+    height: 28px;
+  }
+
+  .stepMarker svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .step:not(:last-child)::after {
+    top: 32px;
+    bottom: 4px;
+    left: 13px;
   }
 
   .stepContent h3 {
-    font-size: 19px;
-  }
-
-  .stepContent p {
-    font-size: 15px;
-  }
-
-  .infoBanner {
-    align-items: flex-start;
-    gap: 12px;
-    padding: 14px;
-  }
-
-  .bulbIcon {
-    width: 42px;
-    height: 42px;
-  }
-
-  .infoBanner h3 {
+    margin: 2px 0 3px;
     font-size: 16px;
   }
 
-  .infoBanner p {
-    font-size: 14px;
+  .stepContent p {
+    margin-top: 2px;
+    font-size: 13.5px;
+    line-height: 1.4;
   }
 
-  .actions {
-    grid-template-columns: 1fr;
+  .stepContent .stepTime {
+    margin-top: 2px;
+    font-size: 13px;
+  }
+
+  .infoBanner {
+    align-items: center;
     gap: 12px;
-    margin-top: 20px;
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .bulbIcon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .bulbIcon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .infoBanner h3 {
+    margin-bottom: 2px;
+    font-size: 14.5px;
+  }
+
+  .infoBanner p {
+    font-size: 13px;
+  }
+
+  .desktopActions {
+    display: none;
+  }
+
+  .orderInfoCard {
+    display: none;
+  }
+
+  .sideCard {
+    padding: 16px;
+  }
+
+  .itemList {
+    margin-top: 12px;
+  }
+
+  .item {
+    grid-template-columns: 52px minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+  }
+
+  .itemImage {
+    grid-row: auto;
+    width: 52px;
+  }
+
+  .itemContent h3 {
+    margin-bottom: 2px;
+    font-size: 15px;
+  }
+
+  .itemContent p {
+    font-size: 13px;
+  }
+
+  .quantity {
+    font-size: 14px;
+    padding-right: 6px;
+  }
+
+  .itemPrice {
+    grid-column: auto;
+    text-align: right;
+    font-size: 16px;
+  }
+
+  .mobileItemsTotal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .mobileItemsTotal span {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .mobileItemsTotal strong {
+    color: var(--ink);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .compactSideCard {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .compactSideCard > .sectionIcon {
+    display: inline-flex;
+    margin-top: 2px;
+  }
+
+  .compactCardBody {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .compactCardTitle {
+    font-size: 17px;
+    line-height: 1.3;
+  }
+
+  .compactSideCard .address,
+  .compactSideCard .note {
+    margin-top: 4px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .compactSideCard .address strong {
+    display: block;
+    font-size: 15px;
+    color: var(--ink);
+  }
+
+  .compactSideCard .address p {
+    margin-top: 2px;
+    font-size: 13.5px;
+  }
+
+  .mobileBottomActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 2px;
   }
 
   .outlineButton,
   .primaryButton {
-    min-height: 52px;
-    font-size: 17px;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 14.5px;
   }
 
-  .item {
-    grid-template-columns: 55px minmax(0, 1fr) 28px;
-    gap: 8px 12px;
-  }
-
-  .itemImage {
-    grid-row: 1 / 3;
-    width: 55px;
-  }
-
-  .itemPrice {
-    grid-column: 2 / -1;
-    text-align: left;
-  }
-
-  .itemContent h3 {
-    font-size: 16px;
-  }
-
-  .totalRow dd {
-    font-size: 28px;
+  .demoNote {
+    display: none;
   }
 }
 

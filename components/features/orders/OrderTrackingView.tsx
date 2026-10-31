@@ -5,6 +5,7 @@ import TransferContent from "@/components/ui/TransferContent";
 import type { ReactNode } from "react";
 import {
   Check,
+  ChevronLeft,
   ClipboardList,
   Clock3,
   CreditCard,
@@ -192,8 +193,17 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
   return (
     <div className={styles.page}>
       <header className={styles.heading}>
-        <h1>Theo dõi đơn hàng</h1>
-        <p>Cập nhật trạng thái đơn hàng của bạn theo thời gian thực.</p>
+        <Link
+          href="/orders"
+          className={styles.backLink}
+          aria-label="Quay lại danh sách đơn hàng"
+        >
+          <ChevronLeft size={28} strokeWidth={2.5} aria-hidden="true" />
+        </Link>
+        <div className={styles.headingText}>
+          <h1>Theo dõi đơn hàng</h1>
+          <p>Cập nhật trạng thái đơn hàng của bạn theo thời gian thực.</p>
+        </div>
       </header>
 
       <div className={styles.columns}>
@@ -292,7 +302,7 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
               </div>
             </aside>
 
-            <div className={styles.actions}>
+            <div className={`${styles.actions} ${styles.desktopActions}`}>
               <Link
                 href={`/orders/${encodeURIComponent(order.id)}`}
                 className={styles.outlineButton}
@@ -308,7 +318,9 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
         </div>
 
         <aside className={styles.rightColumn}>
-          <section className={`${styles.card} ${styles.sideCard}`}>
+          <section
+            className={`${styles.card} ${styles.sideCard} ${styles.orderInfoCard}`}
+          >
             <SectionTitle icon={<ClipboardList size={24} aria-hidden="true" />}>
               Thông tin đơn hàng
             </SectionTitle>
@@ -347,10 +359,14 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
                 <dd>{formatOrderMoney(total)}</dd>
               </div>
             </dl>
-            {order.transferContent && <TransferContent value={order.transferContent} />}
+            {order.transferContent && (
+              <TransferContent value={order.transferContent} />
+            )}
           </section>
 
-          <section className={`${styles.card} ${styles.sideCard}`}>
+          <section
+            className={`${styles.card} ${styles.sideCard} ${styles.itemsCard}`}
+          >
             <SectionTitle icon={<Utensils size={24} aria-hidden="true" />}>
               Danh sách món
             </SectionTitle>
@@ -382,26 +398,54 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
                 </li>
               ))}
             </ul>
-          </section>
 
-          <section className={`${styles.card} ${styles.sideCard}`}>
-            <SectionTitle icon={<MapPin size={24} aria-hidden="true" />}>
-              Địa chỉ nhận hàng
-            </SectionTitle>
-            <div className={styles.address}>
-              <strong>{order.deliveryLocation}</strong>
-              <p>{order.deliveryAddress || "Chưa có địa chỉ chi tiết."}</p>
+            <div className={styles.mobileItemsTotal}>
+              <span>Tổng tiền</span>
+              <strong>{formatOrderMoney(total)}</strong>
             </div>
           </section>
 
-          <section className={`${styles.card} ${styles.sideCard}`}>
-            <SectionTitle icon={<ClipboardList size={24} aria-hidden="true" />}>
-              Ghi chú đơn hàng
-            </SectionTitle>
-            <p className={styles.note}>
-              {order.note.trim() || "Không có ghi chú."}
-            </p>
+          <section
+            className={`${styles.card} ${styles.sideCard} ${styles.compactSideCard}`}
+          >
+            <span className={styles.sectionIcon}>
+              <MapPin size={20} aria-hidden="true" />
+            </span>
+            <div className={styles.compactCardBody}>
+              <h2 className={styles.compactCardTitle}>Địa chỉ nhận hàng</h2>
+              <div className={styles.address}>
+                <strong>{order.deliveryLocation}</strong>
+                <p>{order.deliveryAddress || "Chưa có địa chỉ chi tiết."}</p>
+              </div>
+            </div>
           </section>
+
+          <section
+            className={`${styles.card} ${styles.sideCard} ${styles.compactSideCard}`}
+          >
+            <span className={styles.sectionIcon}>
+              <ClipboardList size={20} aria-hidden="true" />
+            </span>
+            <div className={styles.compactCardBody}>
+              <h2 className={styles.compactCardTitle}>Ghi chú đơn hàng</h2>
+              <p className={styles.note}>
+                {order.note.trim() || "Không có ghi chú."}
+              </p>
+            </div>
+          </section>
+
+          <div className={`${styles.actions} ${styles.mobileBottomActions}`}>
+            <Link
+              href={`/orders/${encodeURIComponent(order.id)}`}
+              className={styles.outlineButton}
+            >
+              Xem chi tiết
+            </Link>
+
+            <Link href="/orders" className={styles.primaryButton}>
+              Về đơn hàng của tôi
+            </Link>
+          </div>
         </aside>
       </div>
 

@@ -1,13 +1,12 @@
 import Link from "next/link";
 import {
+  ArrowRight,
   ChevronRight,
   CircleCheck,
   CircleX,
   Clock3,
   CreditCard,
-  FileText,
   MapPin,
-  Phone,
   Utensils,
 } from "lucide-react";
 import { formatMoney } from "@/lib/format";
@@ -41,11 +40,7 @@ function CurrentStatusBadge({ status }: { status: OrderStatus }) {
   );
 }
 
-export default function CurrentOrderCard({
-  order,
-  onCancel,
-  onContact,
-}: Props) {
+export default function CurrentOrderCard({ order }: Props) {
   return (
     <article
       className={styles.mobileCurrentCard}
@@ -122,32 +117,20 @@ export default function CurrentOrderCard({
       </div>
 
       <div className={styles.currentActions}>
-        {order.status === "pending" ? (
-          <button
-            type="button"
-            className={styles.outlineButton}
-            onClick={() => onCancel?.(order.id)}
-          >
-            <CircleX size={15} strokeWidth={2} aria-hidden="true" />
-            Hủy đơn
-          </button>
-        ) : (
-          <button
-            type="button"
-            className={styles.outlineButton}
-            onClick={() => onContact?.(order)}
-          >
-            <Phone size={15} strokeWidth={2} aria-hidden="true" />
-            Liên hệ quán
-          </button>
-        )}
+        <Link
+          href={`/orders/${encodeURIComponent(order.id)}/tracking`}
+          className={styles.primaryButton}
+        >
+          <MapPin size={16} strokeWidth={2.2} aria-hidden="true" />
+          Theo dõi đơn
+        </Link>
 
         <Link
           href={`/orders/${encodeURIComponent(order.id)}`}
           className={styles.outlineButton}
         >
-          <FileText size={15} strokeWidth={2} aria-hidden="true" />
           Xem chi tiết
+          <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
         </Link>
       </div>
     </article>

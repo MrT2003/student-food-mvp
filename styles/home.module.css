@@ -19,7 +19,7 @@
 .page button {
   cursor: pointer;
 }
-.page :is(button, a, input):focus-visible {
+.page :is(button, a):focus-visible {
   outline: 2px solid var(--sf-orange);
   outline-offset: 4px;
 }
@@ -294,6 +294,7 @@
   flex-shrink: 0;
 }
 .search input {
+  outline: none;
   width: 0;
   flex: 1;
   min-width: 0;
@@ -1201,7 +1202,7 @@
   pointer-events: none;
 }
 
-/* Thẻ lịch sử theo từng món: ảnh/tên mờ khi ngừng bán, vẫn bấm xem được. */
+/* Tháº» lá»‹ch sá»­ theo tá»«ng mÃ³n: áº£nh/tÃªn má» khi ngá»«ng bÃ¡n, váº«n báº¥m xem Ä‘Æ°á»£c. */
 .snapshotCard { flex-direction: column; }
 .snapshotDetails { display: flex; gap: 12px; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .snapshotInfo { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 5px; font-size: 13px; }

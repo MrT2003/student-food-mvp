@@ -66,3 +66,12 @@ nav {
   background: #ffdfca;
   color: #08184c;
 }
+
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: none;
+}
