@@ -12,6 +12,7 @@ export type SellerPreview = {
   cash: boolean;
   bank: boolean;
   hours: string;
+  avatar_url?: string | null;
 };
 
 export const useSellerPreviewStore = create<{

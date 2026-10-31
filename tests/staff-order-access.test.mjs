@@ -90,6 +90,22 @@ test("RPC permission failure is not rerouted to elevated DB/new checkout", async
   assert.equal(f.calls.filter((call) => call.rpc).length, 1);
 });
 
+test("merged order service preserves pre-develop ordered-item history alongside guarded checkout", async () => {
+  const f = fixture();
+  f.client.rpc = async (name, payload) => {
+    f.calls.push({ rpc: name, payload });
+    return { data: [{ restaurantAvailability: "closed", menuAvailability: "paused", price: null }], error: null };
+  };
+  const { OrderServices } = load("../services/order.service.ts", { "@/lib/supabase/client": { createClient: () => f.client }, "@/lib/auth/purchase-access": f });
+  const rows = await OrderServices.fetchOrdered(5);
+  assert.equal(f.calls[0].rpc, "fetch_ordered_items");
+  assert.equal(f.calls[0].payload.p_fetch_items, 5);
+  assert.equal(rows[0].isDimmed, true);
+  assert.equal(rows[0].notices.length, 2);
+  assert.equal(rows[0].price, null);
+  await assert.rejects(OrderServices.fetchOrdered(0));
+});
+
 test("checkout sanitizes unknown RPC errors and preserves known business messages", async () => {
   for (const [message, expected] of [["PRIVATE_DATABASE_DETAIL", "Tạo đơn hàng thất bại."],
     ["PRICE_MISMATCH: PRIVATE_DATABASE_DETAIL", "PRICE_MISMATCH"],

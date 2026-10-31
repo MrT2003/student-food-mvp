@@ -38,6 +38,10 @@ export type RestaurantMenu = {
   items: MenuItemDetail[];
 };
 
+// Catalog cho danh sách: không mang options hoặc các cột không dùng lên trang khám phá.
+export type CatalogItem = Pick<MenuItem, "id" | "slug" | "name" | "price" | "image_url" | "category" | "is_active" | "is_available" | "restaurant_id">;
+export type RestaurantCatalog = { restaurant: RestaurantPublic; items: CatalogItem[] };
+
 
 export type RestaurantServiceType = Pick<
   StudentService,

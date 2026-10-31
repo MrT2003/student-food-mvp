@@ -22,7 +22,7 @@ export const useSellerShopStore = create<{
     const hours = draft?.hours.match(/(\d{2}:\d{2})\s*[-–]\s*(\d{2}:\d{2})/);
     return { shop: { name: draft?.name || demoSellerRestaurant.name,
       description: draft?.description || demoSellerRestaurant.description || "",
-      location: draft?.location || demoSellerRestaurant.location || "KTX A", avatar_url: null,
+      location: draft?.location || demoSellerRestaurant.location || "KTX A", avatar_url: draft?.avatar_url ?? null,
       contactPhonePreview: "0901 234 567", openPreview: false, startPausedPreview: true,
       scheduleModePreview: "same", daysPreview: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((label) => ({
         label, enabled: label !== "CN", opens: hours?.[1] ?? "10:00", closes: hours?.[2] ?? "14:00",

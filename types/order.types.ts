@@ -94,3 +94,27 @@ export interface CreateOrderResponse {
   sessionCheckoutId: string;
   orders: CreateOrderSummary[];
 }
+
+// Mỗi phần tử là một dòng món từng đặt; không gộp theo menu_item_id hoặc options.
+export type OrderedSummary = {
+  orderItemId: string;
+  orderId: Order["id"];
+  orderCode: Order["order_code"];
+  restaurantId: Order["restaurant_id"];
+  restaurantName: string | null;
+  menuItemId: string | null;
+  name: string;
+  imageUrl: string | null;
+  quantity: number;
+  basePriceSnapshot: number;
+  // Giá một phần đã gồm options; null nghĩa là snapshot cũ chưa có total_price.
+  unitPriceSnapshot: number | null;
+  lineTotalSnapshot: number | null;
+  restaurantAvailability: "available" | "closed" | "unavailable";
+  menuAvailability: "available" | "paused" | "unavailable";
+  // UI làm mờ nhưng vẫn cho click; không dùng isDimmed để disabled thẻ.
+  isDimmed: boolean;
+  notices: string[];
+  orderStatus: Order["order_status"];
+  createdAt: Order["created_at"];
+};

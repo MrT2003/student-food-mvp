@@ -18,6 +18,7 @@ export type ExploreRestaurant = {
   popularity: number;
   kind: FoodKind;
   searchTerms: string[];
+  imageUrl: string | null;
 };
 
 export type ExploreDish = {
@@ -28,6 +29,7 @@ export type ExploreDish = {
   restaurantId: string;
   restaurantSlug: string;
   kind: FoodKind;
+  imageUrl: string | null;
 };
 
 export const exploreRestaurants: ExploreRestaurant[] =
@@ -42,6 +44,7 @@ export const exploreRestaurants: ExploreRestaurant[] =
     popularity: view.popularity,
     kind: view.kind,
     searchTerms: [...view.searchTerms],
+    imageUrl: view.restaurant.avatar_url,
   }));
 
 const catalogDishes: ExploreDish[] = catalogRestaurantViews.flatMap((view) =>
@@ -55,6 +58,7 @@ const catalogDishes: ExploreDish[] = catalogRestaurantViews.flatMap((view) =>
       restaurantId: view.restaurant.id,
       restaurantSlug: view.restaurant.slug,
       kind: getDishKind(item.category, view.kind),
+      imageUrl: item.image_url,
     })),
 );
 

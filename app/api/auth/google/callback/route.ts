@@ -93,7 +93,7 @@ export async function GET(request: Request) {
           // Nếu profile đã xuất hiện, giữ nguyên cả role/status, kể cả trạng thái bị khóa.
           const { error: profileInsertError } = await supabaseAdminClient.from("users").upsert({
             id: data.user.id,
-            name: name?.trim() || "Sinh viên",
+            name: name?.trim() || "Unknown User",
             avatar_url: avatar?.trim() || null,
             role: "student",
             status: "active",

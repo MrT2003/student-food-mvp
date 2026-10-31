@@ -1,9 +1,9 @@
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import Button from "@/components/ui/Button";
+import type { AuthProviderType } from "@/lib/auth/useAuthFlow";
 
 type Props = {
-  mode?: "register" | "login";
-  pending: boolean;
+  pendingProvider: AuthProviderType | null;
   error: string | null;
   onGoogle: () => void;
   onZalo: () => void;
@@ -37,55 +37,52 @@ function GoogleIcon() {
 }
 
 export default function SocialAuthButtons({
-  mode = "register",
-  pending,
+  pendingProvider,
   error,
   onGoogle,
   onZalo,
 }: Props) {
-  const isLogin = mode === "login";
+  const pending = pendingProvider !== null;
+  const isZaloPending = pendingProvider === "zalo";
+  const isGooglePending = pendingProvider === "google";
 
   return (
     <div>
-      {!isLogin && (
-        <p className="mb-4 text-center text-[#526a9e]">
-          Tiếp tục nhanh với
-        </p>
-      )}
-
       <button
         type="button"
         onClick={onZalo}
         disabled={pending}
-        aria-busy={pending}
-        className="flex min-h-[72px] w-full cursor-pointer items-center gap-3 rounded-2xl bg-gradient-to-r from-[#2998ff] to-[#2478ef] px-4 py-3 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:gap-5 sm:px-7 sm:text-xl"
+        aria-busy={isZaloPending}
+        className="flex min-h-[64px] w-full cursor-pointer items-center gap-3 rounded-2xl bg-gradient-to-r from-[#2998ff] to-[#1a75ef] px-4 py-3 text-base font-semibold text-white shadow-[0_6px_18px_rgba(36,120,239,0.24)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 sm:gap-5 sm:px-7 sm:text-xl"
       >
         <span
           aria-hidden="true"
-          className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white text-sm font-bold text-[#168aff]"
+          className="flex size-10 shrink-0 items-center justify-center rounded-2xl rounded-bl-md bg-white text-sm font-bold text-[#168aff]"
         >
-          Zalo
+          {isZaloPending ? (
+            <LoaderCircle className="size-6 animate-spin" aria-hidden="true" />
+          ) : (
+            "Zalo"
+          )}
         </span>
 
-        {isLogin && (
-          <span
-            aria-hidden="true"
-            className="h-8 w-px shrink-0 bg-white/40"
-          />
-        )}
+        <span
+          aria-hidden="true"
+          className="h-7 w-px shrink-0 bg-white/40"
+        />
 
         <span className="flex-1 text-center">
-          Tiếp tục với Zalo
+          {isZaloPending ? "Đang chuyển hướng..." : "Tiếp tục với Zalo"}
         </span>
 
         <ArrowRight
-          size={24}
+          size={23}
           className="shrink-0"
           aria-hidden="true"
         />
       </button>
 
-      <div className="my-5 flex items-center gap-4 text-[#526a9e]">
+      <div className="my-5 flex items-center gap-4 text-sm text-[#526a9e]">
         <span className="h-px flex-1 bg-[#dce2ed]" />
         <span>Hoặc</span>
         <span className="h-px flex-1 bg-[#dce2ed]" />
@@ -95,12 +92,12 @@ export default function SocialAuthButtons({
         variant="outline"
         onClick={onGoogle}
         disabled={pending}
-        aria-busy={pending}
+        aria-busy={isGooglePending}
         className="w-full"
       >
         <span className="flex min-h-11 w-full items-center gap-3 sm:gap-5">
           <span className="flex size-10 shrink-0 items-center justify-center">
-            {pending ? (
+            {isGooglePending ? (
               <LoaderCircle
                 className="size-7 animate-spin"
                 aria-hidden="true"
@@ -110,22 +107,20 @@ export default function SocialAuthButtons({
             )}
           </span>
 
-          {isLogin && (
-            <span
-              aria-hidden="true"
-              className="h-8 w-px shrink-0 bg-[#dce2ed]"
-            />
-          )}
+          <span
+            aria-hidden="true"
+            className="h-7 w-px shrink-0 bg-[#dce2ed]"
+          />
 
-          <span className="flex-1 text-center text-base sm:text-xl">
-            {pending
+          <span className="flex-1 text-center text-base font-bold text-[#0d224c] sm:text-xl">
+            {isGooglePending
               ? "Đang chuyển hướng..."
               : "Tiếp tục với Google"}
           </span>
 
           <ArrowRight
-            size={24}
-            className="shrink-0"
+            size={23}
+            className="shrink-0 text-[#0d224c]"
             aria-hidden="true"
           />
         </span>

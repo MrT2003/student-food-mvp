@@ -43,7 +43,7 @@ test("client treats network/invalid response and post-commit profile failure as 
   }
 });
 
-function formHarness(helper) {
+function formHarness(helper, uploadImage = async () => ({ secureUrl: "https://res.cloudinary.com/test/image/upload/test.png" })) {
   const states = [], refs = [], navigation = [];
   let stateCursor = 0, refCursor = 0;
   const jsx = (type, props) => ({ type, props });
@@ -55,6 +55,7 @@ function formHarness(helper) {
     "react/jsx-runtime": { jsx, jsxs: jsx }, "next/link": { default: "a" },
     "next/navigation": { useRouter: () => ({ push: (path) => navigation.push(path), refresh: () => navigation.push("refresh") }) },
     "lucide-react": {}, "@/styles/seller-registration.module.css": { default: {} }, "@/lib/seller/register-client": helper,
+    "@/services/cloudinary.service": { CloudinaryService: { uploadImage } },
   });
   const render = () => { stateCursor = 0; refCursor = 0; return Component(); };
   function nodes(node) { if (!node || typeof node !== "object") return []; return [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)]; }
@@ -81,4 +82,22 @@ test("actual form waits for API, prevents duplicate submit, displays failure and
 test("actual form navigates only after successful API and confirmed seller profile (mock HTTP)", async () => {
   const f = client(); const ui = formHarness(f); await ui.submit();
   assert.equal(f.calls[1], "profile"); assert.deepEqual(ui.navigation, ["/seller", "refresh"]);
+});
+
+test("merged form keeps Cloudinary upload and blocks registration until upload completes", async () => {
+  let resolveUpload;
+  const f = client();
+  const ui = formHarness(f, () => new Promise((resolve) => { resolveUpload = resolve; }));
+  const image = ui.nodes(ui.render()).find((node) => node.props?.id === "shop-image");
+  image.props.onChange({ target: { files: [{ type: "image/webp" }], value: "" } });
+  assert.equal(ui.nodes(ui.render()).find((node) => node.props?.type === "submit").props.disabled, true);
+  await ui.submit();
+  assert.equal(f.calls.length, 0);
+  resolveUpload({ secureUrl: "https://res.cloudinary.com/test/image/upload/test.webp" });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(ui.nodes(ui.render()).find((node) => node.props?.type === "submit").props.disabled, false);
+  await ui.submit();
+  assert.deepEqual(ui.navigation, ["/seller", "refresh"]);
+  // Upload UI không đưa field ảnh ngoài contract vào RPC đăng ký hiện có.
+  assert.equal(Object.hasOwn(JSON.parse(f.calls[0].request.body), "avatar_url"), false);
 });

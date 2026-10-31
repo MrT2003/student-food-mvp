@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { submitSellerRegistration } from "@/lib/seller/register-client";
+import { CloudinaryService } from "@/services/cloudinary.service";
 import {
   useEffect,
   useRef,
@@ -84,8 +85,8 @@ export default function SellerRegistrationView() {
   const [startClosed, setStartClosed] = useState(false);
   const [appLockPin, setAppLockPin] = useState("");
 
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageError, setImageError] = useState("");
 
   const [errors, setErrors] = useState<string[]>([]);
@@ -94,16 +95,8 @@ export default function SellerRegistrationView() {
   const submitting = useRef(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageUrlRef = useRef<string | null>(null);
+  const uploadRequestIdRef = useRef(0);
   const errorRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    return () => {
-      if (imageUrlRef.current) {
-        URL.revokeObjectURL(imageUrlRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (errors.length > 0) {
@@ -112,12 +105,8 @@ export default function SellerRegistrationView() {
   }, [errors]);
 
   function clearImage() {
-    if (imageUrlRef.current) {
-      URL.revokeObjectURL(imageUrlRef.current);
-      imageUrlRef.current = null;
-    }
-
-    setImageFile(null);
+    uploadRequestIdRef.current++;
+    setIsUploadingImage(false);
     setImagePreview("");
 
     if (fileInputRef.current) {
@@ -125,33 +114,36 @@ export default function SellerRegistrationView() {
     }
   }
 
-  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
 
     setImageError("");
     setMessage("");
 
-    if (!["image/jpeg", "image/png"].includes(file.type)) {
-      setImageError("Chỉ chấp nhận ảnh JPG hoặc PNG.");
-      event.target.value = "";
-      return;
+    const requestId = ++uploadRequestIdRef.current;
+    setIsUploadingImage(true);
+    try {
+      const uploaded = await CloudinaryService.uploadImage(file, {
+        folder: "student-food/restaurants",
+      });
+      if (uploadRequestIdRef.current === requestId) {
+        setImagePreview(uploaded.secureUrl);
+      }
+    } catch (err) {
+      if (uploadRequestIdRef.current === requestId) {
+        setImageError(
+          err instanceof Error
+            ? err.message
+            : "Không thể tải ảnh đại diện lên Cloudinary.",
+        );
+      }
+    } finally {
+      if (uploadRequestIdRef.current === requestId) {
+        setIsUploadingImage(false);
+      }
     }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setImageError("Ảnh không được vượt quá 5 MB.");
-      event.target.value = "";
-      return;
-    }
-
-    if (imageUrlRef.current) {
-      URL.revokeObjectURL(imageUrlRef.current);
-    }
-
-    const url = URL.createObjectURL(file);
-    imageUrlRef.current = url;
-    setImageFile(file);
-    setImagePreview(url);
   }
 
   function updateDay(id: string, patch: Partial<DayHours>) {
@@ -181,6 +173,9 @@ export default function SellerRegistrationView() {
     }
     if (!/^[0-9]{4}$/.test(appLockPin)) {
       nextErrors.push("Vui lòng nhập PIN gồm đúng 4 chữ số.");
+    }
+    if (isUploadingImage) {
+      nextErrors.push("Vui lòng chờ tải ảnh lên Cloudinary hoàn tất.");
     }
     if (imageError) {
       nextErrors.push("Vui lòng chọn lại ảnh hợp lệ hoặc bỏ chọn ảnh.");
@@ -365,9 +360,9 @@ export default function SellerRegistrationView() {
                 ref={fileInputRef}
                 id="shop-image"
                 type="file"
-                accept="image/jpeg,image/png"
+                accept="image/jpeg,image/png,image/webp"
                 className={styles.srOnly}
-                onChange={handleImageChange}
+                onChange={(event) => void handleImageChange(event)}
                 aria-describedby="image-help image-error"
               />
 
@@ -393,13 +388,17 @@ export default function SellerRegistrationView() {
                 ) : (
                   <>
                     <ImagePlus size={26} aria-hidden="true" />
-                    <span>Nhấn để tải ảnh lên</span>
-                    <small>JPG, PNG, tối đa 5MB</small>
+                    <span>
+                      {isUploadingImage
+                        ? "Đang tải lên Cloudinary…"
+                        : "Nhấn để tải ảnh lên"}
+                    </span>
+                    <small>JPG, PNG, WEBP, tối đa 5MB</small>
                   </>
                 )}
               </button>
 
-              {(imageFile || imageError) && (
+              {(imagePreview || imageError) && (
                 <button
                   type="button"
                   className={styles.removeImage}
@@ -633,15 +632,15 @@ export default function SellerRegistrationView() {
             <Link href="/account" className={styles.outlineButton}>
               Quay lại
             </Link>
-            <button type="submit" className={styles.primaryButton} disabled={pending} aria-busy={pending}>
-              {pending ? "Đang đăng ký…" : "Tạo cửa hàng"}
+            <button type="submit" className={styles.primaryButton} disabled={pending || isUploadingImage} aria-busy={pending || isUploadingImage}>
+              {pending ? "Đang đăng ký…" : isUploadingImage ? "Đang tải ảnh…" : "Tạo cửa hàng"}
               <ArrowRight size={21} aria-hidden="true" />
             </button>
           </div>
 
           <p className={styles.footerNote}>
             Quán mới luôn đóng; lựa chọn thanh toán chưa được lưu hoặc áp dụng.
-            Ảnh đang chọn chỉ là xem trước, chưa được tải lên.
+            Ảnh được tải lên Cloudinary; luồng đăng ký hiện chưa lưu ảnh vào thông tin quán.
             {" "}
             Sau khi tạo cửa hàng, bạn sẽ được chuyển đến Seller Dashboard để
             quản lý cửa hàng.

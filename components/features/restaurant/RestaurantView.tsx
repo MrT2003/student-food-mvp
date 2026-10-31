@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
   Banknote,
@@ -34,14 +35,35 @@ const categoryIcons = {
   "Món chính": Utensils,
 };
 
-function FoodPlaceholder({ category = "Cơm" }: { category?: MenuCategory }) {
+function FoodPlaceholder({
+  category = "Cơm",
+  imageUrl,
+  alt = "",
+}: {
+  category?: MenuCategory;
+  imageUrl?: string | null;
+  alt?: string;
+}) {
   const Icon = categoryIcons[category];
 
   return (
-    <div className={styles.placeholder} aria-hidden="true">
-      <span>
-        <Icon size={38} strokeWidth={1.4} />
-      </span>
+    <div className={styles.placeholder} aria-hidden={!imageUrl}>
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={alt}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      ) : (
+        <span>
+          <Icon size={38} strokeWidth={1.4} />
+        </span>
+      )}
     </div>
   );
 }
@@ -84,7 +106,10 @@ export default function RestaurantView({
 
         <section className={styles.summary} aria-labelledby="restaurant-title">
           <div className={styles.cover}>
-            <FoodPlaceholder />
+            <FoodPlaceholder
+              imageUrl={restaurant.avatar_url}
+              alt={restaurant.name}
+            />
           </div>
 
           <div className={styles.summaryContent}>
@@ -116,7 +141,9 @@ export default function RestaurantView({
 
               <span>
                 <Utensils size={22} aria-hidden="true" />
-                {availableCount} món đang bán
+                {restaurant.isOpen
+                  ? `${availableCount} món đang bán`
+                  : `${restaurant.menu.length} món (Tạm ngưng nhận đơn)`}
               </span>
             </div>
 
@@ -196,13 +223,24 @@ export default function RestaurantView({
       </div>
 
       <section className={styles.menuSection} aria-labelledby="menu-title">
+        {!restaurant.isOpen && (
+          <div className={styles.closedBanner} role="status">
+            <AlertCircle size={20} aria-hidden="true" />
+            <span>
+              Quán hiện đang tạm đóng cửa nên chưa thể nhận đơn. Bạn vẫn có thể xem trước thực đơn bên dưới.
+            </span>
+          </div>
+        )}
+
         <div className={styles.menuHeading}>
           <span className={styles.headingIcon}>
             <Utensils size={25} aria-hidden="true" />
           </span>
           <h2 id="menu-title">Menu của quán</h2>
           <span className={styles.menuCount}>
-            {availableCount} món đang bán
+            {restaurant.isOpen
+              ? `${availableCount} món đang bán`
+              : "Quán tạm đóng cửa"}
           </span>
         </div>
 
@@ -212,44 +250,64 @@ export default function RestaurantView({
 
         {filteredMenu.length > 0 ? (
           <div className={styles.menuGrid}>
-            {filteredMenu.map((item) => (
-              <article key={item.id} className={styles.menuCard}>
-                <div className={styles.itemMedia}>
-                  <FoodPlaceholder category={item.category} />
+            {filteredMenu.map((item) => {
+              const isItemOrderable = restaurant.isOpen && item.available;
+              const badgeLabel = !restaurant.isOpen
+                ? "Tạm đóng cửa"
+                : item.available
+                  ? "Đang bán"
+                  : "Hết món";
 
-                  <span
-                    className={`${styles.itemBadge} ${
-                      !item.available ? styles.closed : ""
-                    }`}
-                  >
-                    <span aria-hidden="true" />
-                    {item.available ? "Đang bán" : "Hết món"}
-                  </span>
-                </div>
+              return (
+                <article
+                  key={item.id}
+                  className={`${styles.menuCard} ${
+                    !isItemOrderable ? styles.menuCardInactive : ""
+                  }`}
+                >
+                  <div className={styles.itemMedia}>
+                    <FoodPlaceholder
+                      category={item.category}
+                      imageUrl={item.image_url}
+                      alt={item.name}
+                    />
 
-                <h3>{item.name}</h3>
-                <p className={styles.itemDescription}>{item.description}</p>
-                <p className={styles.price}>{formatPrice(item.price)}</p>
-
-                <div className={styles.itemFooter}>
-                  {item.hasOptions && (
-                    <span className={styles.options}>
-                      <Settings size={16} aria-hidden="true" />
-                      Có tùy chọn thêm
+                    <span
+                      className={`${styles.itemBadge} ${
+                        !isItemOrderable ? styles.closed : ""
+                      }`}
+                    >
+                      <span aria-hidden="true" />
+                      {badgeLabel}
                     </span>
-                  )}
+                  </div>
 
-                  <Link
-                    href={`/restaurants/${encodeURIComponent(restaurant.slug)}/menu/${encodeURIComponent(item.slug)}`}
-                    className={styles.primaryButton}
-                    aria-label={`Xem món ${item.name}`}
-                  >
-                    Xem món
-                    <ArrowRight size={17} aria-hidden="true" />
-                  </Link>
-                </div>
-              </article>
-            ))}
+                  <h3>{item.name}</h3>
+                  <p className={styles.itemDescription}>{item.description}</p>
+                  <p className={styles.price}>{formatPrice(item.price)}</p>
+
+                  <div className={styles.itemFooter}>
+                    {item.hasOptions && (
+                      <span className={styles.options}>
+                        <Settings size={16} aria-hidden="true" />
+                        Có tùy chọn thêm
+                      </span>
+                    )}
+
+                    <Link
+                      href={`/restaurants/${encodeURIComponent(restaurant.slug)}/menu/${encodeURIComponent(item.slug)}`}
+                      className={`${styles.primaryButton} ${
+                        !isItemOrderable ? styles.secondaryViewButton : ""
+                      }`}
+                      aria-label={`Xem món ${item.name}`}
+                    >
+                      {isItemOrderable ? "Xem món" : "Xem chi tiết"}
+                      <ArrowRight size={17} aria-hidden="true" />
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         ) : (
           <div className={styles.empty}>

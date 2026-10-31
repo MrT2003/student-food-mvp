@@ -1,4 +1,5 @@
 import { ArrowRight, Store } from "lucide-react";
+import Link from "next/link";
 import type { PreviewRestaurant } from "@/lib/home/mock-data";
 import RestaurantCard from "./RestaurantCard";
 import styles from "@/styles/home.module.css";
@@ -7,12 +8,14 @@ type Props = {
   onSelect: (restaurant: PreviewRestaurant) => void;
   onReset: () => void;
   searching: boolean;
+  compact?: boolean;
 };
 export default function RestaurantSection({
   restaurants,
   onSelect,
   onReset,
   searching,
+  compact = !searching,
 }: Props) {
   return (
     <section
@@ -27,16 +30,19 @@ export default function RestaurantSection({
           </span>
           {searching ? "Kết quả tìm kiếm" : "Quán đang mở"}
         </h2>
-        <button type="button" className={styles.seeAll} onClick={onReset}>
+        <Link href="/open-restaurants" className={styles.seeAll}>
           Xem tất cả
           <ArrowRight size={21} aria-hidden="true" />
-        </button>
+        </Link>
       </div>
       <span className="sr-only" role="status">
         Tìm thấy {restaurants.length} quán.
       </span>
       {restaurants.length ? (
-        <div className={styles.restaurantGrid}>
+        <div
+          className={styles.restaurantGrid}
+          data-compact={compact ? "true" : undefined}
+        >
           {restaurants.map((restaurant) => (
             <RestaurantCard
               key={restaurant.id}

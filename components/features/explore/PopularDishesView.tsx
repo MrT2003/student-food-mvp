@@ -200,8 +200,24 @@ export default function PopularDishesView({
                   key={`${dish.restaurantId}/${dish.id}`}
                   className={styles.card}
                 >
-                  <div className={styles.thumbnail} aria-hidden="true">
-                    <Icon size={48} strokeWidth={1.4} />
+                  <div
+                    className={styles.thumbnail}
+                    aria-hidden={!dish.imageUrl}
+                  >
+                    {dish.imageUrl ? (
+                      <img
+                        src={dish.imageUrl}
+                        alt={dish.name}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                      />
+                    ) : (
+                      <Icon size={48} strokeWidth={1.4} />
+                    )}
                   </div>
 
                   <div className={styles.content}>

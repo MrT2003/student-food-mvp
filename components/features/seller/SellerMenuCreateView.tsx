@@ -12,6 +12,7 @@ import { useSellerMenuStore } from "@/store/useSellerMenuStore";
 import { demoSellerRestaurant } from "@/lib/mocks/seller-orders.mock";
 import { menuCategories, type SellerMenuRow } from "@/lib/seller/menu";
 import { formatMoney, normalizeSearchText } from "@/lib/format";
+import { CloudinaryService } from "@/services/cloudinary.service";
 import type { MenuOptionGroupDetail } from "@/types/restaurant.types";
 import shell from "@/styles/seller-menu.module.css";
 import styles from "@/styles/seller-menu-create.module.css";
@@ -91,32 +92,38 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const submitted = useRef(false);
-  const reader = useRef<FileReader | null>(null);
+  const uploadRequestId = useRef(0);
   const preview = useRef<HTMLElement>(null);
   const upload = useRef<HTMLInputElement>(null);
   const initial = useRef(JSON.stringify({ name, category, price, description, image, groups, active, outOfStock, featured }));
-  useEffect(() => () => { reader.current?.abort(); reader.current = null; }, []);
   const basePrice = Number(price) || 0;
   const status = !active ? "Đang ẩn" : outOfStock ? "Tạm hết" : "Đang bán";
 
-  function readImage(file?: File) {
+  async function readImage(file?: File) {
     if (!file) return;
-    reader.current?.abort(); reader.current = null; setReadingImage(false);
-    if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 5 * 1024 * 1024) {
-      setError("Ảnh phải là JPG hoặc PNG và không quá 5MB."); return;
+    const requestId = ++uploadRequestId.current;
+    setReadingImage(true);
+    setError("");
+    try {
+      const uploaded = await CloudinaryService.uploadImage(file, {
+        folder: "student-food/menu-items",
+      });
+      if (uploadRequestId.current === requestId) {
+        setImage(uploaded.secureUrl);
+      }
+    } catch (err) {
+      if (uploadRequestId.current === requestId) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Không thể tải ảnh lên Cloudinary. Hãy chọn lại.",
+        );
+      }
+    } finally {
+      if (uploadRequestId.current === requestId) {
+        setReadingImage(false);
+      }
     }
-    const next = new FileReader(); reader.current = next;
-    setReadingImage(true); setError("");
-    next.onload = () => {
-      if (reader.current !== next) return;
-      const result = String(next.result);
-      const probe = new window.Image();
-      probe.onload = () => { if (reader.current === next) { setImage(result); setReadingImage(false); } };
-      probe.onerror = () => { if (reader.current === next) { setError("Không đọc được nội dung ảnh. Hãy chọn ảnh khác."); setReadingImage(false); } };
-      probe.src = result;
-    };
-    next.onerror = () => { if (reader.current === next) { setError("Không thể đọc ảnh. Hãy chọn lại."); setReadingImage(false); } };
-    next.readAsDataURL(file);
   }
 
   function saveEditor(values: { name: string; multiple: boolean; required: boolean; price: number }): string | void {
@@ -201,10 +208,10 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
           <section className={styles.card}><h2>Thông tin cơ bản</h2><div className={styles.basic}>
             <div className={styles.uploadField}><span>Ảnh món {(!original || original.item.image_url) && <b>*</b>}</span>
               <button type="button" className={styles.upload} onClick={() => upload.current?.click()} aria-label="Tải hoặc thay ảnh món ăn">
-                {image ? <Image src={image} alt="Ảnh món đã chọn" width={300} height={220} unoptimized /> : <><ImagePlus size={42} /><strong>{readingImage ? "Đang đọc ảnh…" : "Tải ảnh món ăn"}</strong><small>JPG, PNG tối đa 5MB</small></>}
+                {image ? <Image src={image} alt="Ảnh món đã chọn" width={300} height={220} unoptimized /> : <><ImagePlus size={42} /><strong>{readingImage ? "Đang tải ảnh lên Cloudinary…" : "Tải ảnh món ăn"}</strong><small>JPG, PNG, WEBP tối đa 5MB</small></>}
               </button>
-              <input ref={upload} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => { readImage(event.target.files?.[0]); event.target.value = ""; }} />
-              {image && <button type="button" className={styles.textButton} onClick={() => { reader.current?.abort(); reader.current = null; setReadingImage(false); setImage(null); }}>Xóa ảnh</button>}
+              <input ref={upload} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => { void readImage(event.target.files?.[0]); event.target.value = ""; }} />
+              {image && <button type="button" className={styles.textButton} onClick={() => { uploadRequestId.current++; setReadingImage(false); setImage(null); }}>Xóa ảnh</button>}
             </div>
             <div className={styles.fields}>
               <label>Tên món <b>*</b><input required maxLength={120} placeholder="Ví dụ: Trà sữa truyền thống" value={name} onChange={(event) => setName(event.target.value)} /></label>

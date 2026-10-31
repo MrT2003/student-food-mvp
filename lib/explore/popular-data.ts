@@ -11,6 +11,7 @@ export type PopularDishCard = {
   name: string;
   price: number;
   kind: FoodKind;
+  imageUrl: string | null;
   categories: string[];
   rank: number;
   href: string;
@@ -39,6 +40,7 @@ export const popularDishCards: PopularDishCard[] = popularDishes.flatMap(
         name: dish.name,
         price: dish.price,
         kind: dish.kind,
+        imageUrl: dish.imageUrl,
         categories: [...restaurant.categories],
 
         // Thứ tự demo, không phải thống kê đơn hôm nay.
