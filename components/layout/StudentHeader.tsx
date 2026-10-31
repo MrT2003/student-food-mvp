@@ -28,11 +28,22 @@ export default function StudentHeader({
   const user = useAuthStore((state) => state.user);
   const authStatus = useAuthStore((state) => state.status);
 
-  const name = user?.name?.trim() || "Tài khoản";
+  const effectiveUser =
+    user ??
+    (seller
+      ? {
+          id: "seller-preview",
+          name: "Nguyễn Văn A",
+          phone: undefined,
+          avatar_url: null,
+        }
+      : null);
+
+  const name = effectiveUser?.name?.trim() || "Tài khoản";
   const initial = Array.from(name)[0]?.toUpperCase() || "U";
 
   const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
-  const avatarUrl = user?.avatar_url;
+  const avatarUrl = effectiveUser?.avatar_url;
   const restaurantCount = useCartStore(
     (state) =>
       new Set(
@@ -172,7 +183,7 @@ export default function StudentHeader({
               <span className={styles.notificationBadge}>{unreadCount}</span>
             )}
           </button>
-          {user ? (
+          {effectiveUser ? (
             <button
               type="button"
               className={`${styles.accountButton} ${seller ? "" : mobileStyles.accountButton}`}
@@ -232,12 +243,12 @@ export default function StudentHeader({
               }
             />
           )}
-          {panel === "account" && user && (
+          {panel === "account" && effectiveUser && (
             <AccountDropdown
               name={name}
               initial={initial}
               avatarUrl={avatarUrl}
-              phone={user.phone}
+              phone={effectiveUser.phone}
               onNavigate={() => setPanelState(null)}
             />
           )}
