@@ -12,13 +12,20 @@ import {
   type FormEvent,
 } from "react";
 import {
+  ArrowLeft,
   ArrowRight,
   Banknote,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
   ClipboardList,
+  Clock3,
+  CreditCard,
   ImagePlus,
   Info,
   Landmark,
   MapPin,
+  Settings,
   Store,
   Wallet,
   Zap,
@@ -27,6 +34,7 @@ import {
 import styles from "@/styles/seller-registration.module.css";
 
 type ScheduleMode = "same" | "daily" | "later";
+type AccordionSection = "basic" | "schedule" | "payment" | "other";
 
 type DayHours = {
   id: string;
@@ -91,6 +99,16 @@ export default function SellerRegistrationView() {
   const [errors, setErrors] = useState<string[]>([]);
   const [message, setMessage] = useState("");
 
+  const [showMobileIntroDetails, setShowMobileIntroDetails] = useState(false);
+  const [openSections, setOpenSections] = useState<
+    Record<AccordionSection, boolean>
+  >({
+    basic: true,
+    schedule: false,
+    payment: false,
+    other: false,
+  });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadRequestIdRef = useRef(0);
   const errorRef = useRef<HTMLDivElement>(null);
@@ -100,6 +118,13 @@ export default function SellerRegistrationView() {
       errorRef.current?.focus();
     }
   }, [errors]);
+
+  function toggleSection(section: AccordionSection) {
+    setOpenSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  }
 
   function clearImage() {
     uploadRequestIdRef.current++;
@@ -207,14 +232,25 @@ export default function SellerRegistrationView() {
     // Session draft does not create a restaurant or grant roles.
     try {
       useSellerPreviewStore.getState().registerPreview({
-        name: name.trim(), description: description.trim(), location: location.trim(), cash, bank,
+        name: name.trim(),
+        description: description.trim(),
+        location: location.trim(),
+        cash,
+        bank,
         avatar_url: imagePreview || null,
-        hours: scheduleMode === "later" ? "Giờ hoạt động: Chưa thiết lập" : scheduleMode === "same"
-          ? `${enabledDays.map((day) => day.label).join(", ")}: ${openTime} – ${closeTime}`
-          : enabledDays.map((day) => `${day.label}: ${day.open} – ${day.close}`).join("; "),
+        hours:
+          scheduleMode === "later"
+            ? "Giờ hoạt động: Chưa thiết lập"
+            : scheduleMode === "same"
+              ? `${enabledDays.map((day) => day.label).join(", ")}: ${openTime} – ${closeTime}`
+              : enabledDays
+                  .map((day) => `${day.label}: ${day.open} – ${day.close}`)
+                  .join("; "),
       });
     } catch {
-      setErrors(["Không lưu được bản xem trước trong phiên trình duyệt. Vui lòng kiểm tra quyền lưu trữ và thử lại."]);
+      setErrors([
+        "Không lưu được bản xem trước trong phiên trình duyệt. Vui lòng kiểm tra quyền lưu trữ và thử lại.",
+      ]);
       return;
     }
     router.push("/seller");
@@ -222,6 +258,56 @@ export default function SellerRegistrationView() {
 
   return (
     <div className={styles.page} data-schedule={scheduleMode}>
+      <header className={styles.mobileHeader}>
+        <Link
+          href="/account"
+          className={styles.mobileBackButton}
+          aria-label="Quay lại tài khoản"
+        >
+          <ArrowLeft size={24} strokeWidth={2.3} aria-hidden="true" />
+        </Link>
+        <div className={styles.mobileHeaderText}>
+          <h1>Thông tin cửa hàng</h1>
+          <p>Tạo cửa hàng để bắt đầu bán hàng trên StudentFood.</p>
+        </div>
+      </header>
+
+      <section
+        className={styles.mobileBannerCard}
+        aria-label="Giới thiệu bán hàng"
+      >
+        <div className={styles.mobileBannerMain}>
+          <span className={styles.mobileBannerIcon}>
+            <Store size={28} strokeWidth={2} aria-hidden="true" />
+          </span>
+          <div className={styles.mobileBannerContent}>
+            <h2>Bắt đầu bán hàng cùng StudentFood</h2>
+            <p>Tạo cửa hàng miễn phí, tiếp cận sinh viên dễ dàng.</p>
+            <button
+              type="button"
+              className={styles.learnMoreBtn}
+              onClick={() => setShowMobileIntroDetails((prev) => !prev)}
+            >
+              {showMobileIntroDetails ? "Thu gọn" : "Tìm hiểu thêm"}
+              <ChevronRight size={14} strokeWidth={2.4} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        {showMobileIntroDetails && (
+          <ul className={styles.mobileBenefitsList}>
+            {benefits.map(({ icon: Icon, title, description: text }) => (
+              <li key={title}>
+                <Icon size={16} aria-hidden="true" />
+                <div>
+                  <strong>{title}:</strong> {text}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <aside className={styles.intro}>
         <span className={styles.studentBadge}>Dành cho sinh viên</span>
 
@@ -274,317 +360,479 @@ export default function SellerRegistrationView() {
           noValidate
           className={styles.form}
         >
-          <div className={styles.field}>
-            <label htmlFor="shop-name">
-              Tên cửa hàng <span>*</span>
-            </label>
-            <input
-              id="shop-name"
-              name="name"
-              required
-              maxLength={100}
-              placeholder="Ví dụ: Cơm Cô Ba"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="shop-description">
-              Mô tả ngắn <span>*</span>
-            </label>
-            <div className={styles.textareaWrap}>
-              <textarea
-                id="shop-description"
-                name="description"
-                required
-                maxLength={300}
-                rows={3}
-                placeholder="Giới thiệu ngắn về quán, món ăn, phong cách của bạn..."
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                aria-describedby="description-count"
-              />
-              <span id="description-count" className={styles.counter}>
-                {description.length}/300
+          {/* Section 1: Thông tin cơ bản */}
+          <div
+            className={`${styles.accordionCard} ${
+              openSections.basic ? styles.accordionOpen : ""
+            }`}
+          >
+            <button
+              type="button"
+              className={styles.accordionHeader}
+              onClick={() => toggleSection("basic")}
+              aria-expanded={openSections.basic}
+            >
+              <span className={styles.accordionIcon}>
+                <Store size={18} aria-hidden="true" />
               </span>
-            </div>
-          </div>
+              <span className={styles.accordionText}>
+                <strong>Thông tin cơ bản</strong>
+              </span>
+              {openSections.basic ? (
+                <ChevronUp
+                  size={18}
+                  className={styles.accordionChevron}
+                  aria-hidden="true"
+                />
+              ) : (
+                <ChevronDown
+                  size={18}
+                  className={styles.accordionChevron}
+                  aria-hidden="true"
+                />
+              )}
+            </button>
 
-          <div className={styles.twoColumns}>
-            <div className={styles.field}>
-              <label htmlFor="shop-location">
-                Khu vực / địa điểm <span>*</span>
-              </label>
-
-              <div className={styles.locationInput}>
-                <MapPin size={23} aria-hidden="true" />
+            <div className={styles.accordionBody}>
+              <div className={styles.field}>
+                <label htmlFor="shop-name">
+                  Tên cửa hàng <span>*</span>
+                </label>
                 <input
-                  id="shop-location"
-                  name="location"
-                  list="shop-locations"
+                  id="shop-name"
+                  name="name"
                   required
-                  maxLength={200}
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                  placeholder="Chọn khu vực hoặc nhập địa điểm"
+                  maxLength={100}
+                  placeholder="Ví dụ: Cơm Cô Ba"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
                 />
               </div>
 
-              <datalist id="shop-locations">
-                <option value="KTX A" />
-                <option value="KTX B" />
-              </datalist>
-
-              <p className={styles.hint}>Ví dụ: KTX A, Q. Thủ Đức, TP. HCM</p>
-            </div>
-
-            <div className={styles.field}>
-              <div className={styles.uploadHeading}>
-                <label htmlFor="shop-image">Ảnh đại diện quán</label>
-                <span>Không bắt buộc</span>
-              </div>
-
-              <input
-                ref={fileInputRef}
-                id="shop-image"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className={styles.srOnly}
-                onChange={(event) => void handleImageChange(event)}
-                aria-describedby="image-help image-error"
-              />
-
-              <button
-                type="button"
-                className={styles.upload}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {imagePreview ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imagePreview}
-                      alt="Ảnh đại diện quán đã chọn"
-                      className={styles.imagePreview}
-                      onError={() => {
-                        clearImage();
-                        setImageError("Không đọc được ảnh. Hãy chọn ảnh khác.");
-                      }}
-                    />
-                    <span>Nhấn để thay ảnh</span>
-                  </>
-                ) : (
-                  <>
-                    <ImagePlus size={26} aria-hidden="true" />
-                    <span>
-                      {isUploadingImage
-                        ? "Đang tải lên Cloudinary…"
-                        : "Nhấn để tải ảnh lên"}
-                    </span>
-                    <small>JPG, PNG, WEBP, tối đa 5MB</small>
-                  </>
-                )}
-              </button>
-
-              {(imagePreview || imageError) && (
-                <button
-                  type="button"
-                  className={styles.removeImage}
-                  onClick={() => {
-                    clearImage();
-                    setImageError("");
-                    setMessage("");
-                  }}
-                >
-                  Bỏ chọn ảnh
-                </button>
-              )}
-
-              <p id="image-error" className={styles.errorText} role="alert">
-                {imageError}
-              </p>
-              <p id="image-help" className={styles.hint}>
-                Bạn có thể thay đổi hình ảnh này sau trong phần cài đặt.
-              </p>
-            </div>
-          </div>
-
-          <fieldset className={styles.fieldset}>
-            <legend>
-              Giờ hoạt động <span>*</span>
-            </legend>
-
-            <div className={styles.radioGroup}>
-              {[
-                { value: "same", label: "Giống nhau mỗi ngày" },
-                { value: "daily", label: "Thiết lập theo từng ngày" },
-                { value: "later", label: "Thiết lập sau" },
-              ].map((option) => (
-                <label key={option.value}>
-                  <input
-                    type="radio"
-                    name="schedule-mode"
-                    value={option.value}
-                    checked={scheduleMode === option.value}
-                    onChange={() =>
-                      setScheduleMode(option.value as ScheduleMode)
-                    }
-                  />
-                  {option.label}
+              <div className={styles.field}>
+                <label htmlFor="shop-description">
+                  Mô tả ngắn <span>*</span>
                 </label>
-              ))}
-            </div>
-
-            {scheduleMode === "same" && (
-              <div className={styles.sameSchedule}>
-                <label className={styles.timeField}>
-                  Giờ mở cửa
-                  <input
-                    type="time"
-                    value={openTime}
-                    onChange={(event) => setOpenTime(event.target.value)}
+                <div className={styles.textareaWrap}>
+                  <textarea
+                    id="shop-description"
+                    name="description"
+                    required
+                    maxLength={300}
+                    rows={3}
+                    placeholder="Giới thiệu ngắn về quán, món ăn, phong cách của bạn..."
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    aria-describedby="description-count"
                   />
-                </label>
-
-                <label className={styles.timeField}>
-                  Giờ đóng cửa
-                  <input
-                    type="time"
-                    value={closeTime}
-                    onChange={(event) => setCloseTime(event.target.value)}
-                  />
-                </label>
-
-                <div className={styles.dayPicker}>
-                  <strong>Áp dụng cho các ngày</strong>
-                  <div>
-                    {days.map((day) => (
-                      <label key={day.id}>
-                        <input
-                          type="checkbox"
-                          checked={day.enabled}
-                          onChange={(event) =>
-                            updateDay(day.id, { enabled: event.target.checked })
-                          }
-                        />
-                        {day.label}
-                      </label>
-                    ))}
-                  </div>
+                  <span id="description-count" className={styles.counter}>
+                    {description.length}/300
+                  </span>
                 </div>
               </div>
-            )}
 
-            {scheduleMode === "daily" && (
-              <div className={styles.dailySchedule}>
-                {days.map((day) => (
-                  <div className={styles.dayRow} key={day.id}>
-                    <label className={styles.dayToggle}>
+              <div className={styles.twoColumns}>
+                <div className={styles.field}>
+                  <label htmlFor="shop-location">
+                    Khu vực / địa điểm <span>*</span>
+                  </label>
+
+                  <div className={styles.locationInput}>
+                    <MapPin size={23} aria-hidden="true" />
+                    <input
+                      id="shop-location"
+                      name="location"
+                      list="shop-locations"
+                      required
+                      maxLength={200}
+                      value={location}
+                      onChange={(event) => setLocation(event.target.value)}
+                      placeholder="Chọn khu vực hoặc nhập địa điểm"
+                    />
+                  </div>
+
+                  <datalist id="shop-locations">
+                    <option value="KTX A" />
+                    <option value="KTX B" />
+                  </datalist>
+
+                  <p className={styles.hint}>
+                    Ví dụ: KTX A, Q. Thủ Đức, TP. HCM
+                  </p>
+                </div>
+
+                <div className={styles.field}>
+                  <div className={styles.uploadHeading}>
+                    <label htmlFor="shop-image">Ảnh đại diện quán</label>
+                    <span>Không bắt buộc</span>
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    id="shop-image"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className={styles.srOnly}
+                    onChange={(event) => void handleImageChange(event)}
+                    aria-describedby="image-help image-error"
+                  />
+
+                  <button
+                    type="button"
+                    className={styles.upload}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {imagePreview ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imagePreview}
+                          alt="Ảnh đại diện quán đã chọn"
+                          className={styles.imagePreview}
+                          onError={() => {
+                            clearImage();
+                            setImageError(
+                              "Không đọc được ảnh. Hãy chọn ảnh khác.",
+                            );
+                          }}
+                        />
+                        <span>Nhấn để thay ảnh</span>
+                      </>
+                    ) : (
+                      <>
+                        <ImagePlus size={26} aria-hidden="true" />
+                        <span>
+                          {isUploadingImage
+                            ? "Đang tải lên Cloudinary…"
+                            : "Nhấn để tải ảnh lên"}
+                        </span>
+                        <small>JPG, PNG, tối đa 5MB</small>
+                      </>
+                    )}
+                  </button>
+
+                  {(imagePreview || imageError) && (
+                    <button
+                      type="button"
+                      className={styles.removeImage}
+                      onClick={() => {
+                        clearImage();
+                        setImageError("");
+                        setMessage("");
+                      }}
+                    >
+                      Bỏ chọn ảnh
+                    </button>
+                  )}
+
+                  <p
+                    id="image-error"
+                    className={styles.errorText}
+                    role="alert"
+                  >
+                    {imageError}
+                  </p>
+                  <p
+                    id="image-help"
+                    className={`${styles.hint} ${styles.desktopOnlyHint}`}
+                  >
+                    Bạn có thể thay đổi hình ảnh này sau trong phần cài đặt.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Giờ hoạt động */}
+          <div
+            className={`${styles.accordionCard} ${
+              openSections.schedule ? styles.accordionOpen : ""
+            }`}
+          >
+            <button
+              type="button"
+              className={styles.accordionHeader}
+              onClick={() => toggleSection("schedule")}
+              aria-expanded={openSections.schedule}
+            >
+              <span className={styles.accordionIcon}>
+                <Clock3 size={18} aria-hidden="true" />
+              </span>
+              <span className={styles.accordionText}>
+                <strong>Giờ hoạt động</strong>
+                <small>Thiết lập thời gian mở cửa của quán</small>
+              </span>
+              {openSections.schedule ? (
+                <ChevronUp
+                  size={18}
+                  className={styles.accordionChevron}
+                  aria-hidden="true"
+                />
+              ) : (
+                <ChevronDown
+                  size={18}
+                  className={styles.accordionChevron}
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+
+            <div className={styles.accordionBody}>
+              <fieldset className={styles.fieldset}>
+                <legend className={styles.desktopLegend}>
+                  Giờ hoạt động <span>*</span>
+                </legend>
+
+                <div className={styles.radioGroup}>
+                  {[
+                    { value: "same", label: "Giống nhau mỗi ngày" },
+                    { value: "daily", label: "Thiết lập theo từng ngày" },
+                    { value: "later", label: "Thiết lập sau" },
+                  ].map((option) => (
+                    <label key={option.value}>
                       <input
-                        type="checkbox"
-                        checked={day.enabled}
-                        onChange={(event) =>
-                          updateDay(day.id, { enabled: event.target.checked })
+                        type="radio"
+                        name="schedule-mode"
+                        value={option.value}
+                        checked={scheduleMode === option.value}
+                        onChange={() =>
+                          setScheduleMode(option.value as ScheduleMode)
                         }
                       />
-                      {day.label}
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+
+                {scheduleMode === "same" && (
+                  <div className={styles.sameSchedule}>
+                    <label className={styles.timeField}>
+                      Giờ mở cửa
+                      <input
+                        type="time"
+                        value={openTime}
+                        onChange={(event) => setOpenTime(event.target.value)}
+                      />
                     </label>
 
-                    <input
-                      type="time"
-                      aria-label={`Giờ mở cửa ${day.label}`}
-                      disabled={!day.enabled}
-                      value={day.open}
-                      onChange={(event) =>
-                        updateDay(day.id, { open: event.target.value })
-                      }
-                    />
+                    <label className={styles.timeField}>
+                      Giờ đóng cửa
+                      <input
+                        type="time"
+                        value={closeTime}
+                        onChange={(event) => setCloseTime(event.target.value)}
+                      />
+                    </label>
 
-                    <span>đến</span>
-
-                    <input
-                      type="time"
-                      aria-label={`Giờ đóng cửa ${day.label}`}
-                      disabled={!day.enabled}
-                      value={day.close}
-                      onChange={(event) =>
-                        updateDay(day.id, { close: event.target.value })
-                      }
-                    />
-
-                    {!day.enabled && <small>Nghỉ</small>}
+                    <div className={styles.dayPicker}>
+                      <strong>Áp dụng cho các ngày</strong>
+                      <div>
+                        {days.map((day) => (
+                          <label key={day.id}>
+                            <input
+                              type="checkbox"
+                              checked={day.enabled}
+                              onChange={(event) =>
+                                updateDay(day.id, {
+                                  enabled: event.target.checked,
+                                })
+                              }
+                            />
+                            {day.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                )}
 
-            {scheduleMode === "later" && (
-              <p className={styles.laterNotice}>
-                Chưa thiết lập lịch hoạt động. Bạn có thể bổ sung trong phần Cài
-                đặt cửa hàng.
-              </p>
-            )}
+                {scheduleMode === "daily" && (
+                  <div className={styles.dailySchedule}>
+                    {days.map((day) => (
+                      <div className={styles.dayRow} key={day.id}>
+                        <label className={styles.dayToggle}>
+                          <input
+                            type="checkbox"
+                            checked={day.enabled}
+                            onChange={(event) =>
+                              updateDay(day.id, {
+                                enabled: event.target.checked,
+                              })
+                            }
+                          />
+                          {day.label}
+                        </label>
 
-            <p className={styles.hint}>
-              Bạn có thể thiết lập nhiều khung giờ hoặc lịch chi tiết hơn sau
-              trong Cài đặt cửa hàng.
-            </p>
-          </fieldset>
+                        <input
+                          type="time"
+                          aria-label={`Giờ mở cửa ${day.label}`}
+                          disabled={!day.enabled}
+                          value={day.open}
+                          onChange={(event) =>
+                            updateDay(day.id, { open: event.target.value })
+                          }
+                        />
 
-          <fieldset className={styles.fieldset}>
-            <legend>
-              Phương thức thanh toán <span>*</span>
-            </legend>
+                        <span>đến</span>
 
-            <div className={styles.paymentGrid}>
-              <label className={styles.paymentCard}>
+                        <input
+                          type="time"
+                          aria-label={`Giờ đóng cửa ${day.label}`}
+                          disabled={!day.enabled}
+                          value={day.close}
+                          onChange={(event) =>
+                            updateDay(day.id, { close: event.target.value })
+                          }
+                        />
+
+                        {!day.enabled && <small>Nghỉ</small>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {scheduleMode === "later" && (
+                  <p className={styles.laterNotice}>
+                    Chưa thiết lập lịch hoạt động. Bạn có thể bổ sung trong phần
+                    Cài đặt cửa hàng.
+                  </p>
+                )}
+
+                <p className={styles.hint}>
+                  Bạn có thể thiết lập nhiều khung giờ hoặc lịch chi tiết hơn
+                  sau trong Cài đặt cửa hàng.
+                </p>
+              </fieldset>
+            </div>
+          </div>
+
+          {/* Section 3: Phương thức thanh toán */}
+          <div
+            className={`${styles.accordionCard} ${
+              openSections.payment ? styles.accordionOpen : ""
+            }`}
+          >
+            <button
+              type="button"
+              className={styles.accordionHeader}
+              onClick={() => toggleSection("payment")}
+              aria-expanded={openSections.payment}
+            >
+              <span className={styles.accordionIcon}>
+                <CreditCard size={18} aria-hidden="true" />
+              </span>
+              <span className={styles.accordionText}>
+                <strong>Phương thức thanh toán</strong>
+                <small>Chọn cách thanh toán mà bạn hỗ trợ</small>
+              </span>
+              {openSections.payment ? (
+                <ChevronUp
+                  size={18}
+                  className={styles.accordionChevron}
+                  aria-hidden="true"
+                />
+              ) : (
+                <ChevronDown
+                  size={18}
+                  className={styles.accordionChevron}
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+
+            <div className={styles.accordionBody}>
+              <fieldset className={styles.fieldset}>
+                <legend className={styles.desktopLegend}>
+                  Phương thức thanh toán <span>*</span>
+                </legend>
+
+                <div className={styles.paymentGrid}>
+                  <label className={styles.paymentCard}>
+                    <input
+                      type="checkbox"
+                      checked={cash}
+                      onChange={(event) => setCash(event.target.checked)}
+                    />
+                    <span className={styles.cashIcon}>
+                      <Banknote size={26} aria-hidden="true" />
+                    </span>
+                    <span>
+                      <strong>Tiền mặt</strong>
+                      <small>Khách hàng thanh toán khi nhận hàng.</small>
+                    </span>
+                  </label>
+
+                  <label className={styles.paymentCard}>
+                    <input
+                      type="checkbox"
+                      checked={bank}
+                      onChange={(event) => setBank(event.target.checked)}
+                    />
+                    <span className={styles.bankIcon}>
+                      <Landmark size={26} aria-hidden="true" />
+                    </span>
+                    <span>
+                      <strong>Chuyển khoản</strong>
+                      <small>
+                        Thông tin tài khoản ngân hàng sẽ được thiết lập sau.
+                      </small>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+            </div>
+          </div>
+
+          {/* Section 4: Thiết lập khác */}
+          <div
+            className={`${styles.accordionCard} ${
+              openSections.other ? styles.accordionOpen : ""
+            }`}
+          >
+            <button
+              type="button"
+              className={styles.accordionHeader}
+              onClick={() => toggleSection("other")}
+              aria-expanded={openSections.other}
+            >
+              <span className={styles.accordionIcon}>
+                <Settings size={18} aria-hidden="true" />
+              </span>
+              <span className={styles.accordionText}>
+                <strong>Thiết lập khác</strong>
+                <small>Trạng thái ban đầu và tùy chọn khác</small>
+              </span>
+              {openSections.other ? (
+                <ChevronUp
+                  size={18}
+                  className={styles.accordionChevron}
+                  aria-hidden="true"
+                />
+              ) : (
+                <ChevronDown
+                  size={18}
+                  className={styles.accordionChevron}
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+
+            <div className={styles.accordionBody}>
+              <label className={styles.closedOption}>
                 <input
                   type="checkbox"
-                  checked={cash}
-                  onChange={(event) => setCash(event.target.checked)}
+                  role="switch"
+                  checked={startClosed}
+                  onChange={(event) => setStartClosed(event.target.checked)}
+                  className={styles.switchInput}
                 />
-                <span className={styles.cashIcon}>
-                  <Banknote size={26} aria-hidden="true" />
-                </span>
                 <span>
-                  <strong>Tiền mặt</strong>
-                  <small>Khách hàng thanh toán khi nhận hàng.</small>
-                </span>
-              </label>
-
-              <label className={styles.paymentCard}>
-                <input
-                  type="checkbox"
-                  checked={bank}
-                  onChange={(event) => setBank(event.target.checked)}
-                />
-                <span className={styles.bankIcon}>
-                  <Landmark size={26} aria-hidden="true" />
-                </span>
-                <span>
-                  <strong>Chuyển khoản</strong>
-                  <small>
-                    Thông tin tài khoản ngân hàng sẽ được thiết lập sau.
-                  </small>
+                  <strong>Tôi muốn bắt đầu ở trạng thái tạm đóng</strong>
+                  <small>Bạn có thể mở cửa hàng sau khi tạo xong.</small>
                 </span>
               </label>
             </div>
-          </fieldset>
-
-          <label className={styles.closedOption}>
-            <input
-              type="checkbox"
-              role="switch"
-              checked={startClosed}
-              onChange={(event) => setStartClosed(event.target.checked)}
-              className={styles.switchInput}
-            />
-            <span>
-              <strong>Tôi muốn bắt đầu ở trạng thái tạm đóng</strong>
-              <small>Bạn có thể mở cửa hàng sau khi tạo xong.</small>
-            </span>
-          </label>
+          </div>
 
           {errors.length > 0 && (
             <div
@@ -604,13 +852,16 @@ export default function SellerRegistrationView() {
 
           {message && (
             <p className={styles.previewNotice} role="status">
-              {message}
-              {" "}<Link href="/seller">Xem tổng quan seller (demo)</Link>
+              {message}{" "}
+              <Link href="/seller">Xem tổng quan seller (demo)</Link>
             </p>
           )}
 
           <div className={styles.actions}>
-            <Link href="/account" className={styles.outlineButton}>
+            <Link
+              href="/account"
+              className={`${styles.outlineButton} ${styles.desktopBackBtn}`}
+            >
               Quay lại
             </Link>
             <button
@@ -628,7 +879,8 @@ export default function SellerRegistrationView() {
             quản lý cửa hàng.
           </p>
           <p className={styles.previewLabel}>
-            Bản UI mẫu: lưu thông tin bản xem trước trong phiên trình duyệt và chuyển đến Tổng quan.
+            Bản UI mẫu: lưu thông tin bản xem trước trong phiên trình duyệt và
+            chuyển đến Tổng quan.
           </p>
         </form>
       </section>

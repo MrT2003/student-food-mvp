@@ -587,137 +587,468 @@
   }
 }
 
-@media (max-width: 650px) {
+.mobileBackButton,
+.mobileSteps,
+.mobileStepLabel,
+.mobileAddressCard,
+.collapseButton,
+.summaryHandle {
+  display: none;
+}
+
+.restaurantHeaderMain {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
   .page {
     grid-template-columns: 1fr;
+    gap: 14px;
+    padding-bottom: 120px;
   }
 
   .stepsColumn {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .backButton {
-    width: 32px;
-    height: 38px;
-    flex-shrink: 0;
-  }
-
-  .backButton svg {
-    width: 28px;
-  }
-
-  .steps {
-    display: flex;
-    margin: 0;
-  }
-
-  .steps li {
-    flex: 1;
-    min-height: 78px;
-  }
-
-  .steps li:not(:last-child)::after {
-    top: 18px;
-    bottom: auto;
-    left: calc(50% + 24px);
-    width: calc(100% - 48px);
-    height: 2px;
-  }
-
-  .steps li > span {
-    width: 37px;
-    height: 37px;
-    font-size: 17px;
-  }
-
-  .steps li > p {
-    margin-top: 6px;
-    font-size: 12px;
-    line-height: 17px;
+    display: none;
   }
 
   .pageHeading {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
     padding-left: 0;
+    margin: 0 0 12px;
+  }
+
+  .mobileBackButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    margin-top: 3px;
+    margin-left: -4px;
+    color: #e74713;
+    text-decoration: none;
+  }
+
+  .pageHeadingText {
+    min-width: 0;
   }
 
   .pageHeading h1 {
-    font-size: 34px;
-    line-height: 42px;
+    font-size: 28px;
+    line-height: 1.2;
   }
 
   .pageHeading p {
+    margin-top: 2px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .mobileSteps {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    margin: 0 0 14px;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-display);
+  }
+
+  .mobileSteps li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    max-width: 190px;
+    text-align: center;
+    color: #526174;
+  }
+
+  .mobileSteps li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 15px;
+    left: calc(50% + 20px);
+    width: calc(100% - 40px);
+    height: 2px;
+    background: linear-gradient(90deg, #ff6b22 55%, #e2e4e8 55%);
+  }
+
+  .mobileSteps li > span {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e2e4e8;
+    color: #526174;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .mobileSteps .activeStep > span {
+    background: linear-gradient(135deg, #ff8126, #ff4318);
+    color: #fff;
+  }
+
+  .mobileSteps li > p {
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.3;
+    font-weight: 500;
+  }
+
+  .mobileSteps .activeStep > p {
+    color: var(--sf-ink);
+    font-weight: 700;
+  }
+
+  .mobileAddressCard {
+    display: block;
+    margin-bottom: 14px;
+    padding: 13px 14px;
+    border: 1px solid #efece8;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 3px 12px rgb(110 75 34 / 3%);
+  }
+
+  .mobileAddressTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .mobileAddressTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobileAddressTitle .orangeIcon {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+  }
+
+  .mobileAddressTitle h2 {
+    margin: 0;
+    font-family: var(--font-display);
     font-size: 16px;
-    line-height: 23px;
+    font-weight: 700;
+    color: var(--sf-ink);
+  }
+
+  .changeAddressBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: #ff4d12;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  .mobileAddressSummary {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    padding: 10px 12px;
+    border-radius: 11px;
+    background: #f6f8fb;
+  }
+
+  .mobileAddressCol {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .mobileAddressCol + .mobileAddressCol {
+    padding-left: 12px;
+    border-left: 1px solid #e1e6ef;
+  }
+
+  .mobileAddressCol span {
+    color: #6b7d99;
+    font-size: 12px;
+  }
+
+  .mobileAddressCol strong {
+    color: var(--sf-ink);
+    font-size: 14px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobileAddressForm {
+    display: grid;
+    gap: 10px;
+    padding-top: 4px;
+  }
+
+  .mobileAddressForm .field + .field {
+    margin-top: 0;
+  }
+
+  .mobileAddressForm .field label {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  .mobileAddressForm .field input,
+  .mobileAddressForm .field select {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .restaurantCard {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .restaurantCard + .restaurantCard {
+    margin-top: 14px;
+  }
+
+  .restaurantHeader {
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+
+  .restaurantImage {
+    width: 56px;
+    height: 56px;
+  }
+
+  .restaurantTitle {
+    gap: 8px;
+  }
+
+  .restaurantTitle h2 {
+    font-size: 17px;
+    line-height: 1.25;
+  }
+
+  .openBadge {
+    min-height: 24px;
+    padding: 3px 9px;
+    font-size: 11.5px;
+  }
+
+  .location {
+    margin-top: 3px;
+    font-size: 13px;
+    gap: 4px;
+  }
+
+  .location svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .collapseButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #34496e;
+    transition: transform 0.2s ease;
+  }
+
+  .collapseButtonClosed {
+    transform: rotate(-90deg);
+  }
+
+  .itemRow {
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .itemImage {
+    grid-row: auto;
+    width: 64px;
+    height: 64px;
+    min-height: 64px;
+    align-self: start;
+  }
+
+  .placeholder svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .itemContent h3 {
+    margin-bottom: 2px;
+    font-size: 15.5px;
+    line-height: 1.3;
+  }
+
+  .itemPrice {
+    margin-bottom: 3px;
+    font-size: 14.5px;
+    line-height: 1.3;
+  }
+
+  .itemNote {
+    font-size: 12.5px;
+    line-height: 1.35;
+  }
+
+  .itemActions {
+    grid-column: auto;
+    align-self: center;
+    gap: 8px;
+  }
+
+  .quantity {
+    min-height: 34px;
+    border-radius: 10px;
+  }
+
+  .quantity button {
+    width: 28px;
+    height: 32px;
+  }
+
+  .quantity button svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .quantity output {
+    min-width: 22px;
+    font-size: 15px;
+  }
+
+  .removeButton {
+    width: 28px;
+    height: 32px;
+  }
+
+  .removeButton svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .restaurantSubtotal {
+    padding-top: 10px;
+    font-size: 14.5px;
+  }
+
+  .restaurantSubtotal strong {
+    font-size: 18px;
   }
 
   .sidebar {
     grid-column: 1;
+    padding-top: 0;
   }
 
-  .restaurantCard {
-    padding: 13px;
+  .desktopAddressCard,
+  .notesCard {
+    display: none;
   }
 
-  .restaurantImage {
-    width: 58px;
-    height: 60px;
+  .summaryCard {
+    position: fixed;
+    z-index: 30;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-radius: 22px 22px 0 0;
+    border-bottom: 0;
+    background: #fff;
+    box-shadow: 0 -6px 24px rgb(8 20 71 / 9%);
   }
 
-  .restaurantTitle {
+  .summaryHandle {
+    display: block;
+    width: 38px;
+    height: 4px;
+    margin: 0 auto 10px;
+    border-radius: 999px;
+    background: #d8dee8;
+  }
+
+  .summaryContentGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) auto;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .summaryDetails .cardHeading {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .summaryDetails .orangeIcon {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+  }
+
+  .summaryDetails .orangeIcon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .summaryDetails .cardHeading h2 {
+    font-size: 16px;
+    line-height: 1.25;
+  }
+
+  .summaryRow {
+    margin-top: 4px;
+    font-size: 13.5px;
+    line-height: 1.35;
+  }
+
+  .totalRow {
+    margin-top: 8px;
+    padding-top: 8px;
+    font-size: 16px;
+  }
+
+  .totalRow output {
+    font-size: 21px;
+    line-height: 1.2;
+  }
+
+  .summaryActionCol .primaryButton {
+    margin-top: 0;
+    min-height: 58px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14.5px;
+    white-space: nowrap;
     gap: 6px;
   }
 
-  .restaurantTitle h2 {
-    font-size: 20px;
-  }
-
-  .openBadge {
-    min-height: 25px;
-    padding: 3px 9px;
-    font-size: 11px;
-  }
-
-  .location {
-    font-size: 15px;
-  }
-
-  .itemRow {
-    grid-template-columns: 75px minmax(0, 1fr);
-    gap: 10px;
-  }
-
-  .itemImage {
-    width: 75px;
-    grid-row: span 2;
-  }
-
-  .itemActions {
-    grid-column: 2;
-    gap: 12px;
-  }
-
-  .itemContent h3 {
-    font-size: 17px;
-    line-height: 22px;
-  }
-
-  .itemPrice {
-    font-size: 16px;
-  }
-
-  .itemNote {
-    font-size: 13px;
-    line-height: 20px;
-  }
-
-  .restaurantSubtotal {
-    font-size: 16px;
-  }
-
-  .restaurantSubtotal strong {
-    font-size: 19px;
+  .summaryActionCol .primaryButton svg {
+    width: 17px;
+    height: 17px;
   }
 }
 
