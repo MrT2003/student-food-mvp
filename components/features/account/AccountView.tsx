@@ -3,12 +3,12 @@
 import { useSignOut } from "@/lib/auth/useAuthFlow";
 import { useAuthStore } from "@/store/useAuthStore";
 import { AuthClientService } from "@/services/auth.service";
+import { CloudinaryService } from "@/services/cloudinary.service";
 import type { AuthProfile } from "@/types/auth.types";
 import styles from "@/styles/account.module.css";
 import { Camera, Info, LogOut, Settings, UserRound } from "lucide-react";
 import Image from "next/image";
 import {
-  useEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -22,7 +22,10 @@ export default function AccountView() {
   const status = useAuthStore((state) => state.status);
   const error = useAuthStore((state) => state.error);
   if (status === "loading") return <p role="status">Đang tải tài khoản...</p>;
-  if (!profile) return <p role="alert">{error || "Vui lòng đăng nhập để xem tài khoản."}</p>;
+  if (!profile)
+    return (
+      <p role="alert">{error || "Vui lòng đăng nhập để xem tài khoản."}</p>
+    );
   return <AccountProfile key={profile.id} profile={profile} />;
 }
 
@@ -32,22 +35,16 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
   const name = nameDraft ?? profile.name ?? "";
   const phone = phoneDraft ?? profile.phone ?? "";
   const setUser = useAuthStore((state) => state.setUser);
-  const [saving, setSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const { logout, pending, signOutError } = useSignOut()
+  const { logout, pending, signOutError } = useSignOut();
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // Giải phóng ảnh xem trước khi đổi ảnh hoặc rời trang.
-  useEffect(() => {
-    return () => {
-      if (avatarUrl) URL.revokeObjectURL(avatarUrl);
-    };
-  }, [avatarUrl]);
-
-  function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
 
@@ -56,23 +53,36 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
     setError("");
     setMessage("");
 
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setError("Vui lòng chọn ảnh JPG, PNG hoặc WebP.");
+    const validationError = CloudinaryService.validateImageFile(file);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Ảnh đại diện không được vượt quá 5 MB.");
-      return;
+    try {
+      setUploadingAvatar(true);
+      const uploaded = await CloudinaryService.uploadImage(file, {
+        folder: "student-food/avatars",
+      });
+      setAvatarUrl(uploaded.secureUrl);
+      setMessage(
+        "Đã tải ảnh lên Cloudinary thành công. Nhấn 'Lưu thay đổi' để cập nhật hồ sơ.",
+      );
+    } catch (uploadErr) {
+      setError(
+        uploadErr instanceof Error
+          ? uploadErr.message
+          : "Không thể tải ảnh đại diện lên Cloudinary.",
+      );
+    } finally {
+      setUploadingAvatar(false);
     }
-
-    setAvatarUrl(URL.createObjectURL(file));
-    setMessage("Ảnh đang được xem trước trên thiết bị, chưa tải lên hệ thống.");
   }
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (saving) return;
+    if (saving || uploadingAvatar) return;
+
     setError("");
     setMessage("");
 
@@ -89,25 +99,26 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
       return;
     }
 
-    if (avatarUrl) {
-      setError("Ảnh mới chưa được tải lên. Hãy bỏ ảnh xem trước trước khi lưu thông tin.");
-      return;
-    }
     setSaving(true);
     try {
       const updated = await AuthClientService.updateMyProfile({
-        name: trimmedName, phone: normalizedPhone, avatarUrl: profile.avatar_url,
+        name: trimmedName,
+        phone: normalizedPhone,
+        avatarUrl: avatarUrl ?? profile.avatar_url,
       });
       setUser(updated);
       setName(null);
       setPhone(null);
+      setAvatarUrl(null);
       setShowSuccessModal(true);
-    } catch (error) {
-      setError(AuthClientService.getAuthErrorMessage(error));
+    } catch (saveErr) {
+      setError(AuthClientService.getAuthErrorMessage(saveErr));
     } finally {
       setSaving(false);
     }
   }
+
+  const displayAvatarUrl = avatarUrl || profile.avatar_url;
 
   return (
     <div className={styles.accountPage}>
@@ -133,9 +144,9 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
           <div className={styles.avatarColumn}>
             <div className={styles.avatarWrapper}>
               <div className={styles.avatar}>
-                {avatarUrl || profile.avatar_url ? (
+                {displayAvatarUrl ? (
                   <Image
-                    src={avatarUrl || profile.avatar_url!}
+                    src={displayAvatarUrl}
                     alt="Ảnh đại diện"
                     fill
                     unoptimized // Dùng unoptimized nếu chưa config domain Google trong next.config.mjs
@@ -152,6 +163,7 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
                 type="button"
                 className={styles.cameraBadge}
                 aria-label="Chọn ảnh đại diện"
+                disabled={uploadingAvatar}
                 onClick={() => fileInput.current?.click()}
               >
                 <Camera size={20} aria-hidden="true" />
@@ -169,16 +181,21 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
             <button
               type="button"
               className={styles.outlineButton}
+              disabled={uploadingAvatar}
               onClick={() => fileInput.current?.click()}
             >
               <Camera size={21} aria-hidden="true" />
-              Thay đổi ảnh
+              {uploadingAvatar ? "Đang tải ảnh..." : "Thay đổi ảnh"}
             </button>
             {avatarUrl && (
               <button
                 type="button"
                 className={styles.outlineButton}
-                onClick={() => { setAvatarUrl(null); setMessage(""); setError(""); }}
+                onClick={() => {
+                  setAvatarUrl(null);
+                  setMessage("");
+                  setError("");
+                }}
               >
                 Bỏ ảnh xem trước
               </button>
@@ -231,7 +248,12 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
               </p>
             </div>
 
-            <button type="submit" className={styles.primaryButton} disabled={saving} aria-busy={saving}>
+            <button
+              type="submit"
+              className={styles.primaryButton}
+              disabled={saving || uploadingAvatar}
+              aria-busy={saving || uploadingAvatar}
+            >
               {saving ? "Đang lưu..." : "Lưu thay đổi"}
             </button>
           </form>

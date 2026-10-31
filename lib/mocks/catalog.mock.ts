@@ -105,6 +105,11 @@ const restaurantSeeds: RestaurantSeed[] = [
   },
 ];
 
+// Stable demo numbering, independent of sorting/filtering the restaurant list.
+export const mockRestaurantNumbers: Record<string, number> = Object.fromEntries(
+  restaurantSeeds.map(({ seed }) => [fixtureId("restaurant", seed), seed]),
+);
+
 export const mockRestaurants: RestaurantPublic[] = restaurantSeeds.map(
   (restaurant) => ({
     id: fixtureId("restaurant", restaurant.seed),

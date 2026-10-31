@@ -5,13 +5,15 @@ import { useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  CookingPot,
-  CupSoda,
+  Check,
   Info,
+  MapPin,
   Minus,
   Plus,
   ShoppingBag,
   ShoppingCart,
+  Store,
+  Utensils,
 } from "lucide-react";
 
 import type {
@@ -21,68 +23,124 @@ import type {
 } from "@/types/restaurant.types";
 
 import {
+  clearSelectedOptionGroup,
   normalizeSelectedOptions,
   resolveSelectedOptions,
+  toggleSelectedOption,
 } from "@/lib/cart/options";
+import {
+  getDefaultSelectedOptions,
+  getDishDescription,
+  getDishInfoBannerText,
+  getDisplayCategory,
+  getOptionGroupKind,
+  getOptionGroupSubtitle,
+  isDrinkDish,
+  parseSugarOptionLabel,
+  previewDrinkItem,
+  previewDrinkRestaurant,
+  previewFoodItem,
+  previewFoodRestaurant,
+  resolveDishOptionGroups,
+} from "@/lib/dish/options";
+import type { SelectedOption } from "@/types/cart.types";
+import {
+  CartUtilities,
+  type SelectedGroup,
+} from "@/utilities/cart_order.utility";
 
 import { useCartStore } from "@/store/useCartStore";
 import { useFlyToCart } from "@/lib/cart/useFlyToCart";
 import { formatMoney as money } from "@/lib/format";
+import { DishHeroMedia } from "@/components/features/dish/DishMedia";
 import styles from "@/styles/dish.module.css";
 
-type Props = {
-  restaurant: RestaurantPublic;
-  item: MenuItemDetail;
+export type DishViewProps = {
+  restaurant?: RestaurantPublic;
+  item?: MenuItemDetail;
+  mode?: "drink" | "food";
+  defaultSelectedOptionIds?: readonly string[];
+  defaultQuantity?: number;
 };
 
-function FoodPlaceholder({ drink }: { drink: boolean }) {
-  const Icon = drink ? CupSoda : CookingPot;
+export default function DishView({
+  restaurant,
+  item,
+  mode = "drink",
+  defaultSelectedOptionIds,
+  defaultQuantity = 1,
+}: DishViewProps) {
+  const resolvedRestaurant =
+    restaurant ??
+    (mode === "food" ? previewFoodRestaurant : previewDrinkRestaurant);
+  const resolvedItem =
+    item ?? (mode === "food" ? previewFoodItem : previewDrinkItem);
 
+  // Different dishes must not inherit the previous dish's option IDs or quantity.
   return (
-    <div className={styles.placeholder} aria-hidden="true">
-      <Icon strokeWidth={1.3} />
-    </div>
+    <DishSelection
+      key={resolvedItem.id}
+      restaurant={resolvedRestaurant}
+      item={resolvedItem}
+      defaultSelectedOptionIds={defaultSelectedOptionIds}
+      defaultQuantity={defaultQuantity}
+    />
   );
 }
 
-export default function DishView({ restaurant, item }: Props) {
+function DishSelection({
+  restaurant,
+  item,
+  defaultSelectedOptionIds,
+  defaultQuantity = 1,
+}: {
+  restaurant: RestaurantPublic;
+  item: MenuItemDetail;
+  defaultSelectedOptionIds?: readonly string[];
+  defaultQuantity?: number;
+}) {
+  const addToDatabaseCart = useCartStore((state) => state.addToDatabaseCart);
   const addCatalogItem = useCartStore((state) => state.addCatalogItem);
 
   const { sourceRef, flyToCart } = useFlyToCart();
 
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [quantity, setQuantity] = useState(1);
+  const groups = resolveDishOptionGroups(item);
+  const effectiveItem: MenuItemDetail = {
+    ...item,
+    option_groups: groups,
+  };
+
+  const [selected, setSelected] = useState<SelectedOption[]>(() =>
+    getDefaultSelectedOptions(item, groups, defaultSelectedOptionIds),
+  );
+  const [quantity, setQuantity] = useState(() =>
+    Math.min(99, Math.max(1, defaultQuantity)),
+  );
   const [notice, setNotice] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
 
-  const groups = item.option_groups
-    .filter((group) => group.is_active)
-    .map((group) => ({
-      ...group,
-      options: group.options.filter((option) => option.is_active),
-    }));
-
+  const selectedIds = new Set(selected.map((option) => option.option_id));
   const selectedOptions = groups.flatMap((group) =>
     group.options
-      .filter((option) => selectedIds.includes(option.id))
+      .filter((option) => selectedIds.has(option.id))
       .map((option) => ({
         ...option,
         groupName: group.name,
+        groupKind: getOptionGroupKind(group),
       })),
   );
 
-  const selected = normalizeSelectedOptions(
-    selectedIds.map((option_id) => ({ option_id })),
-  );
-
   // Hiển thị giá tạm tính trong lúc người dùng đang chọn.
-  // Khi thêm vào giỏ, store kiểm tra lại toàn bộ lựa chọn.
   const additionalPrice = selectedOptions.reduce(
     (sum, option) => sum + option.additional_price,
     0,
   );
 
   const total = (item.price + additionalPrice) * quantity;
-  const isDrink = item.category === "Nước uống";
+  const isDrink = isDrinkDish(item);
+  const displayCategory = getDisplayCategory(item);
+  const description = getDishDescription(item);
+  const infoBannerText = getDishInfoBannerText(item, groups);
 
   const canAdd =
     restaurant.status === "active" &&
@@ -93,51 +151,83 @@ export default function DishView({ restaurant, item }: Props) {
   const restaurantHref = `/restaurants/${encodeURIComponent(restaurant.slug)}`;
 
   function toggleOption(group: MenuOptionGroupDetail, optionId: string) {
-    setSelectedIds((current) => {
-      if (group.is_multiple) {
-        return current.includes(optionId)
-          ? current.filter((id) => id !== optionId)
-          : [...current, optionId];
-      }
-
-      const groupIds = new Set(group.options.map((option) => option.id));
-
-      const otherGroups = current.filter((id) => !groupIds.has(id));
-
-      return [...otherGroups, optionId];
-    });
-
+    setSelected((current) => toggleSelectedOption(current, group, optionId));
     setNotice("");
   }
 
   function clearGroup(group: MenuOptionGroupDetail) {
-    const groupIds = new Set(group.options.map((option) => option.id));
-
-    setSelectedIds((current) => current.filter((id) => !groupIds.has(id)));
-
+    setSelected((current) => clearSelectedOptionGroup(current, group));
     setNotice("");
   }
 
-  function handleAddToCart() {
-    if (!canAdd) {
-      setNotice("Món đã hết hoặc quán đang tạm đóng cửa.");
+  async function handleAddToCart() {
+    if (!canAdd || isAdding) {
+      if (!canAdd) {
+        setNotice("Món đã hết hoặc quán đang tạm đóng cửa.");
+      }
       return;
     }
 
     try {
+      // Allowlist payload fields: names/prices are for display only.
+      const selected_options = normalizeSelectedOptions(
+        selected.map(({ option_id }) => ({ option_id })),
+      );
       // Báo rõ nhóm nào chưa chọn hoặc lựa chọn không hợp lệ.
-      resolveSelectedOptions(item, selected);
+      resolveSelectedOptions(effectiveItem, selected_options);
 
-      const result = addCatalogItem({
-        restaurant_id: restaurant.id,
-        menu_item_id: item.id,
+      const dbGroupIds = new Set(
+        item.option_groups
+          .filter((g) => g.is_active)
+          .map((g) => g.id),
+      );
+
+      const selectedGroups: SelectedGroup[] = groups
+        .filter((group) => dbGroupIds.has(group.id))
+        .map((group) => ({
+          group_id: group.id,
+          group_name: group.name,
+          options: group.options
+            .filter((option) => selectedIds.has(option.id))
+            .map((option) => ({
+              id: option.id,
+              name: option.option_name,
+              additional_price: option.additional_price,
+            })),
+        }))
+        .filter((group) => group.options.length > 0);
+
+      const optionHash = CartUtilities.generateHash(selectedGroups) || "NONE";
+
+      setIsAdding(true);
+      const result = await addToDatabaseCart({
+        menuItemId: item.id,
+        restaurantId: restaurant.id,
+        optionHash,
         quantity,
-        selected_options: selected,
+        selectedOptions: selectedGroups,
       });
 
       if (!result.ok) {
-        setNotice(result.message);
-        return;
+        const dbOptionIds = new Set(
+          item.option_groups
+            .filter((g) => g.is_active)
+            .flatMap((g) => g.options.filter((o) => o.is_active).map((o) => o.id)),
+        );
+        const fallbackOptions = selected_options.filter((opt) =>
+          dbOptionIds.has(opt.option_id),
+        );
+        const localResult = addCatalogItem({
+          restaurant_id: restaurant.id,
+          menu_item_id: item.id,
+          quantity,
+          selected_options: fallbackOptions,
+        });
+
+        if (!localResult.ok) {
+          setNotice(result.message);
+          return;
+        }
       }
 
       flyToCart();
@@ -148,21 +238,28 @@ export default function DishView({ restaurant, item }: Props) {
           ? error.message
           : "Không thể thêm món vào giỏ hàng.",
       );
+    } finally {
+      setIsAdding(false);
     }
   }
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-dish-kind={isDrink ? "drink" : "food"}>
       <div className={styles.leftColumn}>
         <Link href={restaurantHref} className={styles.backLink}>
-          <ArrowLeft size={21} aria-hidden="true" />
+          <ArrowLeft size={20} aria-hidden="true" />
           Quay lại quán
         </Link>
 
         <div className={styles.mainCard}>
           <section className={styles.overview} aria-labelledby="dish-title">
             <div className={styles.heroMedia}>
-              <FoodPlaceholder drink={isDrink} />
+              <DishHeroMedia
+                drink={isDrink}
+                imageUrl={item.image_url}
+                alt={item.name}
+                slug={item.slug}
+              />
             </div>
 
             <div className={styles.overviewContent}>
@@ -182,90 +279,215 @@ export default function DishView({ restaurant, item }: Props) {
               <p className={styles.mainPrice}>{money(item.price)}</p>
 
               <div className={styles.metadata}>
-                <Link href={restaurantHref}>{restaurant.name}</Link>
-                <span>{restaurant.location}</span>
-                <span>{item.category}</span>
+                <Link href={restaurantHref}>
+                  <Store size={15} aria-hidden="true" />
+                  {restaurant.name}
+                </Link>
+                <span>
+                  <MapPin size={15} aria-hidden="true" />
+                  {restaurant.location}
+                </span>
+                <span>
+                  <Utensils size={15} aria-hidden="true" />
+                  {displayCategory}
+                </span>
               </div>
 
-              <p className={styles.description}>{item.description}</p>
-
-              <div className={styles.info}>
-                <Info size={23} aria-hidden="true" />
-                <span>Chọn tùy chọn và số lượng trước khi thêm vào giỏ.</span>
-              </div>
+              <p className={styles.description}>{description}</p>
             </div>
           </section>
 
-          {groups.map((group) => (
-            <section
-              key={group.id}
-              className={styles.optionSection}
-              aria-labelledby={`group-${group.id}`}
-            >
-              <div className={styles.optionHeading}>
-                <div>
-                  <h2 id={`group-${group.id}`}>{group.name}</h2>
-                  <p>
-                    {group.is_required ? "Bắt buộc" : "Không bắt buộc"}
-                    {" · "}
-                    {group.is_multiple ? "Có thể chọn nhiều" : "Chọn một"}
-                  </p>
-                </div>
-              </div>
+          <div className={styles.infoCard}>
+            <div className={styles.info}>
+              <span className={styles.infoBadge} aria-hidden="true">
+                <Info size={16} strokeWidth={2.4} />
+              </span>
+              <span>{infoBannerText}</span>
+            </div>
+          </div>
 
-              <div
-                className={styles.toppingGrid}
-                role={group.is_multiple ? "group" : "radiogroup"}
+          {groups.map((group) => {
+            const groupKind = getOptionGroupKind(group);
+
+            return (
+              <section
+                key={group.id}
+                className={styles.optionSection}
+                data-group-kind={groupKind}
                 aria-labelledby={`group-${group.id}`}
               >
-                {group.options.map((option) => (
-                  <label
-                    key={option.id}
-                    className={styles.radioOption}
-                    data-selected={selectedIds.includes(option.id)}
-                  >
-                    <input
-                      type={group.is_multiple ? "checkbox" : "radio"}
-                      name={`option-group-${group.id}`}
-                      value={option.id}
-                      checked={selectedIds.includes(option.id)}
-                      onChange={() => toggleOption(group, option.id)}
-                    />
+                <div className={styles.optionHeading}>
+                  <div>
+                    <h2 id={`group-${group.id}`}>{group.name}</h2>
+                    <p>{getOptionGroupSubtitle(group)}</p>
+                  </div>
+                </div>
 
-                    <span>
-                      <strong>{option.option_name}</strong>
-                      <small>
-                        {option.additional_price > 0
-                          ? `+${money(option.additional_price)}`
-                          : "Không phụ thu"}
-                      </small>
-                    </span>
-                  </label>
-                ))}
+                {(groupKind === "topping" || groupKind === "food-extra") && (
+                  <div
+                    className={styles.toppingGrid}
+                    role={group.is_multiple ? "group" : "radiogroup"}
+                    aria-labelledby={`group-${group.id}`}
+                  >
+                    {group.options.map((option) => {
+                      const isSelected = selectedIds.has(option.id);
+                      return (
+                        <label
+                          key={option.id}
+                          className={styles.toppingOption}
+                          data-selected={isSelected}
+                        >
+                          <input
+                            type={group.is_multiple ? "checkbox" : "radio"}
+                            name={`option-group-${group.id}`}
+                            value={option.id}
+                            checked={isSelected}
+                            onChange={() => toggleOption(group, option.id)}
+                            className={styles.srOnlyInput}
+                          />
+
+                          <span
+                            className={styles.checkIndicator}
+                            data-checked={isSelected}
+                            aria-hidden="true"
+                          >
+                            {isSelected ? (
+                              <Check size={14} strokeWidth={3} />
+                            ) : null}
+                          </span>
+
+                          <span className={styles.toppingCopy}>
+                            <strong>{option.option_name}</strong>
+                            <span className={styles.toppingPrice}>
+                              {option.additional_price > 0
+                                ? `+${money(option.additional_price)}`
+                                : "Miễn phí"}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {groupKind === "sugar" && (
+                  <div
+                    className={styles.sugarGrid}
+                    role="radiogroup"
+                    aria-labelledby={`group-${group.id}`}
+                  >
+                    {group.options.map((option) => {
+                      const isSelected = selectedIds.has(option.id);
+                      const { percentLabel, tasteLabel } =
+                        parseSugarOptionLabel(option.option_name);
+
+                      return (
+                        <label
+                          key={option.id}
+                          className={styles.sugarOption}
+                          data-selected={isSelected}
+                        >
+                          <input
+                            type="radio"
+                            name={`option-group-${group.id}`}
+                            value={option.id}
+                            checked={isSelected}
+                            onChange={() => toggleOption(group, option.id)}
+                            className={styles.srOnlyInput}
+                          />
+
+                          <span
+                            className={styles.radioIndicator}
+                            data-checked={isSelected}
+                            aria-hidden="true"
+                          />
+
+                          <span className={styles.sugarTop}>
+                            <strong>{percentLabel}</strong>
+                            <small className={styles.sugarSub}>
+                              {tasteLabel}
+                            </small>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {(groupKind === "ice" || groupKind === "other") && (
+                  <div
+                    className={styles.iceGrid}
+                    role={group.is_multiple ? "group" : "radiogroup"}
+                    aria-labelledby={`group-${group.id}`}
+                  >
+                    {group.options.map((option) => {
+                      const isSelected = selectedIds.has(option.id);
+                      return (
+                        <label
+                          key={option.id}
+                          className={styles.iceOption}
+                          data-selected={isSelected}
+                        >
+                          <input
+                            type={group.is_multiple ? "checkbox" : "radio"}
+                            name={`option-group-${group.id}`}
+                            value={option.id}
+                            checked={isSelected}
+                            onChange={() => toggleOption(group, option.id)}
+                            className={styles.srOnlyInput}
+                          />
+
+                          <span
+                            className={styles.radioIndicator}
+                            data-checked={isSelected}
+                            aria-hidden="true"
+                          />
+
+                          <span className={styles.iceCopy}>
+                            <strong>{option.option_name}</strong>
+                            {option.additional_price > 0 && (
+                              <small>+{money(option.additional_price)}</small>
+                            )}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {!group.is_required && !group.is_multiple && (
+                  <button
+                    type="button"
+                    className={styles.clearButton}
+                    onClick={() => clearGroup(group)}
+                  >
+                    Bỏ lựa chọn
+                  </button>
+                )}
+              </section>
+            );
+          })}
+
+          <section
+            className={`${styles.optionSection} ${styles.quantitySection}`}
+            aria-label="Số lượng món"
+          >
+            <div className={styles.quantityRow}>
+              <div className={styles.quantityHeading}>
+                <span className={styles.quantityLabel}>Số lượng</span>
               </div>
 
-              {!group.is_required && !group.is_multiple && (
-                <button type="button" onClick={() => clearGroup(group)}>
-                  Bỏ lựa chọn
-                </button>
-              )}
-            </section>
-          ))}
-
-          <section className={styles.optionSection}>
-            <div className={styles.iceQuantityRow}>
               <div className={styles.quantity}>
-                <span>Số lượng</span>
-
                 <button
                   type="button"
+                  className={styles.minusButton}
                   aria-label="Giảm số lượng"
                   disabled={quantity <= 1}
                   onClick={() =>
                     setQuantity((current) => Math.max(1, current - 1))
                   }
                 >
-                  <Minus size={20} aria-hidden="true" />
+                  <Minus size={18} strokeWidth={2.4} aria-hidden="true" />
                 </button>
 
                 <output aria-live="polite" aria-label="Số lượng món">
@@ -281,25 +503,64 @@ export default function DishView({ restaurant, item }: Props) {
                     setQuantity((current) => Math.min(99, current + 1))
                   }
                 >
-                  <Plus size={23} aria-hidden="true" />
+                  <Plus size={20} strokeWidth={2.5} aria-hidden="true" />
                 </button>
               </div>
             </div>
           </section>
         </div>
+
+        <div className={styles.bottomBar}>
+          <div className={styles.bottomTotal}>
+            <span className={styles.bottomTotalLabel}>Tạm tính</span>
+            <output
+              className={styles.bottomTotalValue}
+              aria-live="polite"
+              aria-label="Tạm tính"
+            >
+              {money(total)}
+            </output>
+          </div>
+
+          <div className={styles.bottomDivider} aria-hidden="true" />
+
+          <button
+            type="button"
+            className={styles.bottomAddButton}
+            disabled={!canAdd || isAdding}
+            onClick={handleAddToCart}
+          >
+            <ShoppingCart size={20} aria-hidden="true" />
+            <span>
+              {canAdd ? "Thêm vào giỏ hàng" : "Hiện không thể đặt món"}
+            </span>
+            <ArrowRight size={19} aria-hidden="true" />
+          </button>
+        </div>
+
+        {notice && (
+          <p className={styles.mobileNotice} role="status">
+            {notice}
+          </p>
+        )}
       </div>
 
       <aside className={styles.summary} aria-labelledby="selection-title">
         <div className={styles.summaryHeading}>
           <span>
-            <ShoppingBag size={25} aria-hidden="true" />
+            <ShoppingBag size={24} aria-hidden="true" />
           </span>
           <h2 id="selection-title">Tùy chọn đã chọn</h2>
         </div>
 
         <div className={styles.selectedDish}>
           <div ref={sourceRef} className={styles.thumbnail}>
-            <FoodPlaceholder drink={isDrink} />
+            <DishHeroMedia
+              drink={isDrink}
+              imageUrl={item.image_url}
+              alt={item.name}
+              slug={item.slug}
+            />
           </div>
 
           <div className={styles.selectedDishCopy}>
@@ -342,15 +603,16 @@ export default function DishView({ restaurant, item }: Props) {
         <button
           type="button"
           className={styles.addButton}
-          disabled={!canAdd}
+          disabled={!canAdd || isAdding}
           onClick={handleAddToCart}
         >
+          <ShoppingCart size={20} aria-hidden="true" />
           {canAdd ? "Thêm vào giỏ hàng" : "Hiện không thể đặt món"}
-          <ArrowRight size={21} aria-hidden="true" />
+          <ArrowRight size={20} aria-hidden="true" />
         </button>
 
         <Link href="/cart" className={styles.cartButton}>
-          <ShoppingCart size={25} aria-hidden="true" />
+          <ShoppingCart size={22} aria-hidden="true" />
           Xem giỏ hàng
         </Link>
 

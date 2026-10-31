@@ -18,13 +18,18 @@ export type OptionSnapshot = {
 
 export type OrderItem = Omit<
   Tables["order_items"]["Row"],
-  "option_snapshot_price"
+  "selected_options"
 > & {
-  option_snapshot_price: OptionSnapshot[];
+  selected_options: OptionSnapshot[];
 };
 
 export type OrderDetail = Order & {
   order_items: OrderItem[];
+  restaurant?: {
+    id?: string;
+    name: string;
+    location: string | null;
+  } | null;
 };
 
 // Quán có thể không còn public/active khi xem đơn cũ.
@@ -59,10 +64,8 @@ export type CheckoutResult = {
   orders: CheckoutOrderReference[];
 };
 
-
-
 export interface CheckoutItemInput {
-  cartItemId: string,
+  cartItemId: string;
   quantity: number;
   expectedUnitPrice: number;
 }
@@ -70,24 +73,48 @@ export interface CheckoutItemInput {
 // Required input to create order
 // 1 order can contains multiple items
 export interface CreateOrderInput {
-  items: CheckoutItemInput[]
+  items: CheckoutItemInput[];
   deliveryAddress: string;
+  restaurantPreferences?: RestaurantCheckoutPreference[];
   customerNotes?: string;
-  paymentMethod: PaymentMethod;
+  paymentMethod?: PaymentMethod;
   expectedTotal: number;
   sessionCheckoutId?: string;
 }
 
 export interface CreateOrderSummary {
-  orderId: string; 
+  orderId: string;
   orderCode: string;
   restaurantId: string;
   subtotal: string;
   total: string;
 }
 
-export interface CreateOrderResponse{
+export interface CreateOrderResponse {
   sessionCheckoutId: string;
   orders: CreateOrderSummary[];
 }
 
+// Mỗi phần tử là một dòng món từng đặt; không gộp theo menu_item_id hoặc options.
+export type OrderedSummary = {
+  orderItemId: string;
+  orderId: Order["id"];
+  orderCode: Order["order_code"];
+  restaurantId: Order["restaurant_id"];
+  restaurantName: string | null;
+  menuItemId: string | null;
+  name: string;
+  imageUrl: string | null;
+  quantity: number;
+  basePriceSnapshot: number;
+  // Giá một phần đã gồm options; null nghĩa là snapshot cũ chưa có total_price.
+  unitPriceSnapshot: number | null;
+  lineTotalSnapshot: number | null;
+  restaurantAvailability: "available" | "closed" | "unavailable";
+  menuAvailability: "available" | "paused" | "unavailable";
+  // UI làm mờ nhưng vẫn cho click; không dùng isDimmed để disabled thẻ.
+  isDimmed: boolean;
+  notices: string[];
+  orderStatus: Order["order_status"];
+  createdAt: Order["created_at"];
+};

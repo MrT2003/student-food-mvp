@@ -31,8 +31,18 @@ export default function HomeHero({ input, onChange, onSearch }: Props) {
           onChange={(event) => onChange(event.target.value)}
           placeholder="Tìm quán ăn hoặc món ăn..."
         />
-        <button type="submit" className={styles.primaryButton}>
-          Tìm kiếm
+        <button
+          type="submit"
+          className={styles.primaryButton}
+          aria-label="Tìm kiếm"
+        >
+          <Search
+            size={21}
+            strokeWidth={2}
+            className={styles.searchSubmitIcon}
+            aria-hidden="true"
+          />
+          <span className={styles.searchSubmitText}>Tìm kiếm</span>
         </button>
       </form>
     </section>
