@@ -2,6 +2,14 @@
 
 import { createClient } from "@/lib/supabase/client";
 import type { AuthProfile, UpdateProfileInput } from "@/types/auth.types";
+import { assertPushOwner, PushOwnerChangedError, readPushRegistration, removePushBeforeLogout, withPushLock } from "@/lib/firebase/pushLifecycle";
+import { useAuthStore } from "@/store/useAuthStore";
+import { retryWithBackoff } from "@/lib/firebase/retry";
+import { PushTokenRequestError } from "@/services/push-token.service";
+
+let signingOutHere = false;
+let logoutTask: Promise<void> | null = null;
+export function isSigningOutHere() { return signingOutHere; }
 
 // Define error message
 const authErrorMessages: Record<string, string> = {
@@ -21,13 +29,41 @@ export const AuthClientService = {
   },
 
   // Sign out function
-  async signOut(): Promise<void> {
-    const supabase = createClient();
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
+  signOut(): Promise<void> {
+    if (logoutTask) return logoutTask;
+    const state = useAuthStore.getState();
+    const owner = state.user?.id ?? state.logoutOwner;
+    if (!owner) return Promise.reject(new Error("Vui lòng tải lại trang để kiểm tra phiên đăng nhập."));
+    // Đổi UI ngay, không đợi lock/HTTP/Firebase. Owner được chụp trước khi xóa profile local.
+    signingOutHere = true;
+    useAuthStore.setState({ user: null, status: "ready", logoutStatus: "pending", logoutOwner: owner, logoutError: null });
+    const shouldRetry = (error: unknown) => {
+      if (error instanceof PushOwnerChangedError) return false;
+      const status = error instanceof PushTokenRequestError ? error.status
+        : typeof error === "object" && error !== null && "status" in error ? Number(error.status) : 0;
+      return !status || status === 408 || status === 429 || status >= 500;
+    };
+    const perform = async () => {
+      // Giữ lock cả trong backoff. Mỗi lần thử lại kiểm tra owner, không đụng phiên mới.
+      await removePushBeforeLogout(owner);
+      await assertPushOwner(owner);
+      const { error } = await createClient().auth.signOut({ scope: "local" });
+      if (error) throw error;
+    };
+    // Promise sống ở module, không bị mất khi trang account unmount vì chuyển sang login.
+    logoutTask = Promise.resolve().then(() => {
+      // Một retry budget chung: toàn bộ logout tối đa 4 lượt, không nhân budget theo từng bước.
+      const run = () => retryWithBackoff(perform, shouldRetry);
+      if (!navigator.locks && !readPushRegistration()) return run();
+      return withPushLock(run);
+    }).then(() => {
+      useAuthStore.setState({ logoutStatus: "complete", logoutOwner: null, logoutError: null });
+    }).catch((error: unknown) => {
+      // Không báo logout thành công nếu cookie chưa được xóa. Login hiển thị nút thử lại.
+      useAuthStore.setState({ logoutStatus: "failed", logoutError: "Chưa hoàn tất đăng xuất. Vui lòng kiểm tra kết nối và thử lại." });
       throw error;
-    }
+    }).finally(() => { signingOutHere = false; logoutTask = null; });
+    return logoutTask;
   },
 
   // Login with google function
@@ -182,6 +218,7 @@ export async function getCurrentProfile(): Promise<AuthProfile | null> {
 export function subscribeAuthProfile(
   onProfile: (profile: AuthProfile | null) => void,
   onError: (message: string) => void,
+  onSessionUser?: (userId: string | null) => void,
 ): () => void {
   let stopped = false;
   let revision = 0;
@@ -212,8 +249,10 @@ export function subscribeAuthProfile(
     }, 0);
   }
 
-  const { data } = supabase.auth.onAuthStateChange((event) => {
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
     if (stopped) return;
+    // Báo đổi account ngay, không đợi query public.users mới khóa UI cũ.
+    onSessionUser?.(session?.user.id ?? null);
 
     if (event === "SIGNED_OUT") {
       revision++;

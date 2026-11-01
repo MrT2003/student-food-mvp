@@ -15,6 +15,7 @@ import {
   type FormEvent,
 } from "react";
 import AccountSecurity from "./AccountSecurity";
+import AccountNotifications from "./AccountNotifications";
 import AccountSuccessModal from "./AccountSuccessModal";
 
 export default function AccountView() {
@@ -261,6 +262,8 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
       </section>
 
       <AccountSecurity />
+      {/* Component riêng quản lý quyền và đăng ký FCM, không phụ thuộc form sửa profile. */}
+      <AccountNotifications />
 
       <section
         className={`${styles.card} ${styles.managementCard}`}
