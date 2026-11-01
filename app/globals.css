@@ -12,12 +12,15 @@
   --sf-ink: #081447;
   --sf-muted: #657fb1;
   --sf-orange: #ff4d12;
+  --font-body: "Be Vietnam Pro", sans-serif;
+  --font-display: "Inter", sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-sans: "Be Vietnam Pro", sans-serif;
+  --font-display: "Inter", sans-serif;
   --font-mono: Consolas, "Courier New", monospace;
 }
 
@@ -31,14 +34,32 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+nav {
+  font-family: var(--font-display);
 }
 
 .sf-auth {
   color-scheme: light;
   background: #fffbf6;
   color: #08184c;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+}
+
+.sf-auth :is(h1, h2, h3, h4, h5, h6, nav) {
+  font-family: var(--font-display);
 }
 
 .sf-auth ::selection {

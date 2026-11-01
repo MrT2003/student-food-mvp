@@ -5,6 +5,7 @@ import { CartUtilities, type SelectedGroup, type CompactSelectedGroup } from "@/
 import type { GetCartResult } from "@/types/cart.types";
 import type { CartItem, CartRestaurant } from "@/lib/cart/view-model";
 import { getCartSummary } from "@/lib/cart/calculations";
+import { assertPurchaseAccess } from "@/lib/auth/purchase-access";
 
 export interface AddToCartInput {
   menuItemId: string;

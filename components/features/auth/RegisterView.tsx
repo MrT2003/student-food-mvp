@@ -6,8 +6,6 @@ import SocialAuthButtons from "@/components/features/auth/SocialAuthButtons";
 import { useSignIn, useSignOut } from "@/lib/auth/useAuthFlow";
 import { useAuthStore } from "@/store/useAuthStore";
 import styles from "@/styles/auth-fit.module.css";
-import { Info } from "lucide-react";
-import Link from "next/link";
 
 type Props = {
   mode?: "register" | "login";
@@ -32,35 +30,28 @@ export default function RegisterView({ mode = "register" }: Props) {
         ].join(" ")}
       >
         <div className={`${styles.introWrapper} order-2 lg:order-1`}>
-          <AuthIntro mode={mode} />
+          <AuthIntro />
         </div>
 
         <section
           className={`${styles.formPanel} order-1 flex flex-col justify-center px-6 py-10 sm:px-10 lg:order-2 lg:px-12 lg:py-14`}
         >
           <div className={`${styles.formHeading} text-center`}>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              {isRegister ? "Đăng ký" : "Đăng nhập"}
+            <h1 className="text-3xl leading-[1.2] font-bold tracking-tight text-[#0d224c] sm:text-4xl">
+              Chào bạn đến với
+              <br />
+              Student<span className="text-[#ff4d0a]">Food</span>
             </h1>
 
-            {isRegister ? (
-              <p className="mt-4 leading-relaxed text-[#526a9e]">
-                Chọn phương thức để bắt đầu cùng StudentFood.
-              </p>
-            ) : (
-              <p className="mt-5 leading-relaxed text-[#526a9e]">
-                Chào mừng bạn trở lại với StudentFood!
-                <br />
-                Đăng nhập để tiếp tục khám phá những món ngon sinh viên.
-              </p>
-            )}
+            <p className="mt-4 leading-relaxed text-[#526a9e]">
+              Đăng nhập hoặc tạo tài khoản để tiếp tục.
+            </p>
           </div>
 
           <div
             className={[
               styles.providers,
-              "mx-auto w-full",
-              isRegister ? "mt-9 max-w-[430px]" : "mt-12 max-w-[460px]",
+              "mx-auto mt-8 w-full max-w-[440px]",
             ].join(" ")}
           >
 
@@ -79,47 +70,26 @@ export default function RegisterView({ mode = "register" }: Props) {
             />
           </div>
 
-          <p
-            className={[
-              styles.switchAccount,
-              "text-center text-[#526a9e]",
-              isRegister ? "mt-7" : "mt-10",
-            ].join(" ")}
-          >
-            {isRegister ? "Đã có tài khoản? " : "Chưa có tài khoản? "}
-
-            <Link
-              href={isRegister ? "/auth/login" : "/auth/register"}
-              className="font-medium text-[#e94a12] underline underline-offset-4 hover:text-[#c93a09]"
-            >
-              {isRegister ? "Đăng nhập" : "Đăng ký"}
-            </Link>
+          <p className={`${styles.switchAccount} mt-6 text-center text-sm text-[#526a9e]`}>
+            Tài khoản mới sẽ được tạo khi bạn xác thực lần đầu.
           </p>
 
-          {isRegister && (
-            <div
-              className={`${styles.registerNotice} mt-9 flex items-start gap-3 rounded-2xl border border-[#ffe1d0] bg-[#fff7f1] p-4`}
-            >
-              <Info
-                size={27}
-                className="mt-0.5 shrink-0 text-[#ff531b]"
-                aria-hidden="true"
-              />
-
-              <p className="text-sm leading-relaxed text-[#526a9e]">
-                Tài khoản mới dùng để đặt món. Khi muốn bán hàng, bạn có thể
-                chuyển sang tài khoản người bán tại mục{" "}
-                <span className="font-medium text-[#e94a12]">
-                  “Tạo cửa hàng”
-                </span>
-                .
-              </p>
-            </div>
-          )}
+          <p className={`${styles.registerNotice} mt-9 text-center text-sm leading-relaxed text-[#526a9e]`}>
+            Bằng việc tiếp tục, bạn đồng ý với
+            <br />
+            <span className="font-medium text-[#e94a12] underline underline-offset-4">
+              Điều khoản sử dụng
+            </span>{" "}
+            và{" "}
+            <span className="font-medium text-[#e94a12] underline underline-offset-4">
+              Chính sách quyền riêng tư
+            </span>
+            .
+          </p>
         </section>
       </div>
 
-      <AuthBenefits mode={mode} />
+      <AuthBenefits />
     </div>
   );
 }

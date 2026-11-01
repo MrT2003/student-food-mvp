@@ -3,6 +3,7 @@
   max-width: 994px;
   margin: 0 auto;
   color: var(--sf-ink);
+  font-family: var(--font-body);
 }
 
 .pageHeading {
@@ -11,10 +12,11 @@
 
 .pageHeading h1 {
   margin: 0;
-  font-size: 42px;
+  font-family: var(--font-display);
+  font-size: 40px;
   line-height: 1.2;
-  font-weight: 750;
-  letter-spacing: -1.3px;
+  font-weight: 800;
+  letter-spacing: -1px;
 }
 
 .pageHeading h1 span {
@@ -22,10 +24,10 @@
 }
 
 .pageHeading > p {
-  margin: 5px 0 0;
+  margin: 6px 0 0;
   color: var(--sf-muted);
-  font-size: 20px;
-  line-height: 28px;
+  font-size: 18px;
+  line-height: 27px;
 }
 
 .card {
@@ -59,10 +61,11 @@
 
 .sectionHeading h2 {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 22px;
   line-height: 28px;
   font-weight: 700;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.4px;
 }
 
 .sectionHeading p {
@@ -103,8 +106,9 @@
   border-radius: 50%;
   background: linear-gradient(135deg, #ffb39c, #ffc3ad);
   color: #fff;
-  font-size: 62px;
-  font-weight: 400;
+  font-family: var(--font-display);
+  font-size: 58px;
+  font-weight: 600;
 }
 
 .avatarImage {
@@ -138,8 +142,8 @@
   display: block;
   margin-bottom: 5px;
   font-size: 15px;
-  line-height: 19px;
-  font-weight: 700;
+  line-height: 20px;
+  font-weight: 600;
 }
 
 .field input {
@@ -185,7 +189,8 @@
   min-height: 47px;
   padding: 10px 24px;
   border-radius: 10px;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 600;
   line-height: 24px;
   white-space: nowrap;
 }
@@ -240,6 +245,7 @@
 
 .securityCopy h3 {
   margin: 1px 0 0;
+  font-family: var(--font-display);
   font-size: 17px;
   line-height: 23px;
   font-weight: 700;
@@ -321,12 +327,12 @@
 
 @media (max-width: 600px) {
   .pageHeading h1 {
-    font-size: 32px;
+    font-size: 30px;
   }
 
   .pageHeading > p {
-    font-size: 16px;
-    line-height: 24px;
+    font-size: 15px;
+    line-height: 23px;
   }
 
   .card {
@@ -428,9 +434,10 @@
 .zaloLogo {
   background: #edf6ff;
   color: #087aff;
+  font-family: var(--font-display);
   font-size: 16px;
   font-weight: 800;
-  letter-spacing: -0.7px;
+  letter-spacing: -0.5px;
 }
 
 .googleLogo {
@@ -444,6 +451,7 @@
 
 .providerCopy h3 {
   margin: 0;
+  font-family: var(--font-display);
   color: var(--sf-ink);
   font-size: 17px;
   font-weight: 700;
@@ -495,6 +503,7 @@
   color: #ff381d;
   font: inherit;
   font-size: 14px;
+  font-weight: 500;
   line-height: 22px;
   cursor: pointer;
 }

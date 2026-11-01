@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { assertPurchaseAccess } from "@/lib/auth/purchase-access";
 import type { CreateOrderInput, CreateOrderResponse, OrderedSummary } from "@/types/order.types";
 
 export const OrderServices = {
@@ -48,13 +49,16 @@ export const OrderServices = {
 			p_checkout_session_id: validSessionId,
 		};
 
-		const { data, error } = await supabaseBrowser.rpc('create_checkout_orders', payload); 
+		// Staff được phép ở application; RPC/RLS vẫn quyết định quyền thực thi thật.
+		// SQL create_checkout_orders trong repo còn chặn staff; không đổi RPC hoặc fallback quyền cao.
+		await assertPurchaseAccess(supabaseBrowser);
+		const { data, error } = await supabaseBrowser.rpc('create_checkout_orders', payload);
 
 		if (error) {
 			if (error.message.includes('PRICE_MISMATCH')) {
 				throw new Error('PRICE_MISMATCH: Giá đã thay đổi. Vui lòng tải lại giá và xác nhận trước khi đặt.');
 			}
-			console.error("[orderService][createOrder] RPC error: ", error);
+			// Chỉ chuyển mã nghiệp vụ đã biết; không log/trả lỗi DB thô.
 			// Handle các mã lỗi nghiệp vụ ném ra từ SQL
 			if (error.message.includes('SOME_ITEMS_NOT_FOUND_OR_INVALID_OWNER')) {
 				throw new Error('Sản phẩm trong giỏ hàng không tồn tại hoặc đã bị thay đổi.');
@@ -66,7 +70,10 @@ export const OrderServices = {
 				throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
 			}
 
-			throw new Error(error.message || 'Tạo đơn hàng thất bại.');
+			if (error.message === 'ACCOUNT_NOT_ALLOWED') {
+				throw new Error('ACCOUNT_NOT_ALLOWED: Tài khoản không được phép thanh toán.');
+			}
+			throw new Error('Tạo đơn hàng thất bại.');
 		}
 		return data as CreateOrderResponse
 	},

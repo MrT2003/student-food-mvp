@@ -10,7 +10,7 @@
   border-radius: 16px;
   background: #fff;
   color: #081447;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
   box-shadow: 0 20px 70px rgb(0 0 0 / 15%);
 }
 
@@ -109,17 +109,19 @@
 
 .title {
   margin: 0;
-  font-size: 26px;
-  font-weight: 750;
-  line-height: 34px;
-  letter-spacing: -0.7px;
+  font-family: var(--font-display);
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 33px;
+  letter-spacing: -0.5px;
 }
 
 .description {
   margin: 8px 0 22px;
   color: #7c8aa0;
-  font-size: 17px;
-  line-height: 25px;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 24px;
 }
 
 .confirmButton {
@@ -135,7 +137,7 @@
   background: linear-gradient(110deg, #ff8429, #ff291e);
   color: #fff;
   font: inherit;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -161,8 +163,8 @@
   }
 
   .title {
-    font-size: 23px;
-    line-height: 30px;
+    font-size: 22px;
+    line-height: 29px;
   }
 
   .description {

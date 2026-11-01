@@ -1,52 +1,24 @@
-import { Heart, ShieldCheck, Users } from "lucide-react";
+import { ShieldCheck, Store, Users } from "lucide-react";
 
-type Props = {
-  mode?: "register" | "login";
-};
-
-const registerBenefits = [
+const benefits = [
   {
     icon: ShieldCheck,
-    title: "Đăng ký nhanh chóng",
-    description: "Chỉ vài phút là có tài khoản.",
+    title: "Không cần mật khẩu riêng",
+    description: "Tiếp tục bằng tài khoản Zalo hoặc Google.",
   },
   {
     icon: Users,
-    title: "Cộng đồng sinh viên",
-    description: "Cùng nhau khám phá những món ngon.",
+    title: "Kết nối cộng đồng sinh viên",
+    description: "Khám phá và chia sẻ những địa chỉ ăn ngon.",
   },
   {
-    icon: Heart,
-    title: "Sẵn sàng bán hàng",
-    description: "Tạo cửa hàng dễ dàng khi bạn muốn.",
+    icon: Store,
+    title: "Sẵn sàng khi bạn muốn bán",
+    description: "Mở cửa hàng từ chính tài khoản đang dùng.",
   },
 ];
 
-const loginBenefits = [
-  {
-    icon: ShieldCheck,
-    title: "Thanh toán an toàn",
-    description:
-      "Bảo mật thông tin, giao dịch an tâm với nhiều phương thức thanh toán.",
-  },
-  {
-    icon: Users,
-    title: "Hàng ngàn sinh viên tin dùng",
-    description:
-      "Đồng hành cùng cộng đồng sinh viên trên toàn quốc.",
-  },
-  {
-    icon: Heart,
-    title: "Hỗ trợ quán sinh viên",
-    description:
-      "Giúp các quán ăn sinh viên tiếp cận nhiều khách hàng hơn.",
-  },
-];
-
-export default function AuthBenefits({ mode = "register" }: Props) {
-  const benefits =
-    mode === "login" ? loginBenefits : registerBenefits;
-
+export default function AuthBenefits() {
   return (
     <section
       aria-label="Lợi ích khi sử dụng StudentFood"
@@ -63,11 +35,11 @@ export default function AuthBenefits({ mode = "register" }: Props) {
           ].join(" ")}
         >
           <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-[#ffede3] text-[#ff531b]">
-            <Icon size={32} aria-hidden="true" />
+            <Icon size={30} aria-hidden="true" />
           </span>
 
           <div>
-            <h3 className="font-bold">{title}</h3>
+            <h3 className="font-bold text-[#0d224c]">{title}</h3>
             <p className="mt-1 text-sm leading-relaxed text-[#526a9e]">
               {description}
             </p>
