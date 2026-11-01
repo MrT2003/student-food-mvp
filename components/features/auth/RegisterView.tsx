@@ -3,7 +3,8 @@
 import AuthBenefits from "@/components/features/auth/AuthBenefits";
 import AuthIntro from "@/components/features/auth/AuthIntro";
 import SocialAuthButtons from "@/components/features/auth/SocialAuthButtons";
-import { useSignIn } from "@/lib/auth/useAuthFlow";
+import { useSignIn, useSignOut } from "@/lib/auth/useAuthFlow";
+import { useAuthStore } from "@/store/useAuthStore";
 import styles from "@/styles/auth-fit.module.css";
 import { Info } from "lucide-react";
 import Link from "next/link";
@@ -14,6 +15,9 @@ type Props = {
 
 export default function RegisterView({ mode = "register" }: Props) {
   const { pending, error, continueWithGoogle, continueWithZalo } = useSignIn();
+  const logoutStatus = useAuthStore((state) => state.logoutStatus);
+  const { logout, signOutError } = useSignOut();
+  const finishingLogout = logoutStatus === "pending" || logoutStatus === "failed";
   const isRegister = mode === "register";
 
   return (
@@ -60,9 +64,15 @@ export default function RegisterView({ mode = "register" }: Props) {
             ].join(" ")}
           >
 
+            {/* Trang đã mở ngay; khóa login mới đến khi session cũ đã kết thúc an toàn. */}
+            {logoutStatus === "pending" && <p role="status">Đang hoàn tất đăng xuất…</p>}
+            {logoutStatus === "failed" && <div role="alert">
+              <p>{signOutError}</p>
+              <button type="button" onClick={() => void logout()}>Thử lại đăng xuất</button>
+            </div>}
             <SocialAuthButtons
               mode={mode}
-              pending={pending}
+              pending={pending || finishingLogout}
               error={error}
               onGoogle={() => void continueWithGoogle()}
               onZalo={() => void continueWithZalo()}

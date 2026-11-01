@@ -11,7 +11,7 @@ export function useSignIn() {
   const [error, setError] = useState<string | null>(null);
 
   async function continueWithGoogle() {
-    if (pending) return;
+    if (pending || ["pending", "failed"].includes(useAuthStore.getState().logoutStatus)) return;
 
     setPending(true);
     setError(null);
@@ -25,7 +25,7 @@ export function useSignIn() {
   }
 
   async function continueWithZalo() {
-    if (pending) return;
+    if (pending || ["pending", "failed"].includes(useAuthStore.getState().logoutStatus)) return;
     setPending(true);
     setError(null);
 
@@ -43,28 +43,22 @@ export function useSignIn() {
 // useSignOut handle sign out process 
 export function useSignOut() {
   const router = useRouter();
-  const setUser = useAuthStore((state) => state.setUser);
-  const [pending, setPending] = useState(false);
-  const [signOutError, setSignOutError] = useState<string | null>(null);
+  const pending = useAuthStore((state) => state.logoutStatus === "pending");
+  const signOutError = useAuthStore((state) => state.logoutError);
+
+  // Chuẩn bị route trước khi click; AuthProvider còn render login ngay trong lúc route đang tải.
+  useEffect(() => { router.prefetch("/auth/login"); }, [router]);
 
   async function logout() {
     if (pending) return;
 
-    setPending(true);
-    setSignOutError(null);
-
+    const task = AuthClientService.signOut();
+    router.replace("/auth/login");
     try {
-      // Interact with DB 
-      await AuthClientService.signOut()
-      setUser(null);
-      router.replace("/auth/login");
-      // Clear the router cache of browser 
-      router.refresh() 
-    } catch (error) {
-      setSignOutError(AuthClientService.getAuthErrorMessage(error));
-    } finally {
-      setPending(false);
-    }
+      await task;
+      // Chỉ refresh sau khi cookie thực sự đã xóa, tránh server render lại account cũ.
+      router.refresh();
+    } catch { /* Lỗi được giữ trong store và hiển thị ở trang login, không mất khi unmount. */ }
   }
   return { logout, pending, signOutError };
 }
