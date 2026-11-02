@@ -1,5 +1,6 @@
 .navigation {
   display: none;
+  font-family: var(--font-display);
 }
 
 @media (max-width: 760px) {
@@ -21,6 +22,7 @@
     border-radius: 22px 22px 0 0;
     background: #ffffff;
     box-shadow: 0 -5px 24px #17284a08;
+    font-family: var(--font-display);
   }
 
   .link {
@@ -34,11 +36,12 @@
     gap: 4px;
     padding: 8px 2px 13px;
     box-sizing: border-box;
+    font-family: var(--font-display);
     color: #7188b3;
     text-decoration: none;
     font-size: 12px;
     font-weight: 500;
-    line-height: 1.2;
+    line-height: 1.25;
     white-space: nowrap;
   }
 
@@ -96,12 +99,15 @@
   }
 
   .header .brand strong {
+    font-family: var(--font-display);
     font-size: 21px;
     line-height: 25px;
-    letter-spacing: -0.8px;
+    font-weight: 800;
+    letter-spacing: -0.6px;
   }
 
   .header .brand small {
+    font-family: var(--font-body);
     font-size: 10px;
     line-height: 14px;
   }
@@ -129,13 +135,11 @@
     font-size: 18px;
   }
 
-  /* Anchor dropdowns to the header so notifications fit narrow viewports. */
+  /* Anchor dropdowns right below the header action icons like the mobile design. */
   .header .actions > section {
-    position: fixed;
-    top: 70px;
-    right: max(14px, env(safe-area-inset-right, 0px));
-    max-width: calc(100vw - 28px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
-    max-height: calc(100dvh - 90px - var(--student-navigation-height) - env(safe-area-inset-bottom, 0px));
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
     box-sizing: border-box;
   }
 }

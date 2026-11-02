@@ -1,6 +1,7 @@
 .page {
   width: 100%;
   color: #081b46;
+  font-family: var(--font-body);
 }
 
 .page,
@@ -15,6 +16,7 @@
   color: #55769e;
   text-decoration: none;
   font-size: 15px;
+  font-weight: 500;
 }
 
 .hero {
@@ -24,10 +26,11 @@
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(28px, 2.6vw, 42px);
-  line-height: 1.2;
-  font-weight: 750;
-  letter-spacing: -1px;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 2.6vw, 40px);
+  line-height: 1.22;
+  font-weight: 800;
+  letter-spacing: -0.9px;
 }
 
 .hero h1 span {
@@ -76,6 +79,7 @@
   background: linear-gradient(110deg, #ff8522, #ff371e);
   color: #fff;
   font: inherit;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -100,6 +104,7 @@
   color: #5b7da7;
   font: inherit;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -107,6 +112,7 @@
   border-color: #ff6a30;
   background: #fff1e9;
   color: #ec4a1d;
+  font-weight: 600;
 }
 
 .filters button:first-child[aria-pressed="true"] {
@@ -126,8 +132,11 @@
   align-items: center;
   gap: 12px;
   margin: 0;
+  font-family: var(--font-display);
   font-size: 24px;
+  font-weight: 700;
   line-height: 1.3;
+  letter-spacing: -0.4px;
 }
 
 .sectionIcon {
@@ -201,16 +210,18 @@
 
 .content h3 {
   margin: 2px 0 5px;
+  font-family: var(--font-display);
   font-size: 16px;
   line-height: 1.35;
   font-weight: 700;
+  letter-spacing: -0.2px;
   overflow-wrap: anywhere;
 }
 
 .price {
   margin: 0 0 6px;
   color: #ff3c22;
-  font-size: 20px;
+  font-size: 19px;
   line-height: 1.3;
   font-weight: 700;
 }
@@ -222,7 +233,7 @@
   margin: 0 0 5px;
   color: #6b819d;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .meta svg {
@@ -306,7 +317,7 @@
   }
 
   .hero h1 {
-    font-size: 28px;
+    font-size: 27px;
   }
 
   .hero p {

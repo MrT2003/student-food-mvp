@@ -5,12 +5,18 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Camera,
+  CircleAlert,
+  Clock3,
   Copy,
+  Download,
   ExternalLink,
-  HelpCircle,
+  MapPin,
+  Phone,
+  QrCode,
   Settings,
   Store,
   TriangleAlert,
+  Users,
   X,
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
@@ -74,11 +80,28 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
   const [opens, setOpens] = useState(initial.daysPreview[0].opens);
   const [closes, setCloses] = useState(initial.daysPreview[0].closes);
   const [open, setOpen] = useState(initial.openPreview);
-  const [paused, setPaused] = useState(initial.startPausedPreview);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [reading, setReading] = useState(false);
   const [manage, setManage] = useState(false);
+  const [showStaffQrModal, setShowStaffQrModal] = useState(false);
+  const [showStaffRequestsModal, setShowStaffRequestsModal] = useState(false);
+  const [staffRequests, setStaffRequests] = useState([
+    {
+      id: "req-1",
+      name: "Nguyễn Văn A",
+      initial: "A",
+      phone: "0901 234 567",
+      requestedAt: "Hôm nay, 10:24",
+    },
+    {
+      id: "req-2",
+      name: "Trần Minh Anh",
+      initial: "M",
+      phone: "0987 654 321",
+      requestedAt: "Hôm nay, 09:15",
+    },
+  ]);
   const [demoToken, setDemoToken] = useState("");
   const [tokenUpdated, setTokenUpdated] = useState("");
   const upload = useRef<HTMLInputElement>(null);
@@ -200,14 +223,21 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
         });
     message("Đã lưu lịch hoạt động trong bản demo.");
   }
-  function saveStatus() {
-    if (open && !rows.some(({ item }) => item.is_active && item.is_available)) {
+  function toggleOperatingStatus() {
+    const nextOpen = !open;
+    if (
+      nextOpen &&
+      !rows.some(({ item }) => item.is_active && item.is_available)
+    ) {
       setError("Cần ít nhất một món đang hiển thị và đang bán để mở nhận đơn.");
       return;
     }
-    update({ openPreview: open, startPausedPreview: paused });
+    setOpen(nextOpen);
+    update({ openPreview: nextOpen });
     message(
-      "Đã lưu trạng thái demo. Chưa thay đổi trạng thái nhận đơn trên hệ thống.",
+      nextOpen
+        ? "Đã mở nhận đơn trong bản demo."
+        : "Đã tạm ngừng nhận đơn trong bản demo.",
     );
   }
 
@@ -532,43 +562,66 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
             </footer>
           </form>
         </section>
-        <section className={styles.card}>
-          <h2>Trạng thái hoạt động</h2>
-          <div className={styles.statusPanel} data-open={open}>
-            <span>
-              <Store size={36} />
-            </span>
-            <div>
-              <strong>{open ? "Đang nhận đơn" : "Tạm ngừng nhận đơn"}</strong>
-              <p>
-                {open
-                  ? "Cửa hàng đang mở trong bản xem trước."
-                  : "Cửa hàng đang tạm ngừng trong bản xem trước."}
-              </p>
+        <div className={styles.rightStack}>
+          <section className={styles.card}>
+            <h2>Trạng thái hoạt động</h2>
+            <div className={styles.statusCompactRow} data-open={open}>
+              <div className={styles.statusCompactInfo}>
+                <span className={styles.statusCompactIcon} aria-hidden="true">
+                  <Store size={26} />
+                </span>
+                <div className={styles.statusCompactCopy}>
+                  <strong>
+                    <Store size={16} aria-hidden="true" />
+                    {open ? "Đang mở" : "Tạm ngừng"}
+                  </strong>
+                  <p>{open ? "Đang nhận đơn" : "Chưa nhận đơn"}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className={open ? styles.outline : styles.statusActionBtn}
+                onClick={toggleOperatingStatus}
+              >
+                {open ? "Tạm ngừng" : "Mở nhận đơn"}
+              </button>
             </div>
-          </div>
-          <label className={styles.pause}>
-            Bắt đầu ở trạng thái tạm dừng
-            <input
-              type="checkbox"
-              role="switch"
-              checked={paused}
-              onChange={(event) => setPaused(event.target.checked)}
-            />
-            <HelpCircle
-              size={18}
-              aria-label="Thiết lập demo, chưa áp dụng tự động khi đăng nhập lại"
-            />
-          </label>
-          <footer>
-            <button className={styles.outline} onClick={() => setOpen(!open)}>
-              {open ? "Tạm ngừng nhận đơn" : "Mở nhận đơn"}
-            </button>
-            <button className={styles.primary} onClick={saveStatus}>
-              Lưu trạng thái
-            </button>
-          </footer>
-        </section>
+          </section>
+
+          <section className={styles.card}>
+            <div className={styles.staffCardHeader}>
+              <h2>Quản lý nhân viên</h2>
+              <span className={styles.qrActivePill}>QR bật</span>
+            </div>
+
+            <div className={styles.staffQrRow}>
+              <div className={styles.staffQrThumb} aria-hidden="true">
+                <QrCode size={34} strokeWidth={1.9} />
+              </div>
+              <div className={styles.staffQrCopy}>
+                <strong>QR tuyển nhân viên</strong>
+                <p>{staffRequests.length} yêu cầu chờ duyệt</p>
+              </div>
+            </div>
+
+            <div className={styles.staffActionsRow}>
+              <button
+                type="button"
+                className={styles.staffPrimaryBtn}
+                onClick={() => setShowStaffQrModal(true)}
+              >
+                Xem QR
+              </button>
+              <button
+                type="button"
+                className={styles.staffOutlineBtn}
+                onClick={() => setShowStaffRequestsModal(true)}
+              >
+                Yêu cầu ({staffRequests.length})
+              </button>
+            </div>
+          </section>
+        </div>
       </div>
       <section className={styles.card}>
         <div className={styles.deliveryHeading}>
@@ -663,6 +716,262 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
             </button>
           </footer>
         </dialog>
+      )}
+      {showStaffQrModal && (
+        <div
+          className={styles.staffQrBackdrop}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="staff-qr-modal-title"
+          onClick={() => setShowStaffQrModal(false)}
+        >
+          <div
+            className={styles.staffQrModal}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={styles.staffQrCloseBtn}
+              aria-label="Đóng"
+              onClick={() => setShowStaffQrModal(false)}
+            >
+              <X size={21} strokeWidth={2} />
+            </button>
+
+            <div className={styles.staffQrModalHeader}>
+              <span className={styles.staffQrHeaderIcon} aria-hidden="true">
+                <QrCode size={24} strokeWidth={2} />
+              </span>
+              <div>
+                <h2 id="staff-qr-modal-title">Mã QR tuyển nhân viên</h2>
+                <p>
+                  Sinh viên quét mã để gửi yêu cầu xin làm nhân viên tại cửa
+                  hàng của bạn.
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.staffQrInnerCard}>
+              <h3>{name.trim() || shop.name || demoSellerRestaurant.name}</h3>
+
+              <span className={styles.staffQrLocation}>
+                <MapPin size={15} strokeWidth={2} aria-hidden="true" />
+                {location || shop.location || "KTX A"}
+              </span>
+
+              <span className={styles.staffQrStatusPill}>
+                <span className={styles.staffQrStatusDot} aria-hidden="true" />
+                QR đang hoạt động
+              </span>
+
+              <div className={styles.staffQrCodeFrame} aria-hidden="true">
+                <svg viewBox="0 0 120 120" fill="#000000">
+                  {/* Top-left finder */}
+                  <path d="M6 6h34v34H6V6zm6 6v22h22V12H12zm5 5h12v12H17V17z" />
+                  {/* Top-right finder */}
+                  <path d="M80 6h34v34H80V6zm6 6v22h22V12H86zm5 5h12v12H91V17z" />
+                  {/* Bottom-left finder */}
+                  <path d="M6 80h34v34H6V80zm6 6v22h22V86H12zm5 5h12v12H17V91z" />
+                  {/* QR Modules */}
+                  <rect x="46" y="6" width="6" height="12" />
+                  <rect x="58" y="6" width="6" height="6" />
+                  <rect x="64" y="12" width="10" height="6" />
+                  <rect x="46" y="24" width="12" height="6" />
+                  <rect x="64" y="24" width="6" height="10" />
+                  <rect x="52" y="34" width="6" height="6" />
+                  <rect x="6" y="46" width="12" height="6" />
+                  <rect x="24" y="46" width="6" height="12" />
+                  <rect x="36" y="52" width="12" height="6" />
+                  <rect x="54" y="46" width="12" height="12" />
+                  <rect x="72" y="46" width="6" height="6" />
+                  <rect x="84" y="46" width="12" height="6" />
+                  <rect x="102" y="46" width="12" height="12" />
+                  <rect x="12" y="58" width="6" height="12" />
+                  <rect x="30" y="64" width="12" height="6" />
+                  <rect x="48" y="62" width="6" height="12" />
+                  <rect x="60" y="64" width="12" height="6" />
+                  <rect x="78" y="58" width="6" height="12" />
+                  <rect x="90" y="58" width="12" height="6" />
+                  <rect x="108" y="64" width="6" height="12" />
+                  <rect x="46" y="80" width="12" height="6" />
+                  <rect x="64" y="76" width="6" height="12" />
+                  <rect x="76" y="80" width="12" height="6" />
+                  <rect x="94" y="76" width="12" height="12" />
+                  <rect x="46" y="92" width="6" height="12" />
+                  <rect x="58" y="92" width="12" height="6" />
+                  <rect x="76" y="92" width="6" height="12" />
+                  <rect x="88" y="94" width="12" height="6" />
+                  <rect x="106" y="90" width="8" height="12" />
+                  <rect x="54" y="106" width="12" height="8" />
+                  <rect x="72" y="108" width="12" height="6" />
+                  <rect x="92" y="106" width="10" height="8" />
+                  <rect x="108" y="108" width="6" height="6" />
+                </svg>
+              </div>
+
+              <p className={styles.staffQrCaption}>
+                Mã QR này dùng để sinh viên gửi yêu cầu gia nhập. Yêu cầu sẽ
+                cần bạn phê duyệt trước khi cấp quyền nhân viên.
+              </p>
+            </div>
+
+            <div className={styles.staffQrModalFooter}>
+              <button
+                type="button"
+                className={styles.staffQrDismissBtn}
+                onClick={() => setShowStaffQrModal(false)}
+              >
+                Đóng
+              </button>
+
+              <button
+                type="button"
+                className={styles.staffQrDownloadBtn}
+                onClick={() => {
+                  setShowStaffQrModal(false);
+                  message("Đã tải mã QR tuyển nhân viên về thiết bị.");
+                }}
+              >
+                <Download size={18} strokeWidth={2.2} aria-hidden="true" />
+                <span>Tải mã QR</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showStaffRequestsModal && (
+        <div
+          className={styles.staffQrBackdrop}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="staff-requests-modal-title"
+          onClick={() => setShowStaffRequestsModal(false)}
+        >
+          <div
+            className={styles.staffReqModal}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={styles.staffQrCloseBtn}
+              aria-label="Đóng"
+              onClick={() => setShowStaffRequestsModal(false)}
+            >
+              <X size={21} strokeWidth={2} />
+            </button>
+
+            <div className={styles.staffReqHeader}>
+              <h2 id="staff-requests-modal-title">Yêu cầu gia nhập cửa hàng</h2>
+              <p>
+                Xem xét các sinh viên muốn làm nhân viên tại cửa hàng của bạn.
+              </p>
+            </div>
+
+            <div className={styles.staffReqSummaryBar}>
+              <span className={styles.staffReqSummaryIcon} aria-hidden="true">
+                <Users size={21} strokeWidth={2.2} />
+              </span>
+              <strong>Đang chờ duyệt</strong>
+              <span className={styles.staffReqCountPill}>
+                {staffRequests.length} yêu cầu
+              </span>
+            </div>
+
+            {staffRequests.length > 0 ? (
+              <div className={styles.staffReqList}>
+                {staffRequests.map((req) => (
+                  <article key={req.id} className={styles.staffReqCard}>
+                    <div className={styles.staffReqTopRow}>
+                      <div className={styles.staffReqUserLeft}>
+                        <span
+                          className={styles.staffReqAvatar}
+                          aria-hidden="true"
+                        >
+                          {req.initial}
+                        </span>
+
+                        <div className={styles.staffReqUserInfo}>
+                          <h3>{req.name}</h3>
+
+                          <span className={styles.staffReqMetaItem}>
+                            <Phone
+                              size={13.5}
+                              strokeWidth={2}
+                              aria-hidden="true"
+                            />
+                            {req.phone}
+                          </span>
+
+                          <span className={styles.staffReqMetaItem}>
+                            <Clock3
+                              size={13.5}
+                              strokeWidth={2}
+                              aria-hidden="true"
+                            />
+                            {req.requestedAt}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className={styles.staffReqPendingBadge}>
+                        Chờ duyệt
+                      </span>
+                    </div>
+
+                    <div className={styles.staffReqActionRow}>
+                      <button
+                        type="button"
+                        className={styles.staffReqRejectBtn}
+                        onClick={() => {
+                          setStaffRequests((prev) =>
+                            prev.filter((item) => item.id !== req.id),
+                          );
+                          message(
+                            `Đã từ chối yêu cầu gia nhập của ${req.name}.`,
+                          );
+                        }}
+                      >
+                        Từ chối
+                      </button>
+
+                      <button
+                        type="button"
+                        className={styles.staffReqAcceptBtn}
+                        onClick={() => {
+                          setStaffRequests((prev) =>
+                            prev.filter((item) => item.id !== req.id),
+                          );
+                          message(
+                            `Đã chấp nhận ${req.name} làm nhân viên (Staff) của cửa hàng.`,
+                          );
+                        }}
+                      >
+                        Chấp nhận
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.staffReqEmpty}>
+                Hiện không còn yêu cầu gia nhập nào đang chờ duyệt.
+              </div>
+            )}
+
+            <div className={styles.staffReqNoticeBox} role="note">
+              <CircleAlert
+                size={19}
+                strokeWidth={2.1}
+                className={styles.staffReqNoticeIcon}
+                aria-hidden="true"
+              />
+              <span>
+                Khi chấp nhận, sinh viên sẽ được cấp quyền Staff tại cửa hàng
+                của bạn. Bạn có thể quản lý quyền nhân viên sau này.
+              </span>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
