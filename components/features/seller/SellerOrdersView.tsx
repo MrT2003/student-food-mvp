@@ -22,25 +22,20 @@ import {
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
-import { useSellerPreview } from "@/store/useSellerPreviewStore";
+import { useSellerAccess } from "./SellerAccessProvider";
+import { useSellerOrders } from "@/lib/seller/useSellerOrders";
+import type { SellerManagedOrder } from "@/types/seller-orders.types";
+import type { SellerAccess } from "@/types/seller-access.types";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
-import TransferContent from "@/components/ui/TransferContent";
-import { formatTransferContent } from "@/lib/orders/order-code";
-import {
-  createSellerOrderFixtures,
-  demoSellerRestaurant,
-} from "@/lib/mocks/seller-orders.mock";
 import {
   filterSellerOrders,
   isInSellerTab,
   selectedSellerOrder,
   sellerTabs,
-  transitionSellerOrder,
   vietnamDay,
-  type SellerOrder,
   type SellerOrderTab,
 } from "@/lib/seller/orders";
-import { formatMoney, normalizeSearchText } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import {
   formatOrderDate,
   formatOrderPayment,
@@ -64,58 +59,54 @@ function Badge({ status }: { status: OrderStatus }) {
   );
 }
 
-function Item({ item }: { item: SellerOrder["order_items"][number] }) {
+function Item({ item }: { item: SellerManagedOrder["order_items"][number] }) {
   return (
     <div className={styles.item}>
-      {item.image_url ? <Image src={item.image_url} alt={item.item_name_snapshot} width={52} height={52} unoptimized className={styles.thumb} /> : <FoodThumbnail
-        kind={
-          normalizeSearchText(item.item_name_snapshot).includes("tra")
-            ? "drink"
-            : "food"
-        }
+      {item.image_url ? <Image src={item.image_url} alt={item.item_name_snapshot ?? "Ảnh món đã đặt"} width={52} height={52} unoptimized className={styles.thumb} /> : <FoodThumbnail
+        kind="food"
         className={styles.thumb}
       />}
       <div>
-        <strong>{item.item_name_snapshot}</strong>
-        {item.selected_options.length > 0 && <small>+ {item.selected_options.map((o) => o.option_name).join(", ")}</small>}
+        <strong>{item.item_name_snapshot ?? "Chưa có tên món snapshot"}</strong>
+        {item.selected_options === null ? <small>Chưa có snapshot lựa chọn thêm</small> : item.selected_options.length > 0 && <small>+ {item.selected_options.map((o) => [o.group_name, o.option_name].filter(Boolean).join(": ")).join(", ")}</small>}
       </div>
       <span className={styles.quantity}>×{item.quantity}</span>
     </div>
   );
 }
 
+const money = (value: number | null) => value === null ? "Chưa có số tiền" : formatMoney(value);
+
 export default function SellerOrdersView() {
-  const draft = useSellerPreview();
-  const [orders, setOrders] = useState<SellerOrder[]>([]);
+  const { data, error, retry } = useSellerAccess();
+  if (!data?.restaurant) return <div className={styles.page}><StudentHeader variant="seller" /><div className={styles.workspace}><SellerSidebar active="orders" name="" /><main className={styles.content}><p role={error ? "alert" : "status"}>{error || "Đang tải cửa hàng…"}</p>{error && <button onClick={retry}>Thử lại</button>}</main></div></div>;
+  // Account/quán đổi: unmount toàn bộ danh sách, bill, request state và bộ lọc cũ.
+  return <SellerOrdersContent key={`${data.user.id}:${data.restaurant.id}`} actorId={data.user.id} restaurant={data.restaurant} />;
+}
+
+export function SellerOrdersContent({ actorId, restaurant }: { actorId: string; restaurant: NonNullable<SellerAccess["restaurant"]> }) {
+  const { orders, loading, refreshError, error, notice, actionError, busyIds, reload, decide, clearNotice } = useSellerOrders(actorId, restaurant.id);
   const [today, setToday] = useState("");
-  const [ready, setReady] = useState(false);
   const [tab, setTab] = useState<SellerOrderTab>("pending");
   const [query, setQuery] = useState("");
   const [period, setPeriod] = useState("today");
   const [sort, setSort] = useState("newest");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ filter: "", page: 1 });
-  const [notice, setNotice] = useState("");
   const bill = useRef<HTMLElement>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    // Initialize only in the browser to avoid date/time hydration differences.
     let active = true;
-    void Promise.resolve().then(() => {
-      if (!active) return;
-      const now = new Date().toISOString();
-      setOrders(createSellerOrderFixtures(now));
-      setToday(vietnamDay(now));
-      setReady(true);
-    });
-    return () => {
-      active = false;
-    };
+    const refreshDay = () => { if (active) setToday(vietnamDay(new Date().toISOString())); };
+    void Promise.resolve().then(refreshDay);
+    const timer = window.setInterval(refreshDay, 60_000);
+    window.addEventListener("focus", refreshDay);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener("focus", refreshDay); };
   }, []);
   const filtered = filterSellerOrders(
-    draft ? [] : orders,
-    demoSellerRestaurant.id,
+    orders ?? [],
+    restaurant.id,
     query,
     period === "today" ? today : null,
   );
@@ -143,23 +134,9 @@ export default function SellerOrdersView() {
     setSelectedId(null);
     opener.current?.focus();
   }
-  function changeStatus(order: SellerOrder, status: OrderStatus) {
-    if (
-      status === "rejected" &&
-      !window.confirm(`Từ chối đơn #${order.order_code}? (Chỉ dữ liệu demo)`)
-    )
-      return;
-    setOrders((current) =>
-      current.map((o) =>
-        o.id === order.id
-          ? transitionSellerOrder(o, status, new Date().toISOString())
-          : o,
-      ),
-    );
-    setSelectedId(null);
-    setNotice(
-      `Đơn #${order.order_code}: ${orderStatusLabels[status]}. Chỉ cập nhật bản demo.`,
-    );
+  function changeStatus(order: SellerManagedOrder, action: "accept" | "reject") {
+    if (action === "reject" && !window.confirm(`Từ chối đơn #${order.order_code ?? "chưa có mã"}?`)) return;
+    void decide(order.id, action);
   }
 
   return (
@@ -169,7 +146,7 @@ export default function SellerOrdersView() {
         className={styles.workspace}
         data-bill-open={selected ? "true" : "false"}
       >
-        <SellerSidebar active="orders" name={draft?.name || demoSellerRestaurant.name} />
+        <SellerSidebar active="orders" name={restaurant.name} />
 
         <section className={styles.content}>
           <header className={styles.heading}>
@@ -222,19 +199,14 @@ export default function SellerOrdersView() {
                 ) : (
                   <CheckCircle2 />
                 )}
-                {t.label} (
-                {
-                  filtered.filter((o) => isInSellerTab(o.order_status, t.value))
-                    .length
-                }
-                )
+                {t.label} ({loading || error || orders === null ? "—" : filtered.filter((o) => isInSellerTab(o.order_status, t.value)).length})
               </button>
             ))}
           </div>
-          {notice && (
-            <p role="status" className={styles.notice}>
-              {notice}
-              <button onClick={() => setNotice("")} aria-label="Đóng thông báo">
+          {(notice || actionError) && (
+            <p role={actionError ? "alert" : "status"} className={styles.notice}>
+              {actionError || notice}
+              <button onClick={clearNotice} aria-label="Đóng thông báo">
                 <X size={16} />
               </button>
             </p>
@@ -259,11 +231,14 @@ export default function SellerOrdersView() {
                 <option value="oldest">Cũ nhất</option>
               </select></label>
             </div>
+            {refreshError && <p role="status" aria-live="polite" className={styles.refreshStatus}>{refreshError}</p>}
             <div className={styles.orderList}>
-            {!ready ? (
+            {loading || !today ? (
               <p role="status" className={styles.empty}>
                 Đang tải đơn hàng…
               </p>
+            ) : error ? (
+              <div className={styles.empty} role="alert"><p>{error}</p><button onClick={() => { void reload(); }}>Thử lại</button></div>
             ) : visible.length === 0 ? (
               <div className={styles.empty}>
                 <ClipboardList size={38} />
@@ -287,11 +262,11 @@ export default function SellerOrdersView() {
                         opener.current = e.currentTarget;
                         setSelectedId(order.id);
                       }}
-                      aria-label={`Xem đơn ${order.order_code}`}
+                      aria-label={`Xem đơn ${order.order_code ?? "chưa có mã"}`}
                       aria-expanded={selectedId === order.id}
                       aria-controls="seller-order-bill"
                     >
-                      #{order.order_code}
+                      #{order.order_code ?? "Chưa có mã đơn"}
                     </button>
                     <small>{formatOrderDate(order.created_at)}</small>
                     <Badge status={order.order_status} />
@@ -301,16 +276,16 @@ export default function SellerOrdersView() {
                       <div>
                         <strong>
                           <User size={16} />
-                          {order.customer.name}
+                          {order.customer.name ?? "Chưa có tên khách"}
                         </strong>
                         <span>
                           <Phone size={16} />
-                          {order.customer.phone ?? "Đã ẩn số điện thoại"}
+                          {order.customer.phone ?? (order.order_status === "completed" ? "Đã ẩn số điện thoại" : "Chưa có số điện thoại")}
                         </span>
                       </div>
                       <span className={styles.address}>
                         <MapPin size={17} />
-                        <span><strong>{(order.delivery_address ?? "Chưa có địa chỉ").split(",")[0]}</strong>{(order.delivery_address ?? "").split(",").slice(1).join(",").trim()}</span>
+                        <span>{order.delivery_address ?? "Chưa có địa chỉ giao nhận"}</span>
                       </span>
                       <span>
                         <ClipboardList size={17} />
@@ -322,9 +297,7 @@ export default function SellerOrdersView() {
                       </span>
                       <span>
                         <CreditCard size={17} />
-                        {order.payment_method === "cash"
-                          ? "Tiền mặt"
-                          : "Chuyển khoản"}
+                        {formatOrderPayment(order.payment_method)}
                       </span>
                     </div>
                     <div className={styles.itemPreview}>
@@ -337,19 +310,21 @@ export default function SellerOrdersView() {
                     </div>
                   </div>
                   <div className={styles.actions}>
-                    <strong>{formatMoney(order.total)}</strong>
+                    <strong>{money(order.total)}</strong>
                     <div>
                       {order.order_status === "pending" && (
                         <>
                           <button
                             className={styles.primary}
-                            onClick={() => changeStatus(order, "accepted")}
+                            disabled={loading || busyIds.includes(order.id)}
+                            onClick={() => changeStatus(order, "accept")}
                           >
                             Chấp nhận
                           </button>
                           <button
                             className={styles.outline}
-                            onClick={() => changeStatus(order, "rejected")}
+                            disabled={loading || busyIds.includes(order.id)}
+                            onClick={() => changeStatus(order, "reject")}
                           >
                             Từ chối
                           </button>
@@ -358,7 +333,8 @@ export default function SellerOrdersView() {
                       {order.order_status === "accepted" && (
                         <button
                           className={styles.primary}
-                          onClick={() => changeStatus(order, "completed")}
+                          disabled
+                          title="Hoàn thành đơn chưa thuộc luồng được nối backend"
                         >
                           Hoàn thành
                         </button>
@@ -381,12 +357,9 @@ export default function SellerOrdersView() {
               ))
             )}
             </div>
-            {pageCount > 1 && <nav className={styles.pagination} aria-label="Phân trang đơn hàng"><span>{visible.length} đơn · Trang {page}/{pageCount}</span><div><button disabled={page === 1} onClick={() => goToPage(page - 1)}>Trước</button><button disabled={page === pageCount} onClick={() => goToPage(page + 1)}>Sau</button></div></nav>}
+            {!loading && !error && pageCount > 1 && <nav className={styles.pagination} aria-label="Phân trang đơn hàng"><span>{visible.length} đơn · Trang {page}/{pageCount}</span><div><button disabled={page === 1} onClick={() => goToPage(page - 1)}>Trước</button><button disabled={page === pageCount} onClick={() => goToPage(page + 1)}>Sau</button></div></nav>}
           </section>
-          <p className={styles.demo}>
-            Bản demo UI · Không phải đơn thật. Thay đổi trạng thái sẽ mất khi
-            tải lại trang.
-          </p>
+          <p className={styles.demo}>Số lượng tab theo toàn bộ đơn của quán đã tải, cùng từ khóa/ngày đang chọn. Ngày tính theo giờ Việt Nam. Chức năng hoàn thành đơn chưa được nối tại đây.</p>
         </section>
 
         {selected ? (
@@ -395,7 +368,7 @@ export default function SellerOrdersView() {
             ref={bill}
             tabIndex={-1}
             className={styles.bill}
-            aria-label={`Chi tiết đơn ${selected.order_code}`}
+            aria-label={`Chi tiết đơn ${selected.order_code ?? "chưa có mã"}`}
             onKeyDown={(e) => {
               if (e.key === "Escape") closeBill();
             }}
@@ -408,7 +381,7 @@ export default function SellerOrdersView() {
             </div>
             <section>
               <div className={styles.billTitle}>
-                <strong>#{selected.order_code}</strong>
+                <strong>#{selected.order_code ?? "Chưa có mã đơn"}</strong>
                 <Badge status={selected.order_status} />
               </div>
               <p>Đặt lúc: {formatOrderDate(selected.created_at)}</p>
@@ -418,14 +391,14 @@ export default function SellerOrdersView() {
                 <User />
                 Thông tin khách hàng
               </h3>
-              <strong>{selected.customer.name}</strong>
+              <strong>{selected.customer.name ?? "Chưa có tên khách"}</strong>
               <p>
                 <Phone size={16} />
-                {selected.customer.phone ?? "Đã ẩn số điện thoại"}
+                {selected.customer.phone ?? (selected.order_status === "completed" ? "Đã ẩn số điện thoại" : "Chưa có số điện thoại")}
               </p>
               <p>
                 <MapPin size={16} />
-                {selected.delivery_address}
+                {selected.delivery_address ?? "Chưa có địa chỉ giao nhận"}
               </p>
             </section>
             <section>
@@ -434,7 +407,6 @@ export default function SellerOrdersView() {
                 Thông tin thanh toán
               </h3>
               <p>{formatOrderPayment(selected.payment_method)}</p>
-              {selected.payment_method === "bank_transfer" && <TransferContent value={formatTransferContent(selected.order_code, draft?.name || demoSellerRestaurant.name)} />}
             </section>
             <section>
               <h3>
@@ -445,7 +417,7 @@ export default function SellerOrdersView() {
                 <div className={styles.billItem} key={item.id}>
                   <Item item={item} />
                   <strong>
-                    {formatMoney(item.unit_price_snapshot * item.quantity)}
+                    {item.total_price === null ? `Giá món snapshot: ${money(item.unit_price_snapshot)}; chưa có đơn giá đầy đủ` : `${money(item.total_price)}/phần`}
                   </strong>
                 </div>
               ))}
@@ -462,15 +434,11 @@ export default function SellerOrdersView() {
             <section className={styles.totals}>
               <p>
                 <span>Tạm tính</span>
-                <span>{formatMoney(selected.subtotal)}</span>
-              </p>
-              <p>
-                <span>Phí giao hàng (demo)</span>
-                <span>{formatMoney(selected.total - selected.subtotal)}</span>
+                <span>{money(selected.subtotal)}</span>
               </p>
               <p>
                 <strong>Tổng cộng</strong>
-                <strong>{formatMoney(selected.total)}</strong>
+                <strong>{money(selected.total)}</strong>
               </p>
             </section>
           </aside>

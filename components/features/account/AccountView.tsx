@@ -16,6 +16,7 @@ import {
 } from "react";
 import AccountSecurity from "./AccountSecurity";
 import AccountStoreJoin from "./AccountStoreJoin";
+import AccountNotifications from "./AccountNotifications";
 import AccountSuccessModal from "./AccountSuccessModal";
 
 export default function AccountView() {
@@ -264,6 +265,8 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
       <AccountStoreJoin />
 
       <AccountSecurity />
+      {/* Component riêng quản lý quyền và đăng ký FCM, không phụ thuộc form sửa profile. */}
+      <AccountNotifications />
 
       <section
         className={`${styles.card} ${styles.managementCard}`}

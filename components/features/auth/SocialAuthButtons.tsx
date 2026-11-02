@@ -4,6 +4,7 @@ import type { AuthProviderType } from "@/lib/auth/useAuthFlow";
 
 type Props = {
   pendingProvider: AuthProviderType | null;
+  disabled?: boolean;
   error: string | null;
   onGoogle: () => void;
   onZalo: () => void;
@@ -38,11 +39,12 @@ function GoogleIcon() {
 
 export default function SocialAuthButtons({
   pendingProvider,
+  disabled = false,
   error,
   onGoogle,
   onZalo,
 }: Props) {
-  const pending = pendingProvider !== null;
+  const pending = disabled || pendingProvider !== null;
   const isZaloPending = pendingProvider === "zalo";
   const isGooglePending = pendingProvider === "google";
 

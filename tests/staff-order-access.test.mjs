@@ -11,6 +11,7 @@ function load(file, mocks = {}) {
   const exports = {};
   vm.runInNewContext(output, { exports, URL, console: { error() { throw new Error("Must not log raw database errors"); } }, require(id) {
     if (id === "server-only") return {};
+    if (id === "@/lib/orders/approval-http") return load("../lib/orders/approval-http.ts", mocks);
     if (id === "@/lib/http/request-origin") return load("../lib/http/request-origin.ts");
     if (id in mocks) return mocks[id];
     if (id === "@/utilities/system.utility") return load("../utilities/system.utility.ts");
@@ -44,13 +45,13 @@ function fixture(options = {}) {
           if (table === "orders") {
             if (call.update) {
               if (options.policyError) return { data: null, error: { code: "42501", message: "SECRET_POLICY" } };
-              if (options.hiddenUpdate || status !== "pending") return { data: null, error: null };
+              if (options.rpcConflict || status !== "pending") return { data: null, error: null };
               writes++; status = "accepted";
               return { data: { id: orderId, restaurant_id: restaurantId, order_status: status, accepted_at: call.update.accepted_at, token: "SECRET_TOKEN" }, error: null };
             }
             const staffFilter = call.filters.find(([field]) => field === "restaurant_id");
             if (options.missingOrder || (staffFilter && staffFilter[1] !== restaurantId)) return { data: null, error: null };
-            return { data: { id: orderId, restaurant_id: restaurantId, order_status: status }, error: null };
+            return { data: { id: orderId, restaurant_id: restaurantId, order_status: status, accepted_at: status === "accepted" ? "2026-11-02T03:00:00.000Z" : null }, error: null };
           }
           return { data: null, error: null };
         },
@@ -58,6 +59,13 @@ function fixture(options = {}) {
     },
     async rpc(name, payload) {
       calls.push({ rpc: name, payload });
+      if (name === "accept_order" || name === "reject_order") {
+        // Model the supplied RPC's locked pending check, not a real SQL transaction.
+        if (options.policyError) return {data:null,error:{code:"42501",message:"SECRET_POLICY"}};
+        if (options.rpcConflict || status !== "pending") return {data:null,error:{code:"P0001",message:"ORDER_INVALID_STATUS"}};
+        writes++;status=name === "accept_order" ? "accepted" : "rejected";
+        return {data:{success:true,order_id:orderId,order_status:status},error:null};
+      }
       if (options.rpcError) return { data: null, error: { message: options.rpcError } };
       if (options.rpcBlocked) return { data: null, error: { message: "ACCOUNT_NOT_ALLOWED" } };
       return { data: { orders: [], sessionCheckoutId: "test-session" }, error: null };
@@ -198,9 +206,11 @@ for (const role of ["seller", "staff"]) {
     const result = await f.OrderApprovalServices.acceptOrder(f.client, userId, orderId, {});
     assert.equal(result.order.order_status, "accepted");
     assert.deepEqual(Object.keys(result.order).sort(), ["accepted_at", "id", "order_status", "restaurant_id"]);
-    const update = f.calls.find((c) => c.update);
-    assert.deepEqual(Object.keys(update.update).sort(), ["accepted_at", "order_status"]);
-    assert.deepEqual(update.filters, [["id", orderId], ["restaurant_id", restaurantId], ["order_status", "pending"]]);
+    assert.equal(f.calls.some(c=>c.update),false);
+    const rpc=f.calls.find(c=>c.rpc);assert.equal(rpc.rpc,"accept_order");
+    assert.deepEqual(JSON.parse(JSON.stringify(rpc.payload)),{p_order_id:orderId});
+    const reads=f.calls.filter(c=>c.table==="orders");
+    assert.deepEqual(reads.at(-1).filters,[["id",orderId],["restaurant_id",restaurantId]]);
     if (role === "seller") assert.deepEqual(f.calls.find((c) => c.table === "restaurants").filters, [["id", restaurantId], ["owner_id", userId]]);
     if (role === "staff") assert.deepEqual(f.calls.find((c) => c.table === "orders" && !c.update).filters, [["id", orderId], ["restaurant_id", restaurantId]]);
     assert.ok(!JSON.stringify(result).includes("SECRET"));
@@ -213,7 +223,7 @@ for (const [options, code] of [
   [{ missingOrder: true }, "ORDER_NOT_FOUND"], [{ orderStatus: "accepted" }, "ORDER_CONFLICT"],
   [{ orderStatus: "completed" }, "ORDER_CONFLICT"], [{ orderStatus: "cancelled" }, "ORDER_CONFLICT"],
   [{ orderStatus: "rejected" }, "ORDER_CONFLICT"], [{ policyError: true }, "ORDER_FORBIDDEN"],
-  [{ hiddenUpdate: true }, "ORDER_CONFLICT"], [{ queryError: true }, "ORDER_APPROVAL_FAILED"],
+  [{ rpcConflict: true }, "ORDER_CONFLICT"], [{ queryError: true }, "ORDER_APPROVAL_FAILED"],
 ]) {
   test(`approval rejects ${JSON.stringify(options)}`, async () => {
     const f = fixture(options); await assert.rejects(f.OrderApprovalServices.acceptOrder(f.client, userId, orderId, {}), { message: code });
@@ -226,7 +236,7 @@ for (const input of [null, [], { order_status: "completed" }, { restaurantId }, 
     assert.equal(f.calls.length, 0);
   });
 }
-test("approval invalid UUID and two concurrent accepts/repeat only update once (mock)", async () => {
+test("approval invalid UUID and two concurrent accepts/repeat call locked RPC only once successfully (mock)", async () => {
   const f = fixture(); await assert.rejects(f.OrderApprovalServices.acceptOrder(f.client, userId, "bad", {}), /VALIDATION_ERROR/);
   const results = await Promise.allSettled([f.OrderApprovalServices.acceptOrder(f.client, userId, orderId, {}), f.OrderApprovalServices.acceptOrder(f.client, userId, orderId, {})]);
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1); assert.equal(f.writes(), 1);
@@ -243,7 +253,7 @@ function apiFixture(options = {}) {
     call(request) { return route.POST(request, { params: Promise.resolve({ orderId }) }); },
   };
 }
-for (const [options, expected] of [[{}, 200], [{ noUser: true }, 401], [{ role: "student" }, 403], [{ work: other }, 404], [{ hiddenUpdate: true }, 409], [{ queryError: true }, 500]]) {
+for (const [options, expected] of [[{}, 200], [{ noUser: true }, 401], [{ role: "student" }, 403], [{ work: other }, 404], [{ rpcConflict: true }, 409], [{ queryError: true }, 500]]) {
   test(`approval API verifies session/RLS errors ${JSON.stringify(options)}`, async () => {
     const f = apiFixture(options); const response = await f.call(f.request());
     assert.equal(response.status, expected); assert.equal(response.headers.get("Cache-Control"), "no-store");
