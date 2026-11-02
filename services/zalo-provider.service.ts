@@ -129,7 +129,7 @@ async function sendRequestToZalo(
   } catch (error) {
     // Preserve already-classified failures instead of logging them again as network errors.
     if (error instanceof ZaloProviderError) throw error;
-    if (error instanceof SyntaxError) {
+    if (error instanceof SyntaxError || (isRecord(error) && error.name === "SyntaxError")) {
       return generateFailureReponse(stage, "invalid_json", {
         httpStatus: response?.status,
       });
@@ -315,7 +315,14 @@ export const ZaloProviderService = {
       isRecord(response.picture) && isRecord(response.picture.data)
         ? response.picture.data
         : null;
-    const imgUrl = typeof imgData?.url === "string" ? imgData.url.trim() : "";
+    let imgUrl = typeof imgData?.url === "string" ? imgData.url.trim() : "";
+    // Provider data is persisted as an avatar URL; accept only safe web URLs.
+    if (imgUrl) {
+      try {
+        const url = new URL(imgUrl);
+        if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) imgUrl = "";
+      } catch { imgUrl = ""; }
+    }
 
     return { id: response.id, name: response.name, img_url: imgUrl };
   },

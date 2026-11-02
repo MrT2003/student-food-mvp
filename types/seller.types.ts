@@ -52,6 +52,11 @@ export type SellerRestaurantUpdateResult = {
   };
 };
 
+export type SellerRestaurantOpenResult = {
+  restaurant: { id: string; operating_status: "open" };
+  alreadyOpen: boolean;
+};
+
 export type SellerBankCreate = {
   bank_name: string;
   account_no: string;
@@ -64,6 +69,8 @@ export type SellerBankPatch = Partial<SellerBankCreate>;
 export type SellerBankResult = {
   bank: SellerBankCreate & { id: string; restaurant_id: string };
 };
+
+export type SellerBankListResult = { banks: SellerBankResult["bank"][] };
 
 export type StaffInvitationResult = {
   restaurantId: string;

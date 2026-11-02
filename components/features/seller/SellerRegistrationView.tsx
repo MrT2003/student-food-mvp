@@ -589,7 +589,7 @@ export default function SellerRegistrationView() {
               autoComplete="off" minLength={4} maxLength={4} pattern="[0-9]{4}"
               required value={appLockPin} disabled={pending}
               onChange={(event) => setAppLockPin(event.target.value)} />
-            <small>Nhập đúng 4 chữ số. Không chia sẻ PIN trong ảnh hoặc báo cáo kiểm thử.</small>
+            <small>PIN gồm đúng 4 chữ số, dùng để khóa ứng dụng.</small>
           </div>
 
           <label className={styles.closedOption}>
@@ -639,15 +639,13 @@ export default function SellerRegistrationView() {
           </div>
 
           <p className={styles.footerNote}>
-            Quán mới luôn đóng; lựa chọn thanh toán chưa được lưu hoặc áp dụng.
-            Ảnh được tải lên Cloudinary; luồng đăng ký hiện chưa lưu ảnh vào thông tin quán.
+            Quán mới ở trạng thái đóng. Phương thức thanh toán sẽ được thiết lập sau.
+            Ảnh đã tải lên chưa được gắn vào quán trong bước này.
             {" "}
             Sau khi tạo cửa hàng, bạn sẽ được chuyển đến Seller Dashboard để
             quản lý cửa hàng.
           </p>
-          <p className={styles.previewLabel}>
-            Form gửi đăng ký tới backend thật. Các màn quản lý seller tiếp theo còn có phần demo chưa nối API.
-          </p>
+
         </form>
       </section>
     </div>

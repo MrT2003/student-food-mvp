@@ -3,6 +3,28 @@ import {test} from 'node:test';
 import {fixture,userId,restaurantId,bankId,other,assertSafe} from './seller-sdk-fixture.mjs';
 const input=(patch={})=>({bank_name:' TEST BANK ',account_no:' 0012345 ',account_name:' TEST ONLY ',...patch});
 const call=(f,mode,data,rid=restaurantId,bid=bankId)=>mode==='create'?f.SellerServices.createRestaurantBank(userId,rid,data,f.client):f.SellerServices.updateRestaurantBank(userId,rid,bid,data,f.client);
+test('GET banks verifies seller/owner, paginates even below requested size, and returns an allowlist',async()=>{
+ const f=fixture({readPageSize:1});
+ f.state.banks.push({...f.state.banks[0],id:'66666666-6666-4666-8666-666666666666',account_no:'00099',unexpected:'PRIVATE'});
+ const result=await f.SellerServices.listRestaurantBanks(userId,restaurantId,f.client);
+ assert.equal(result.banks.length,2);assertSafe(result);assert.equal(f.writes().length,0);
+ assert.ok(result.banks.every(bank=>bank.restaurant_id===restaurantId));
+ assert.deepEqual(Object.keys(result.banks[0]).sort(),['id','restaurant_id','bank_name','account_no','account_name','is_default'].sort());
+ assert.deepEqual(f.calls.filter(c=>c.range).map(c=>c.range),[[0,99],[1,100],[2,101]]);
+});
+// Service rejects an actor argument different from Auth. API uses Auth's actual actor;
+// that other authenticated seller instead reaches the owner check and receives 404.
+for(const [options,code,status] of [[{noUser:true},'UNAUTHORIZED',401],[{authUserId:other},'UNAUTHORIZED',404],[{noProfile:true},'PROFILE_NOT_FOUND',403],[{status:'inactive'},'ACCOUNT_INACTIVE',403],[{role:'staff'},'SELLER_REQUIRED',403],[{role:'student'},'SELLER_REQUIRED',403],[{notOwner:true},'RESTAURANT_NOT_FOUND',404],[{noRestaurant:true},'RESTAURANT_NOT_FOUND',404],[{errorAt:'list'},'DATABASE_ACCESS_DENIED',403],[{throwAt:'list'},'BANK_READ_FAILED',500]]) {
+ test('GET banks access/error '+JSON.stringify(options),async()=>{
+  const f=fixture(options);await assert.rejects(f.SellerServices.listRestaurantBanks(userId,restaurantId,f.client),{message:code});
+  const response=await f.api('read')();assert.equal(response.status,status);assertSafe(await response.json());assert.equal(f.writes().length,0);
+ });
+}
+test('GET banks empty list and invalid UUID',async()=>{
+ const f=fixture();f.state.banks=[];
+ const response=await f.api('read')();assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.deepEqual(await response.json(),{banks:[]});
+ const invalid=fixture();assert.equal((await invalid.api('read')(null,{restaurantId:'bad'})).status,400);assert.equal(invalid.writes().length,0);
+});
 for(const mode of ['create','update']) {
  test(mode+' SDK bank ownership, string and partial patch',async()=>{
   const f=fixture({targetDefault:mode==='update'});const before=structuredClone(f.state.banks[0]);
@@ -81,4 +103,11 @@ test('bank required fields, runtime types, identity fields and invalid UUIDs rej
  assert.equal(f.calls.length,0);
  const data=f.SellerServices.validateBankCreate(input({bank_name:'x'.repeat(2000),account_no:'001 2-3'}));
  assert.equal(data.bank_name.length,2000);assert.equal(data.account_no,'001 2-3');
+});
+test('bank only maps exact table/schema constraint; failed insert/default never mutates existing defaults (mock)',async()=>{
+ for(const error of [{code:'23505',constraint:'uq_restaurant_banks_account',schema:'other'},{code:'23505',constraint:'uq_restaurant_banks_account',table:'users'},{code:'23505',message:'PRIVATE unrelated unique'}]){
+  const f=fixture({errorAt:'write',error});const before=structuredClone(f.state);
+  await assert.rejects(call(f,'create',input({is_default:true})),/BANK_WRITE_FAILED/);assert.deepEqual(f.state,before);
+ }
+ const f=fixture({hiddenUpdate:true});const before=structuredClone(f.state);await assert.rejects(call(f,'create',input({is_default:true})),/BANK_WRITE_FAILED/);assert.deepEqual(f.state,before);
 });

@@ -3,7 +3,6 @@
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  AuthClientService,
   subscribeAuthProfile,
 } from "@/services/auth.service";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -55,14 +54,14 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   // Các trang không bắt buộc phải nhảy sang Onboarding ngay lập tức
   const isBypassPage =
     pathname === "/auth/callback" ||
-    pathname === "/auth/onboarding";
+    pathname === "/account";
     // pathname === "/"; 
 
   const mustRedirect = needsOnboarding && !isBypassPage;
 
   useEffect(() => {
     if (mustRedirect) {
-      router.replace("/auth/onboarding");
+      router.replace("/account");
     }
   }, [mustRedirect, router]);
 

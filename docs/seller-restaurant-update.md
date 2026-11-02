@@ -97,4 +97,20 @@ Test gọi implementation thật với mock, không chứng minh khóa, rollback
 node --test tests/seller-validation.test.mjs tests/seller-registration.test.mjs tests/seller-restaurant-update.test.mjs
 ```
 
-Chưa làm tạo thêm quán, ngân hàng, thanh toán, upload ảnh, QR/staff, UI hoặc checkout.
+## Caller hiện tại
+
+SellerShopView lấy quán từ SellerAccessProvider (GET /api/seller/access), không còn
+khởi tạo tên/lịch từ preview store hoặc dữ liệu mẫu. Thông tin chỉ PATCH field đã
+đổi; lịch có nút lưu riêng, không gửi kèm tên/slug/status. Same/daily/later đều có UI.
+Lịch JSON không nhận dạng được được cảnh báo; sửa tên không tự chuyển lịch cũ.
+Sau success dispatch seller-access-changed để menu/sidebar/dashboard đọc lại DB.
+Lỗi không báo đã lưu; chặn bấm gửi trùng, bỏ kết quả của account cũ/unmount.
+
+Tên/mô tả/địa điểm dùng đúng max100/300/200. Không bắt số điện thoại ngoài contract.
+Ảnh đọc từ avatar_url; upload Cloudinary vẫn chỉ là preview, không ghi avatar_url
+qua PATCH thông tin. Xóa ảnh ở đây chỉ bỏ preview, không xóa ảnh Cloudinary/DB.
+UI nêu rõ điều đó; không thêm hệ thống ảnh. Đổi trạng thái bị vô hiệu ở màn này vì
+chưa nối backend; liên kết giao hàng demo vẫn được ghi rõ chưa hoạt động.
+QR đang chuẩn bị được giữ nguyên, không sửa trong review này.
+
+Chưa thêm tạo nhiều quán, thanh toán hoặc checkout. Xem seller-bank-review.md.

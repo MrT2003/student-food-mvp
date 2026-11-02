@@ -11,9 +11,7 @@ import pngjs from "pngjs";
 const secret = "test-only-key-32-bytes-minimum-123456789";
 const seller = "11111111-1111-4111-8111-111111111111";
 const student = "22222222-2222-4222-8222-222222222222";
-const second = "33333333-3333-4333-8333-333333333333";
 const restaurant = "44444444-4444-4444-8444-444444444444";
-const otherRestaurant = "55555555-5555-4555-8555-555555555555";
 function clock() {
   let time = 1900000000000;
   return { Date: class extends Date { static now() { return time; } }, advance(ms) { time += ms; } };
@@ -74,224 +72,47 @@ test("token tampering, noncanonical signature, wrong purpose/version/structure a
   assert.throws(() => t.verifyStaffToken(`eA.${crypto.createHmac("sha256", secret).update("studentfood.staff-invite:v1:eA").digest("base64url")}`), /INVALID_STAFF_TOKEN/);
 });
 for (const key of [undefined, "", "short", "a".repeat(64), "REPLACE_WITH_A_RANDOM_SERVER_ONLY_KEY_AT_LEAST_32_BYTES"]) {
-  test(`dedicated signing config required: ${String(key)}`, () => {
+  test(`dedicated signing config rejected case ${[undefined, "", "short", "a".repeat(64), "REPLACE_WITH_A_RANDOM_SERVER_ONLY_KEY_AT_LEAST_32_BYTES"].indexOf(key)}`, () => {
     const t = tokenTools(clock(), { STAFF_INVITATION_SECRET: key });
     assert.throws(() => t.issueStaffToken(restaurant, seller), /STAFF_TOKEN_CONFIGURATION_MISSING/);
   });
 }
 
-class DatabaseConfigurationError extends Error {
-  constructor(code = "DATABASE_CONFIGURATION_MISSING") { super(code); this.code = code; }
+function fixture(options={}) {
+ const t=tokenTools(),calls=[];const actor=options.actor??seller;let role=options.role??'student',work=options.work??null;
+ const client={async rpc(name,args){calls.push({rpc:name,hasOnlyToken:Object.keys(args).join(',')==='p_token'});if(options.network)throw Error('PRIVATE');if(options.rpcError)return {data:null,error:options.rpcError};if(work!==null)return {data:null,error:{code:'P0001',message:'STAFF_MEMBERSHIP_CONFLICT'}};role='staff';work=restaurant;return {data:{profile:{id:options.wrongResponse?'other':actor,role,work_for_restaurant_id:work,app_lock_pin:'PRIVATE'}},error:null};},auth:{async getUser(){return {data:{user:options.noAuth?null:{id:actor}},error:null};}},from(table){const filters=[];return {select(fields){calls.push({table,fields,filters});return this;},eq(k,v){filters.push([k,v]);return this;},async maybeSingle(){
+ if(options.dbError)return {data:null,error:{message:'PRIVATE',code:'42501'}};
+ if(table==='restaurants')return {data:options.notOwner?null:{id:restaurant},error:null};
+ const id=filters.find(([k])=>k==='id')?.[1];if(options.missing)return {data:null,error:null};
+ return {data:id===seller?{role:options.issuerRole??'seller',status:options.issuerStatus??'active'}:{role,status:options.status??'active',work_for_restaurant_id:work},error:null};
+ }}}};
+ const exports=load('../services/seller.service.ts',{'@/lib/seller/staff-token':t},{Date:t.clock.Date});
+ return {...exports,t,client,calls};
 }
-function fixture(options = {}) {
-  const c = clock(); const t = tokenTools(c, options.signingMissing ? {} : { STAFF_INVITATION_SECRET: secret }); const calls = [];
-  const users = {
-    [seller]: { id: seller, role: options.issuerRole ?? "seller", status: options.issuerStatus ?? "active", work_for_restaurant_id: null },
-    [student]: { id: student, role: options.role ?? "student", status: options.status ?? "active", work_for_restaurant_id: options.work ?? null },
-    [second]: { id: second, role: "student", status: "active", work_for_restaurant_id: null },
-  };
-  let tail = Promise.resolve();
-  const database = {
-    DatabaseConfigurationError,
-    getDatabasePool() {
-      calls.push({ kind: "POOL" });
-      if (options.noConfig) throw new DatabaseConfigurationError();
-      if (options.badConfig) throw new DatabaseConfigurationError("DATABASE_CONFIGURATION_INVALID");
-      return { async connect() {
-        calls.push({ kind: "CONNECT" });
-        if (options.connectFailure) throw new Error("SECRET_CONNECTION");
-        let unlock; let snapshot;
-        return {
-          async query(sql, params) {
-            const kind = sql.includes("ANY($1") ? "USERS" : sql.startsWith("SELECT role") ? "SELLER"
-              : sql.startsWith("SELECT id FROM public.restaurants") ? "RESTAURANT" : sql.trim().split(/\s+/)[0];
-            calls.push({ kind, sql, params });
-            if (options.failAt === kind) throw new Error("SECRET_DB");
-            if (kind === "USERS" || kind === "SELLER") {
-              // Simulation seulement: not a PostgreSQL row-lock integration test.
-              const before = tail; tail = new Promise((resolve) => { unlock = resolve; }); await before;
-              snapshot = structuredClone(users);
-              const ids = kind === "USERS" ? params[0] : [params[0]];
-              return { rows: ids.filter((id) => !(options.missingIssuer && id === seller) && !(options.missingUser && id === student))
-                .map((id) => users[id]).filter(Boolean).map((row) => ({ ...row })) };
-            }
-            if (kind === "RESTAURANT") {
-              assert.ok(!/status|operating_status/.test(sql));
-              if (options.expireAfterLock) c.advance(300000);
-              return { rows: options.notOwner || options.noRestaurant ? [] : [{ id: params[0] }] };
-            }
-            if (kind === "UPDATE") {
-              users[params[1]].role = "staff"; users[params[1]].work_for_restaurant_id = params[0];
-              return { rowCount: options.zeroUpdate ? 0 : 1, rows: [{ ...users[params[1]], token: "SECRET_TOKEN" }] };
-            }
-            if (kind === "ROLLBACK") {
-              if (options.rollbackFailure) throw new Error("SECRET_ROLLBACK");
-              if (snapshot) for (const id of Object.keys(users)) users[id] = snapshot[id];
-              unlock?.();
-            }
-            if (kind === "COMMIT") unlock?.();
-            return { rows: [] };
-          },
-          release(discard) { calls.push({ kind: "RELEASE", discard }); if (discard) unlock?.(); },
-        };
-      } };
-    },
-  };
-  const service = load("../services/seller.service.ts", { "@/lib/database/server": database, "@/lib/seller/staff-token": t,
-    ...(options.qrFailure ? { qrcode: { toDataURL: async () => { throw new Error("SECRET_QR"); } } } : {}) });
-  return { ...service, tokens: t, clock: c, users, calls, kinds: () => calls.map((v) => v.kind),
-    token: () => (options.signingMissing ? tokenTools(c) : t).issueStaffToken(restaurant, seller).token };
-}
-test("issue QR uses seller ownership locks and real local PNG; inactive/closed restaurant allowed", async () => {
-  const f = fixture();
-  const result = await f.SellerServices.createStaffInvitation(seller, restaurant, {});
-  assert.deepEqual(f.kinds(), ["POOL", "CONNECT", "BEGIN", "SELLER", "RESTAURANT", "COMMIT", "RELEASE"]);
-  assert.equal(JSON.parse(result.qrPayload).token, result.token);
-  assert.equal(JSON.parse(result.qrPayload).type, "studentfood.staff-invite");
-  assert.equal(f.tokens.verifyStaffToken(result.token).issuedBy, seller);
-  const png = Buffer.from(result.qrImageDataUrl.split(",")[1], "base64");
-  assert.equal(png.subarray(1, 4).toString(), "PNG");
-  assert.equal(png.readUInt32BE(16), 512);
-  const decodedPng = pngjs.PNG.sync.read(png);
-  const decodedQr = jsQR(new Uint8ClampedArray(decodedPng.data), decodedPng.width, decodedPng.height);
-  assert.ok(decodedQr, "Generated PNG must decode as a QR code");
-  assert.equal(decodedQr.data, result.qrPayload);
-  assert.ok(!result.token.includes(secret));
+test('SDK invitation uses session and owner, returns real decodable local PNG',async()=>{
+ const f=fixture();const data=await f.SellerServices.createStaffInvitation(seller,restaurant,{},f.client);
+ const png=pngjs.PNG.sync.read(Buffer.from(data.qrImageDataUrl.split(',')[1],'base64'));
+ const decoded=jsQR(new Uint8ClampedArray(png.data),png.width,png.height);
+ assert.equal(decoded.data===data.qrPayload,true);const payload=JSON.parse(decoded.data);
+ assert.equal(payload.token===data.token,true);assert.equal(f.t.verifyStaffToken(payload.token).restaurantId,restaurant);
+ assert.equal(f.calls[1].filters.some(([k,v])=>k==='owner_id'&&v===seller),true);
+ assert.equal(f.calls.some(c=>c.filters.some(([k])=>['status','operating_status'].includes(k))),false);
 });
-test("multiple users may join with same QR; regenerate does not consume/extend old QR", async () => {
-  const f = fixture(); const token = f.token();
-  await f.SellerServices.joinStaff(student, { token });
-  assert.equal(f.tokens.verifyStaffToken(token).restaurantId, restaurant);
-  await f.SellerServices.joinStaff(second, { token });
-  assert.equal(f.users[student].role, "staff"); assert.equal(f.users[second].role, "staff");
-  const update = f.calls.find((call) => call.kind === "UPDATE");
-  assert.match(update.sql, /role = 'staff', work_for_restaurant_id = \$1, updated_at = now\(\)/);
-  assert.match(update.sql, /status = 'active' AND role = 'student' AND work_for_restaurant_id IS NULL/);
-  const lock = f.calls.find((call) => call.kind === "USERS");
-  assert.match(lock.sql, /ORDER BY id FOR UPDATE/);
-  assert.deepEqual(Array.from(lock.params[0]), [seller, student].sort());
-  assert.ok(f.calls.every((call) => !(JSON.stringify(call.params) ?? "").includes(token)));
+for(const [options,code] of [[{noAuth:true},'UNAUTHORIZED'],[{missing:true},'PROFILE_NOT_FOUND'],[{issuerStatus:'inactive'},'ACCOUNT_INACTIVE'],[{issuerRole:'staff'},'SELLER_REQUIRED'],[{notOwner:true},'RESTAURANT_NOT_FOUND'],[{dbError:true},'DATABASE_ACCESS_DENIED']])test('invitation safe denial '+code,async()=>{const f=fixture(options);await assert.rejects(f.SellerServices.createStaffInvitation(seller,restaurant,{},f.client),{code});});
+for(const input of [null,[],{ttl:300},{owner_id:seller}])test('invitation rejects client control '+JSON.stringify(Object.keys(input??{})),async()=>{const f=fixture();await assert.rejects(f.SellerServices.createStaffInvitation(seller,restaurant,input,f.client),f.SellerValidationError);assert.equal(f.calls.length,0);});
+for(const [options,code] of [[{noAuth:true},'UNAUTHORIZED'],[{status:'inactive'},'ACCOUNT_INACTIVE'],[{role:'seller'},'STAFF_ROLE_CONFLICT'],[{work:restaurant},'STAFF_MEMBERSHIP_CONFLICT'],[{issuerRole:'student'},'ISSUER_NOT_ALLOWED'],[{issuerStatus:'inactive'},'ISSUER_NOT_ALLOWED'],[{notOwner:true},'RESTAURANT_NOT_FOUND'],[{dbError:true},'DATABASE_ACCESS_DENIED']])test('join precheck denial: '+code,async()=>{const f=fixture({...options,actor:student});const token=f.t.issueStaffToken(restaurant,seller).token;await assert.rejects(f.SellerServices.joinStaff(student,{token},f.client),{code});});
+test('session RPC maps allowlisted success and no supplemental mutation',async()=>{const f=fixture({actor:student});const token=f.t.issueStaffToken(restaurant,seller).token;const result=await f.SellerServices.joinStaff(student,{token},f.client);assert.equal(result.profile.role,'staff');assert.equal(Object.keys(result.profile).sort().join(','),'id,role,work_for_restaurant_id');assert.equal(f.calls.filter(c=>c.rpc).length,1);assert.equal(f.calls.find(c=>c.rpc).rpc,'join_staff_qr');assert.equal(f.calls.find(c=>c.rpc).hasOnlyToken,true);await assert.rejects(f.SellerServices.joinStaff(student,{token},f.client),{code:'STAFF_MEMBERSHIP_CONFLICT'});});
+test('concurrent join handling with modeled RPC: not proof of DB row locks',async()=>{const f=fixture({actor:student});const token=f.t.issueStaffToken(restaurant,seller).token;const results=await Promise.allSettled([f.SellerServices.joinStaff(student,{token},f.client),f.SellerServices.joinStaff(student,{token},f.client)]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.filter(r=>r.status==='rejected').length,1);});
+for(const [options,code] of [[{rpcError:{code:'PGRST202',message:'PRIVATE'}},'STAFF_JOIN_RPC_UNAVAILABLE'],[{rpcError:{code:'42501',message:'PRIVATE'}},'DATABASE_ACCESS_DENIED'],[{rpcError:{code:'P0001',message:'STAFF_TOKEN_EXPIRED'}},'STAFF_TOKEN_EXPIRED'],[{rpcError:{code:'P0001',message:'STAFF_TOKEN_CONFIGURATION_MISSING'}},'STAFF_TOKEN_CONFIGURATION_MISSING'],[{network:true},'STAFF_JOIN_RESULT_UNKNOWN'],[{wrongResponse:true},'STAFF_JOIN_RESULT_UNKNOWN'],[{rpcError:{code:'PRIVATE',message:'PRIVATE'}},'STAFF_JOIN_RESULT_UNKNOWN']])test('RPC error safely mapped without retry '+code,async()=>{const f=fixture({...options,actor:student});await assert.rejects(f.SellerServices.joinStaff(student,{token:f.t.issueStaffToken(restaurant,seller).token},f.client),{code});assert.equal(f.calls.filter(c=>c.rpc).length,1);});
+test('expired join token rejected before SDK access',async()=>{const f=fixture({actor:student});const token=f.t.issueStaffToken(restaurant,seller).token;f.t.clock.advance(300000);await assert.rejects(f.SellerServices.joinStaff(student,{token},f.client),{code:'STAFF_TOKEN_EXPIRED'});assert.equal(f.calls.length,0);});
+test('actual staff HTTP helper verifies Origin/session/JSON and maps blocker without leaking details',async()=>{
+ const f=fixture({actor:student,rpcError:{code:'PGRST202',message:'PRIVATE'}});const helper=load('../lib/seller/staff-http.ts',{'next/server':{NextResponse:{json:(data,options)=>Response.json(data,options)}},'@/lib/supabase/server':{createClient:async()=>f.client},'@/services/seller.service':f});
+ const request=(origin,body)=>new Request('http://localhost:3000/api/staff/join',{method:'POST',headers:{origin,host:'localhost:3000','content-type':'application/json'},body});
+ const action=(id,input,client)=>f.SellerServices.joinStaff(id,input,client);
+ assert.equal((await helper.handleStaffRequest(request('https://elsewhere.invalid','{}'),action)).status,403);
+ assert.equal((await helper.handleStaffRequest(request('http://localhost:3000','bad'),action)).status,400);
+ const r=await helper.handleStaffRequest(request('http://localhost:3000',JSON.stringify({token:f.t.issueStaffToken(restaurant,seller).token})),action);
+ assert.equal(r.status,503);assert.equal(r.headers.get('cache-control'),'no-store');assert.equal((await r.json()).error.code,'STAFF_JOIN_RPC_UNAVAILABLE');
 });
-test("join validates token before DB and rechecks expiry after waiting for locks", async () => {
-  const f = fixture(); const token = f.token();
-  await assert.rejects(f.SellerServices.joinStaff(student, { token: token + "tampered" }), /INVALID_STAFF_TOKEN/);
-  assert.equal(f.calls.length, 0);
-  const g = fixture({ expireAfterLock: true });
-  await assert.rejects(g.SellerServices.joinStaff(student, { token: g.token() }), /STAFF_TOKEN_EXPIRED/);
-  assert.ok(!g.kinds().includes("UPDATE")); assert.ok(g.kinds().includes("ROLLBACK"));
-});
-test("repeated join conflicts without another write; two restaurants race for a student (mock lock)", async () => {
-  const f = fixture(); const token = f.token();
-  const results = await Promise.allSettled([
-    f.SellerServices.joinStaff(student, { token }),
-    f.SellerServices.joinStaff(student, { token: f.tokens.issueStaffToken(otherRestaurant, seller).token }),
-  ]);
-  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
-  assert.equal(results.find((r) => r.status === "rejected").reason.code, "STAFF_MEMBERSHIP_CONFLICT");
-  assert.equal(f.kinds().filter((k) => k === "UPDATE").length, 1);
-  await assert.rejects(f.SellerServices.joinStaff(student, { token }), /STAFF_MEMBERSHIP_CONFLICT/);
-});
-for (const [options, code] of [
-  [{ issuerRole: "student" }, "ISSUER_NOT_ALLOWED"], [{ issuerStatus: "inactive" }, "ISSUER_NOT_ALLOWED"],
-  [{ missingIssuer: true }, "ISSUER_NOT_ALLOWED"], [{ missingUser: true }, "PROFILE_NOT_FOUND"],
-  [{ status: "inactive" }, "ACCOUNT_INACTIVE"], [{ role: "staff" }, "STAFF_ROLE_CONFLICT"],
-  [{ role: "seller" }, "STAFF_ROLE_CONFLICT"], [{ work: otherRestaurant }, "STAFF_MEMBERSHIP_CONFLICT"],
-  [{ notOwner: true }, "RESTAURANT_NOT_FOUND"], [{ zeroUpdate: true }, "STAFF_ROLE_CONFLICT"],
-  [{ noConfig: true }, "DATABASE_CONFIGURATION_MISSING"], [{ badConfig: true }, "DATABASE_CONFIGURATION_INVALID"],
-  [{ connectFailure: true }, "STAFF_OPERATION_FAILED"],
-  [{ signingMissing: true }, "STAFF_TOKEN_CONFIGURATION_MISSING"],
-]) {
-  test(`join rejects ${JSON.stringify(options)}`, async () => {
-    const f = fixture(options);
-    await assert.rejects(f.SellerServices.joinStaff(student, { token: f.token() }), { message: code });
-    assert.ok(!f.kinds().includes("COMMIT"));
-    if (f.kinds().includes("CONNECT") && !options.connectFailure) assert.equal(f.calls.at(-1).kind, "RELEASE");
-  });
-}
-for (const [options, code] of [
-  [{ issuerRole: "staff" }, "SELLER_REQUIRED"], [{ issuerStatus: "inactive" }, "ACCOUNT_INACTIVE"],
-  [{ missingIssuer: true }, "PROFILE_NOT_FOUND"], [{ notOwner: true }, "RESTAURANT_NOT_FOUND"],
-  [{ noConfig: true }, "DATABASE_CONFIGURATION_MISSING"], [{ qrFailure: true }, "STAFF_OPERATION_FAILED"],
-  [{ signingMissing: true }, "STAFF_TOKEN_CONFIGURATION_MISSING"],
-]) {
-  test(`issue rejects ${JSON.stringify(options)}`, async () => {
-    const f = fixture(options);
-    await assert.rejects(f.SellerServices.createStaffInvitation(seller, restaurant, {}), { message: code });
-  });
-}
-for (const mode of ["issue", "join"]) {
-  for (const failAt of ["BEGIN", mode === "join" ? "USERS" : "SELLER", "RESTAURANT", "COMMIT", ...(mode === "join" ? ["UPDATE"] : [])]) {
-    test(`${mode} ${failAt} error rolls back/releases safely`, async () => {
-      const f = fixture({ failAt });
-      const result = mode === "issue" ? f.SellerServices.createStaffInvitation(seller, restaurant, {}) : f.SellerServices.joinStaff(student, { token: f.token() });
-      await assert.rejects(result, /STAFF_OPERATION_FAILED/);
-      assert.equal(f.kinds().includes("ROLLBACK"), failAt !== "BEGIN");
-      assert.equal(f.calls.at(-1).kind, "RELEASE");
-    });
-  }
-}
-test("rollback failure discards connection", async () => {
-  const f = fixture({ zeroUpdate: true, rollbackFailure: true });
-  await assert.rejects(f.SellerServices.joinStaff(student, { token: f.token() }), /STAFF_OPERATION_FAILED/);
-  assert.equal(f.calls.at(-1).discard, true);
-});
-for (const input of [null, [], {}, { token: 1 }, { token: "" }, { token: "x", userId: second }, { token: "x", role: "staff" }, { token: "x", work_for_restaurant_id: restaurant }]) {
-  test(`join invalid runtime payload ${JSON.stringify(input)}`, async () => {
-    const f = fixture(); await assert.rejects(f.SellerServices.joinStaff(student, input)); assert.equal(f.calls.length, 0);
-  });
-}
-test("issue validates UUID and refuses client TTL/owner fields before DB", async () => {
-  const f = fixture();
-  for (const input of [null, [], { ttl: 900 }, { owner_id: seller }]) await assert.rejects(f.SellerServices.createStaffInvitation(seller, restaurant, input), /SELLER_VALIDATION_ERROR/);
-  await assert.rejects(f.SellerServices.createStaffInvitation(seller, "bad", {}), /restaurantId/);
-  assert.equal(f.calls.length, 0);
-});
-
-function apiFixture(mode, options = {}) {
-  const f = fixture(options); let authReads = 0;
-  const http = load("../lib/seller/staff-http.ts", {
-    "next/server": { NextResponse: { json: (body, init) => Response.json(body, init) } },
-    "@/services/seller.service": f,
-    "@/lib/supabase/server": { async createClient() { return { auth: { async getUser() {
-      authReads++; return { data: { user: options.noUser ? null : { id: mode === "issue" ? seller : student } }, error: options.authError ? new Error("SECRET_AUTH") : null };
-    } } }; } },
-  });
-  const route = load(mode === "issue" ? "../app/api/seller/restaurants/[restaurantId]/staff-qr/route.ts" : "../app/api/staff/join/route.ts",
-    { "@/lib/seller/staff-http": http, "@/services/seller.service": f });
-  return { ...f, route, authReads: () => authReads,
-    request(body = JSON.stringify(mode === "issue" ? {} : { token: f.token() })) {
-      return new Request("https://example.com/api/test", { method: "POST", headers: { origin: "https://example.com", "Content-Type": "application/json" }, body });
-    }, call(request) { return route.POST(request, { params: Promise.resolve({ restaurantId: restaurant }) }); },
-  };
-}
-for (const mode of ["issue", "join"]) {
-  test(`${mode} API authenticates real service, no-store and no GET action`, async () => {
-    const f = apiFixture(mode); const response = await f.call(f.request());
-    assert.equal(response.status, mode === "issue" ? 201 : 200);
-    assert.equal(response.headers.get("Cache-Control"), "no-store");
-    assert.equal(f.route.GET, undefined);
-    const text = await response.text(); assert.ok(!text.includes(secret)); assert.ok(!text.includes("SECRET"));
-  });
-  for (const option of [{ noUser: true }, { authError: true }]) {
-    test(`${mode} API denies unauthenticated ${JSON.stringify(option)}`, async () => {
-      const f = apiFixture(mode, option); assert.equal((await f.call(f.request())).status, 401); assert.equal(f.calls.length, 0);
-    });
-  }
-  test(`${mode} API rejects Origin and malformed JSON`, async () => {
-    const f = apiFixture(mode); const req = f.request(); req.headers.delete("origin");
-    assert.equal((await f.call(req)).status, 403); assert.equal(f.authReads(), 0);
-    assert.equal((await f.call(f.request("bad-json"))).status, 400); assert.equal(f.calls.length, 0);
-    const foreign = f.request(); foreign.headers.set("origin", "https://example.com.attacker.invalid");
-    assert.equal((await f.call(foreign)).status, 403);
-  });
-}
-for (const [options, status] of [[{ role: "seller" }, 409], [{ notOwner: true }, 404], [{ noConfig: true }, 503], [{ signingMissing: true }, 503], [{ failAt: "UPDATE" }, 500]]) {
-  test(`join API sanitized failure ${JSON.stringify(options)}`, async () => {
-    const f = apiFixture("join", options); const response = await f.call(f.request());
-    assert.equal(response.status, status); assert.ok(!(await response.text()).includes("SECRET"));
-  });
-}
-test("expired token API returns 410 without DB access", async () => {
-  const f = apiFixture("join"); const request = f.request(); f.clock.advance(300000);
-  assert.equal((await f.call(request)).status, 410); assert.equal(f.calls.length, 0);
-});
+test('same signed token reaches RPC for two different students (mock DB, not SQL integration)',async()=>{const a=fixture({actor:student}),b=fixture({actor:'33333333-3333-4333-8333-333333333333'});const token=a.t.issueStaffToken(restaurant,seller).token;const first=await a.SellerServices.joinStaff(student,{token},a.client);const second=await b.SellerServices.joinStaff('33333333-3333-4333-8333-333333333333',{token},b.client);assert.equal(first.profile.work_for_restaurant_id,restaurant);assert.equal(second.profile.work_for_restaurant_id,restaurant);assert.notEqual(first.profile.id,second.profile.id);});
+test('RPC zero-row conditional-update conflict is not reported as success',async()=>{const f=fixture({actor:student,rpcError:{code:'P0001',message:'STAFF_ROLE_CONFLICT'}});await assert.rejects(f.SellerServices.joinStaff(student,{token:f.t.issueStaffToken(restaurant,seller).token},f.client),{code:'STAFF_ROLE_CONFLICT'});assert.equal(f.calls.filter(c=>c.rpc).length,1);});

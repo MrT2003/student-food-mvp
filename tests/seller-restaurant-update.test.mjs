@@ -38,3 +38,32 @@ test('restaurant API uses SDK and sanitized failure mapping',async()=>{
  const f=fixture();const api=f.api('restaurant');assert.equal((await api({name:'Mới'},{origin:'https://evil.invalid'})).status,403);assert.equal(f.calls.length,0);
  assert.equal((await api(null,{raw:'bad JSON'})).status,400);assert.equal(f.writes().length,0);
 });
+
+test('strict restaurant PATCH rejects reserved fields, null/whitespace/length and incompatible schedules',async()=>{
+ const invalid=[];
+ for(const field of ['owner_id','userId','id','slug','status','operating_status','updated_at','avatar_url']) invalid.push({[field]:'forged'});
+ for(const [field,max] of [['name',100],['description',300],['location',200]])for(const value of [null,123,'  ','x'.repeat(max+1)])invalid.push({[field]:value});
+ for(const schedule of [
+  {mode:'later',days:[]},{mode:'other'},[],
+  {mode:'same',dayIds:[],openTime:'10:00',closeTime:'14:00'},
+  {mode:'same',dayIds:['mon','mon'],openTime:'10:00',closeTime:'14:00'},
+  {mode:'same',dayIds:['bad'],openTime:'10:00',closeTime:'14:00'},
+  {mode:'same',dayIds:['mon'],openTime:'9:00',closeTime:'14:00'},
+  {mode:'same',dayIds:['mon'],openTime:'24:00',closeTime:'25:00'},
+  {mode:'daily',days:[{id:'fri',open:'10:00',close:'10:00'}]},
+  {mode:'daily',days:[{id:'mon',open:'10:00',close:'14:00',enabled:true}]},
+  {mode:'daily',days:[{id:'mon',open:'10:00'}]},
+ ]) invalid.push({schedule});
+ const f=fixture();for(const body of invalid)await assert.rejects(f.SellerServices.updateRestaurant(userId,restaurantId,body,f.client),/SELLER_VALIDATION_ERROR/);
+ assert.equal(f.calls.length,0);
+});
+test('schedule mode replacement and omitted schedule preserve only intended DB columns (mock)',async()=>{
+ const f=fixture();
+ await f.SellerServices.updateRestaurant(userId,restaurantId,{schedule:{mode:'same',dayIds:['mon','fri'],openTime:'10:00',closeTime:'14:00'}},f.client);
+ await f.SellerServices.updateRestaurant(userId,restaurantId,{schedule:{mode:'daily',days:[{id:'fri',open:'09:00',close:'13:00'}]}},f.client);
+ assert.deepEqual(JSON.parse(JSON.stringify(f.state.restaurant.operating_hours.days)),{fri:{open:'09:00',close:'13:00'}});
+ await f.SellerServices.updateRestaurant(userId,restaurantId,{schedule:{mode:'later'}},f.client);
+ await Promise.all([f.SellerServices.updateRestaurant(userId,restaurantId,{name:'NEW'},f.client),f.SellerServices.updateRestaurant(userId,restaurantId,{location:'NEW LOCATION'},f.client)]);
+ assert.equal(f.state.restaurant.operating_hours,null);assert.equal(f.state.restaurant.name,'NEW');assert.equal(f.state.restaurant.location,'NEW LOCATION');
+ assert.equal(f.state.restaurant.slug,'original-slug');assert.equal(f.state.restaurant.status,'inactive');assert.equal(f.state.restaurant.operating_status,'paused');
+});

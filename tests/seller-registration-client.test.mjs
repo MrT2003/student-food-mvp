@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { load, restaurantId, registration, testPin } from "./seller-sdk-fixture.mjs";
+import { load, userId, restaurantId, registration, testPin } from "./seller-sdk-fixture.mjs";
 
 const success = { restaurant: { id: restaurantId, slug: "quan-test", operating_status: "closed" }, role: "seller", paymentSelectionPersisted: false };
 function client(options = {}) {
   const calls = [];
   const helper = load("../lib/seller/register-client.ts", {
-    "@/services/auth.service": { async getCurrentProfile() { calls.push("profile"); if (options.profileError) throw new Error("PRIVATE"); return { role: options.profileRole ?? "seller", status: "active" }; } },
-    "@/store/useAuthStore": { useAuthStore: { getState: () => ({ setUser: (profile) => calls.push({ profile }) }) } },
+    "@/lib/seller/access-client": {readSellerAccess:async()=>{if(options.accessError)throw Error("PRIVATE");return {user:{id:userId,role:options.accessRole??"seller"},restaurant:options.missingRestaurant?null:{id:restaurantId}};},invalidateSellerAccess(){}},
+    "@/services/auth.service": { async getCurrentProfile() { calls.push("profile"); if (options.profileError) throw new Error("PRIVATE"); return { id: options.changedActor ? "other" : userId, role: options.profileRole ?? "seller", status: "active" }; } },
+    "@/store/useAuthStore": { useAuthStore: { getState: () => ({ user:{id:userId}, setUser: (profile) => calls.push({ profile }) }) } },
   }, { fetch: async (path, request) => {
     calls.push({ path, request });
     if (options.networkError) throw new Error("PRIVATE");
@@ -29,7 +30,7 @@ test("client submits JSON to API then refreshes profile/store (mock HTTP)", asyn
   assert.equal(result.paymentSelectionPersisted, false);
 });
 test("client never refreshes profile or reports success after API/RLS/RPC error", async () => {
-  for (const [code, status] of [["REGISTRATION_RPC_UNAVAILABLE", 503], ["REGISTRATION_RESULT_UNKNOWN", 503], ["DATABASE_ACCESS_DENIED", 403], ["UNAUTHORIZED", 401], ["ROLE_CONFLICT", 409], ["UNKNOWN", 500]]) {
+  for (const [code, status] of [["REGISTRATION_RPC_UNAVAILABLE", 503], ["REGISTRATION_RESULT_UNKNOWN", 503], ["DATABASE_ACCESS_DENIED", 403], ["UNAUTHORIZED", 401], ["UNKNOWN", 500]]) {
     const f = client({ status, body: { error: { code, message: "PRIVATE_DATABASE_ERROR" } } });
     await assert.rejects(f.submitSellerRegistration(registration()), (error) => !error.message.includes("PRIVATE"));
     assert.equal(f.calls.length, 1);
@@ -100,4 +101,10 @@ test("merged form keeps Cloudinary upload and blocks registration until upload c
   assert.deepEqual(ui.navigation, ["/seller", "refresh"]);
   // Upload UI không đưa field ảnh ngoài contract vào RPC đăng ký hiện có.
   assert.equal(Object.hasOwn(JSON.parse(f.calls[0].request.body), "avatar_url"), false);
+});
+
+test('duplicate role conflict recovers only with confirmed current seller and owned restaurant',async()=>{
+ const options={status:409,body:{error:{code:'ROLE_CONFLICT'}}};
+ const f=client(options);const result=await f.submitSellerRegistration(registration());assert.equal(result.recovered,true);assert.equal(f.calls.filter(c=>typeof c==='object'&&c.request).length,1);assert.equal(f.calls.at(-1).profile.role,'seller');
+ for(const condition of [{accessError:true},{missingRestaurant:true},{profileRole:'student'},{changedActor:true}]){const failed=client({...options,...condition});await assert.rejects(failed.submitSellerRegistration(registration()));assert.equal(failed.calls.some(c=>typeof c==='object'&&c.profile),false);}
 });

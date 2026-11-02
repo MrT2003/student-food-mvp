@@ -47,6 +47,18 @@ export function fixture(options = {}) {
       return { data: { user: options.noUser ? null : { id: options.authUserId ?? userId } }, error: options.authError ? { message: "PRIVATE_AUTH" } : null };
     } },
     async rpc(name, payload) {
+      if (name === "set_restaurant_operating_status") {
+        // Model only the supplied RPC contract; not a PostgreSQL/permission test.
+        calls.push({ kind: "rpc", name, payload });
+        if (options.rpcNetworkError) throw Error("PRIVATE_NETWORK");
+        if (options.rpcError) return { data: null, error: options.rpcError };
+        options.beforeOpenRpc?.(state);
+        if (state.restaurant.owner_id !== (options.authUserId ?? userId)) return { data: null, error: { code: "P0001", message: "NOT_ALLOWED" } };
+        state.restaurant.operating_status = payload.p_operating_status;
+        state.restaurant.updated_at = new Date().toISOString();
+        if (options.commitThenNetworkError) throw Error("PRIVATE_AFTER_COMMIT");
+        return { data: options.rpcResponse === undefined ? { success: true, operating_status: "open", unexpected: "PRIVATE" } : options.rpcResponse, error: null };
+      }
       assert.equal(name, "register_seller");
       // Model the provided RPC contract/serialized outcome, not PostgreSQL itself.
       // Record only non-secret args and a boolean assertion about the synthetic PIN.
@@ -72,6 +84,18 @@ export function fixture(options = {}) {
         eq(field, value) { call.filters.push([field, value, "eq"]); return this; },
         neq(field, value) { call.filters.push([field, value, "neq"]); return this; },
         limit() { return this; },
+        order(column) { call.order = column; return this; },
+        range(from, to) { call.range = [from, to]; return this; },
+        async then(resolve, reject) {
+          try {
+            if (options.throwAt === "list") throw Error("PRIVATE_LIST");
+            if (options.errorAt === "list") return resolve({ data: null, error: options.error ?? { code: "42501", message: "PRIVATE" } });
+            const rows = state.banks.filter(row => call.filters.every(([key, value]) => row[key] === value))
+              .sort((a, b) => a.id.localeCompare(b.id));
+            const [from, to] = call.range;
+            return resolve({ data: rows.slice(from, Math.min(to + 1, from + (options.readPageSize ?? 100))), error: null });
+          } catch (error) { return reject(error); }
+        },
         update(value) { call.mode = "update"; call.values = value; return this; },
         insert(value) { call.mode = "insert"; call.values = value; return this; },
         async maybeSingle() {
@@ -111,7 +135,7 @@ export function fixture(options = {}) {
         "@/lib/supabase/server": { createClient: async () => client }, "@/services/seller.service": service };
       const route = load(mode === "register" ? "../app/api/seller/register/route.ts" : mode === "restaurant" ? "../app/api/seller/restaurants/[restaurantId]/route.ts" : "../app/api/seller/restaurants/[restaurantId]/banks/_handler.ts", mocks);
       return async (input, config = {}) => {
-        const request = new Request("http://localhost:3000/api/test", { method: "POST", headers: { origin: config.origin ?? "http://localhost:3000", "Content-Type": "application/json" }, body: config.raw ?? JSON.stringify(input) });
+        const request = new Request("http://localhost:3000/api/test", { method: mode === "read" ? "GET" : "POST", headers: { origin: config.origin ?? "http://localhost:3000", "Content-Type": "application/json" }, ...(mode === "read" ? {} : {body: config.raw ?? JSON.stringify(input)}) });
         const params = Promise.resolve({ restaurantId: config.restaurantId ?? restaurantId, bankId: config.bankId ?? bankId });
         return mode === "register" ? route.POST(request) : mode === "restaurant" ? route.PATCH(request, { params }) : route.handleBankRequest(request, params, mode);
       };

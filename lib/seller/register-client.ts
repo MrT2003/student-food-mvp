@@ -1,5 +1,6 @@
 "use client";
 
+import {readSellerAccess,invalidateSellerAccess} from "@/lib/seller/access-client";
 import { getCurrentProfile } from "@/services/auth.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { SellerRegistrationResult } from "@/types/seller.types";
@@ -17,14 +18,28 @@ const messages: Record<string, string> = {
   SLUG_CONFLICT: "Chưa thể tạo địa chỉ cửa hàng. Vui lòng thử lại.",
 };
 
-export async function submitSellerRegistration(input: unknown): Promise<SellerRegistrationResult> {
+export async function submitSellerRegistration(input: unknown): Promise<SellerRegistrationResult | {recovered:true;message:string}> {
+  const actor=useAuthStore.getState().user?.id;
+  if(!actor)throw new Error("Vui lòng đợi tải tài khoản hoặc đăng nhập lại.");
   // Cookie cùng origin, không nhận owner/role từ client và không fallback preview.
   const response = await fetch("/api/seller/register", {
     method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   }).catch(() => { throw new Error("Chưa xác định được kết quả đăng ký. Kiểm tra lại hồ sơ trước khi gửi lại."); });
   const body = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(messages[body?.error?.code] ?? "Không thể đăng ký cửa hàng. Vui lòng thử lại sau.");
+  if (!response.ok) {
+    // Only a confirmed existing seller+owned restaurant can recover a duplicate.
+    if(response.status===409&&body?.error?.code==="ROLE_CONFLICT"){
+      try{
+        const [access,profile]=await Promise.all([readSellerAccess(),getCurrentProfile()]);
+        if(access.user.id===actor&&access.user.role==="seller"&&access.restaurant&&profile?.id===actor&&profile.role==="seller"&&profile.status==="active"&&useAuthStore.getState().user?.id===actor){
+          useAuthStore.getState().setUser(profile);invalidateSellerAccess();
+          return {recovered:true,message:"Đã xác nhận cửa hàng của bạn."};
+        }
+      }catch { /* Uncertain recovery must not create a success or retry a write. */ }
+    }
+    throw new Error(messages[body?.error?.code] ?? "Không thể đăng ký cửa hàng. Vui lòng thử lại sau.");
+  }
   if (response.status !== 201 || body?.role !== "seller" || body?.paymentSelectionPersisted !== false
     || typeof body?.restaurant?.id !== "string" || typeof body?.restaurant?.slug !== "string"
     || body?.restaurant?.operating_status !== "closed") {
@@ -33,8 +48,10 @@ export async function submitSellerRegistration(input: unknown): Promise<SellerRe
   try {
     // public.users đổi role không bảo đảm phát sinh Auth event; đọc lại hồ sơ thật.
     const profile = await getCurrentProfile();
-    if (!profile || profile.role !== "seller" || profile.status !== "active") throw new Error();
+    const access=await readSellerAccess();
+    if (!profile || profile.id!==actor || profile.role !== "seller" || profile.status !== "active" || access.user.id!==actor || access.user.role!=="seller" || access.restaurant?.id!==body.restaurant.id || useAuthStore.getState().user?.id!==actor) throw new Error();
     useAuthStore.getState().setUser(profile);
+    invalidateSellerAccess();
   } catch {
     throw new Error("API đã xác nhận đăng ký nhưng chưa tải được hồ sơ seller. Hãy tải lại trang, không gửi lại đăng ký.");
   }

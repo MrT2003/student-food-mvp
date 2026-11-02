@@ -1,10 +1,15 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { isSameOrigin } from "@/lib/http/request-origin";
 import { createClient } from "@/lib/supabase/server";
 import { SellerStaffError, SellerValidationError } from "@/services/seller.service";
 
 const errors = {
+  STAFF_JOIN_RPC_UNAVAILABLE: [503, "Chức năng gia nhập chưa được triển khai đầy đủ. Vui lòng thử lại sau."],
+  STAFF_JOIN_RESULT_UNKNOWN: [503, "Chưa xác định được kết quả gia nhập. Kiểm tra hồ sơ trước khi gửi lại."],
+  UNAUTHORIZED: [401, "Vui lòng đăng nhập lại."], DATABASE_ACCESS_DENIED: [403, "Không có quyền thực hiện thao tác."],
+  STAFF_JOIN_ATOMICITY_UNAVAILABLE: [503, "Chức năng gia nhập đang tạm ngưng. Vui lòng thử lại sau."],
   PROFILE_NOT_FOUND: [403, "Chưa có hồ sơ hợp lệ."], ACCOUNT_INACTIVE: [403, "Tài khoản hiện không hoạt động."],
   SELLER_REQUIRED: [403, "Chỉ seller được tạo QR tuyển nhân viên."],
   RESTAURANT_NOT_FOUND: [404, "Không tìm thấy cửa hàng thuộc người phát hành."],
@@ -22,7 +27,7 @@ function failure(code: string, message: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-export async function handleStaffRequest(request: Request, action: (userId: string, input: unknown) => Promise<unknown>, status = 200) {
+export async function handleStaffRequest(request: Request, action: (userId: string, input: unknown, client: SupabaseClient) => Promise<unknown>, status = 200) {
   if (!isSameOrigin(request)) return failure("FORBIDDEN", "Yêu cầu không hợp lệ.", 403);
   try {
     const client = await createClient();
@@ -31,7 +36,7 @@ export async function handleStaffRequest(request: Request, action: (userId: stri
     let input: unknown;
     try { input = await request.json(); }
     catch { return failure("INVALID_JSON", "Nội dung JSON không hợp lệ.", 400); }
-    return NextResponse.json(await action(data.user.id, input), { status, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(await action(data.user.id, input, client), { status, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof SellerValidationError) return failure("VALIDATION_ERROR", error.message, 400);
     if (error instanceof SellerStaffError) {

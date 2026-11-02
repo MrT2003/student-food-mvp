@@ -1,3 +1,7 @@
+> Bản chuẩn bị DB mới: xem [staff-qr-db-rollout.md](./staff-qr-db-rollout.md). Application đã gọi join_staff_qr bằng session; migration mới CHƯA ÁP DỤNG. Các mô tả chặn cố định/pg bên dưới là lịch sử.
+
+> Cập nhật hiện tại: xem [staff-sdk-ui.md](./staff-sdk-ui.md). QR đã dùng session SDK; join chặn trước ghi vì chưa xác minh cơ chế DB nguyên tử. Nội dung pg bên dưới là lịch sử, không phản ánh implementation QR hiện tại.
+
 # QR tuyển staff và quyền staff — đợt 4B
 
 > Ngày 2026-10-28: seller registration/quán/ngân hàng đã được tách khỏi yêu cầu pg
