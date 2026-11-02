@@ -753,6 +753,10 @@
       radial-gradient(ellipse at 0% 88%, #ffefe0 0%, transparent 44%),
       #fbf7f2;
   }
+  .page[data-mobile-detail-open="true"] > header,
+  .page[data-mobile-detail-open="true"] .workspace > nav {
+    display: none;
+  }
   .workspace,
   .workspace[data-bill-open="true"] {
     display: flex;

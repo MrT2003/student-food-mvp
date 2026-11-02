@@ -26,6 +26,9 @@ import {
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
+import SellerOrderDetailView, {
+  createDefaultSellerOrderDetailFixture,
+} from "./SellerOrderDetailView";
 import { useSellerPreview } from "@/store/useSellerPreviewStore";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
 import TransferContent from "@/components/ui/TransferContent";
@@ -239,34 +242,7 @@ function buildMobileOrder(params: {
 
 export function createSellerMobileOrderFixtures(): SellerOrder[] {
   const pendingOrders: SellerOrder[] = [
-    buildMobileOrder({
-      id: "71000000-0000-4000-8000-000000000128",
-      orderCode: "SF0128",
-      status: "pending",
-      createdAt: "2026-10-05T03:24:00.000Z", // 10:24 ICT
-      customerName: "Trần Minh Anh",
-      customerPhone: "0901 234 567",
-      deliveryAddress: "KTX A, Cổng B, Phòng 302",
-      paymentMethod: "cash",
-      customerNotes: null,
-      items: [
-        {
-          id: "81000000-0000-4000-8000-000000001281",
-          menuItemId: "20000000-0000-4000-8000-000000000003",
-          name: "Trà sữa truyền thống",
-          unitPrice: 25000,
-          quantity: 1,
-          hasOption: true,
-        },
-        {
-          id: "81000000-0000-4000-8000-000000001282",
-          menuItemId: "20000000-0000-4000-8000-000000000002",
-          name: "Bánh tráng trộn",
-          unitPrice: 20000,
-          quantity: 1,
-        },
-      ],
-    }),
+    createDefaultSellerOrderDetailFixture(),
     buildMobileOrder({
       id: "71000000-0000-4000-8000-000000000129",
       orderCode: "SF0129",
@@ -638,7 +614,10 @@ export default function SellerOrdersView() {
   }
 
   return (
-    <div className={styles.page}>
+    <div
+      className={styles.page}
+      data-mobile-detail-open={mobileSelectedOrder ? "true" : "false"}
+    >
       <StudentHeader variant="seller" />
       <div
         className={styles.workspace}
@@ -1318,52 +1297,14 @@ export default function SellerOrdersView() {
           </div>
 
           {mobileSelectedOrder && (
-            <section
-              className={styles.mobileDetailSheet}
-              aria-label={`Chi tiết đơn hàng ${mobileSelectedOrder.order_code}`}
-            >
-              <div className={styles.mobileDetailHeader}>
-                <div>
-                  <strong>#{mobileSelectedOrder.order_code}</strong>
-                  <small>
-                    {formatMobileOrderTime(mobileSelectedOrder.created_at)} ·{" "}
-                    {mobileSelectedOrder.customer.name}
-                  </small>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMobileSelectedId(null)}
-                  aria-label="Đóng chi tiết đơn hàng"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              <p className={styles.mobileDetailLine}>
-                <MapPin size={15} />
-                <span>{mobileSelectedOrder.delivery_address}</span>
-              </p>
-              <div className={styles.mobileDetailItems}>
-                {mobileSelectedOrder.order_items.map((item) => (
-                  <div key={item.id} className={styles.mobileDetailItem}>
-                    <span>
-                      {item.quantity}× {item.item_name_snapshot}
-                    </span>
-                    <strong>
-                      {formatMoney(item.unit_price_snapshot * item.quantity)}
-                    </strong>
-                  </div>
-                ))}
-              </div>
-              {mobileSelectedOrder.customer_notes && (
-                <p className={styles.mobileDetailNote}>
-                  Ghi chú: {mobileSelectedOrder.customer_notes}
-                </p>
-              )}
-              <div className={styles.mobileDetailTotal}>
-                <span>Tổng thanh toán</span>
-                <strong>{formatMoney(mobileSelectedOrder.total)}</strong>
-              </div>
-            </section>
+            <SellerOrderDetailView
+              order={mobileSelectedOrder}
+              overlay
+              onBack={() => setMobileSelectedId(null)}
+              onAccept={(order) => changeMobileStatus(order, "accepted")}
+              onReject={(order) => changeMobileStatus(order, "rejected")}
+              onComplete={(order) => changeMobileStatus(order, "completed")}
+            />
           )}
         </div>
       </div>
