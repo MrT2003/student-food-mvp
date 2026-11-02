@@ -18,7 +18,17 @@ import {
 import SellerBottomNavigation from "./SellerBottomNavigation";
 import styles from "@/styles/seller-orders.module.css";
 
-export default function SellerSidebar({ active, name }: { active: "overview" | "orders" | "menu" | "shop" | "payments"; name: string }) {
+export default function SellerSidebar({
+  active,
+  name,
+  pendingOrderCount,
+  menuLabel,
+}: {
+  active: "overview" | "orders" | "menu" | "shop" | "payments";
+  name: string;
+  pendingOrderCount?: number;
+  menuLabel?: string;
+}) {
   const shop = useSellerShopStore((state) => state.shop);
   return (
     <>
@@ -48,7 +58,11 @@ export default function SellerSidebar({ active, name }: { active: "overview" | "
         </nav>
         <Link className={styles.back} href="/"><ArrowLeft size={18} />Quay lại StudentFood</Link>
       </aside>
-      <SellerBottomNavigation active={active} />
+      <SellerBottomNavigation
+        active={active}
+        pendingOrderCount={pendingOrderCount}
+        menuLabel={menuLabel}
+      />
     </>
   );
 }

@@ -68,8 +68,12 @@ export function isSellerNavActive(
 
 export default function SellerBottomNavigation({
   active,
+  pendingOrderCount,
+  menuLabel,
 }: {
   active?: SellerNavKey;
+  pendingOrderCount?: number;
+  menuLabel?: string;
 }) {
   const pathname = usePathname();
 
@@ -87,6 +91,19 @@ export default function SellerBottomNavigation({
           inactiveIcon: InactiveIcon,
         }) => {
           const isCurrent = isSellerNavActive(pathname, href, active, key);
+          const resolvedBadgeCount =
+            key === "orders"
+              ? typeof pendingOrderCount === "number"
+                ? pendingOrderCount
+                : isCurrent
+                  ? 3
+                  : 0
+              : 0;
+          const displayLabel =
+            key === "menu" && (menuLabel || active === "orders")
+              ? (menuLabel ?? "Thực đơn")
+              : label;
+
           return (
             <Link
               key={href}
@@ -94,12 +111,23 @@ export default function SellerBottomNavigation({
               className={styles.link}
               aria-current={isCurrent ? "page" : undefined}
             >
-              {isCurrent ? (
-                <ActiveIcon aria-hidden="true" />
-              ) : (
-                <InactiveIcon aria-hidden="true" />
-              )}
-              <span>{label}</span>
+              <span className={styles.iconWrap}>
+                {isCurrent ? (
+                  <ActiveIcon aria-hidden="true" />
+                ) : (
+                  <InactiveIcon aria-hidden="true" />
+                )}
+                {resolvedBadgeCount > 0 && (
+                  <span
+                    className={styles.badge}
+                    data-testid="seller-orders-nav-badge"
+                    aria-label={`${resolvedBadgeCount} đơn chờ xác nhận`}
+                  >
+                    {resolvedBadgeCount > 99 ? "99+" : resolvedBadgeCount}
+                  </span>
+                )}
+              </span>
+              <span>{displayLabel}</span>
             </Link>
           );
         },
