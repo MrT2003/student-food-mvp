@@ -10,17 +10,17 @@ export const sellerTabs: { value: SellerOrderTab; label: string }[] = [
 ];
 export const isInSellerTab = (status: OrderStatus, tab: SellerOrderTab) =>
   status === tab || tab === "cancelled" && status === "rejected";
-export const selectedSellerOrder = (visible: SellerOrder[], id: string | null) =>
+export const selectedSellerOrder = <T extends { id: string }>(visible: T[], id: string | null) =>
   id === null ? undefined : visible.find((order) => order.id === id);
 export const vietnamDay = (date: string) => new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
 }).format(new Date(date));
 
-export function filterSellerOrders(orders: SellerOrder[], restaurantId: string, query: string, day: string | null) {
+export function filterSellerOrders<T extends { restaurant_id: string; order_code: string | null; customer: { name: string | null }; created_at: string }>(orders: T[], restaurantId: string, query: string, day: string | null) {
   const search = normalizeSearchText(query).replace(/^#/, "");
   return orders.filter((order) => order.restaurant_id === restaurantId &&
     (!day || vietnamDay(order.created_at) === day) &&
-    (!search || normalizeSearchText(`${order.order_code} ${order.customer.name}`).includes(search)));
+    (!search || normalizeSearchText(`${order.order_code ?? ""} ${order.customer.name ?? ""}`).includes(search)));
 }
 
 // UI demo only; backend must authorize restaurant ownership and enforce transitions.

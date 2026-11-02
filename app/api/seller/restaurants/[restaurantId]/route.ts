@@ -10,8 +10,8 @@ const updateErrors = {
   ACCOUNT_INACTIVE: { status: 403, message: "Tài khoản hiện không hoạt động." },
   SELLER_REQUIRED: { status: 403, message: "Chỉ seller được cập nhật thông tin cửa hàng." },
   RESTAURANT_NOT_FOUND: { status: 404, message: "Không tìm thấy cửa hàng." },
-  DATABASE_CONFIGURATION_MISSING: { status: 503, message: "Chức năng cập nhật cửa hàng chưa được cấu hình." },
-  DATABASE_CONFIGURATION_INVALID: { status: 503, message: "Cấu hình cập nhật cửa hàng chưa hợp lệ." },
+  UNAUTHORIZED: { status: 401, message: "Vui lòng đăng nhập lại." },
+  DATABASE_ACCESS_DENIED: { status: 403, message: "Không có quyền cập nhật cửa hàng." },
   UPDATE_FAILED: { status: 500, message: "Không thể cập nhật cửa hàng. Vui lòng thử lại." },
 } as const;
 
@@ -35,7 +35,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
     } catch {
       return failure("INVALID_JSON", "Nội dung JSON không hợp lệ.", 400);
     }
-    const result = await SellerServices.updateRestaurant(data.user.id, restaurantId, input);
+    const result = await SellerServices.updateRestaurant(data.user.id, restaurantId, input, supabase);
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof SellerValidationError) return failure("VALIDATION_ERROR", error.message, 400);

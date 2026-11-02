@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { AuthClientService } from "@/services/auth.service";
@@ -31,7 +31,7 @@ export function useSignIn() {
 
   async function continueWithZalo() {
     if (pending || ["pending", "failed"].includes(useAuthStore.getState().logoutStatus)) return;
-    setPending(true);
+    setPendingProvider("zalo");
     setError(null);
 
     try {

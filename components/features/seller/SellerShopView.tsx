@@ -1,5 +1,6 @@
 "use client";
 
+import StaffRecruitment from "./StaffRecruitment";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -7,7 +8,6 @@ import {
   Camera,
   Copy,
   ExternalLink,
-  HelpCircle,
   Settings,
   Store,
   TriangleAlert,
@@ -15,66 +15,49 @@ import {
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
-import { useSellerPreviewStore } from "@/store/useSellerPreviewStore";
-import {
-  useSellerShopStore,
-  type SellerShopPreview,
-} from "@/store/useSellerShopStore";
-import { useSellerMenuStore } from "@/store/useSellerMenuStore";
-import { demoSellerRestaurant } from "@/lib/mocks/seller-orders.mock";
+import { useSellerAccess } from "./SellerAccessProvider";
+import { useAuthStore } from "@/store/useAuthStore";
+import { updateSellerRestaurant } from "@/lib/seller/management-client";
+import { readShopSchedule, shopSchedulePayload } from "@/lib/seller/schedule-client";
+import type { SellerAccess } from "@/types/seller-access.types";
+import type { SellerRestaurantPatch } from "@/types/seller.types";
 import { CloudinaryService } from "@/services/cloudinary.service";
 import shell from "@/styles/seller-menu.module.css";
 import styles from "@/styles/seller-shop.module.css";
 
 export default function SellerShopView() {
-  const shop = useSellerShopStore((state) => state.shop);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let mounted = true;
-    Promise.resolve(useSellerPreviewStore.persist.rehydrate()).then(() => {
-      if (!mounted) return;
-      useSellerShopStore
-        .getState()
-        .initialize(useSellerPreviewStore.getState().draft);
-      setReady(true);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const { data, error, retry } = useSellerAccess();
   return (
     <div className={`${shell.page} ${styles.page}`}>
       <StudentHeader variant="seller" />
       <div className={styles.workspace}>
-        <SellerSidebar
-          active="shop"
-          name={shop?.name || demoSellerRestaurant.name}
-        />
-        {ready && shop ? (
-          <ShopForm initial={shop} />
+        <SellerSidebar active="shop" name={data?.restaurant?.name ?? ""} />
+        {data?.restaurant ? (
+          <ShopForm key={`${data.user.id}:${data.restaurant.id}`} initial={data.restaurant} actorId={data.user.id} />
         ) : (
-          <main className={styles.card}>Đang tải thông tin cửa hàng…</main>
+          <main className={styles.card}>{error || "Đang tải thông tin cửa hàng…"}{error && <button onClick={retry}>Thử lại</button>}</main>
         )}
       </div>
     </div>
   );
 }
 
-function ShopForm({ initial }: { initial: SellerShopPreview }) {
-  const shop = useSellerShopStore((state) => state.shop) ?? initial;
-  const update = useSellerShopStore((state) => state.update);
-  const rows = useSellerMenuStore((state) => state.rows);
+export function ShopForm({ initial, actorId }: { initial: NonNullable<SellerAccess["restaurant"]>; actorId: string }) {
+  const parsedSchedule = readShopSchedule(initial.operating_hours);
+  const baseline = useRef({ name: initial.name, description: initial.description ?? "", location: initial.location ?? "" });
+  const pending = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const [saving, setSaving] = useState(false);
   const [name, setName] = useState(initial.name);
-  const [description, setDescription] = useState(initial.description);
-  const [location, setLocation] = useState(initial.location);
-  const [phone, setPhone] = useState(initial.contactPhonePreview);
+  const [description, setDescription] = useState(initial.description ?? "");
+  const [location, setLocation] = useState(initial.location ?? "");
   const [avatar, setAvatar] = useState(initial.avatar_url);
-  const [days, setDays] = useState(initial.daysPreview);
-  const [mode, setMode] = useState(initial.scheduleModePreview);
-  const [opens, setOpens] = useState(initial.daysPreview[0].opens);
-  const [closes, setCloses] = useState(initial.daysPreview[0].closes);
-  const [open, setOpen] = useState(initial.openPreview);
-  const [paused, setPaused] = useState(initial.startPausedPreview);
+  const [days, setDays] = useState(parsedSchedule.days);
+  const [mode, setMode] = useState(parsedSchedule.mode);
+  const [opens, setOpens] = useState(parsedSchedule.days.find(day => day.enabled)?.opens ?? "10:00");
+  const [closes, setCloses] = useState(parsedSchedule.days.find(day => day.enabled)?.closes ?? "14:00");
+  const open = initial.operating_status === "open";
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [reading, setReading] = useState(false);
@@ -87,7 +70,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
   useEffect(() => {
     if (manage) dialog.current?.showModal();
   }, [manage]);
-  const restaurantPath = `/restaurants/${demoSellerRestaurant.slug}`;
+  const restaurantPath = `/restaurants/${encodeURIComponent(initial.slug)}`;
   const schedule = days.map((day) =>
     mode === "same" ? { ...day, opens, closes } : day,
   );
@@ -97,9 +80,6 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
   const previewDays = sameWeekdays ? [{ ...weekdays[0], label: "T2 - T6" }, ...schedule.slice(5)] : schedule;
   const timeChoices = [...new Set([...Array.from({ length: 96 }, (_, index) =>
     `${String(Math.floor(index / 4)).padStart(2, "0")}:${String((index % 4) * 15).padStart(2, "0")}`), opens, closes])].sort();
-  const locations = [
-    ...new Set(["KTX A", "KTX B", "KTX C", initial.location].filter(Boolean)),
-  ];
 
   function message(value: string) {
     setError("");
@@ -108,7 +88,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
   async function copy(value: string) {
     try {
       await navigator.clipboard.writeText(value);
-      message("Đã sao chép liên kết demo.");
+      message("Đã sao chép liên kết.");
     } catch {
       setError(
         "Không thể sao chép tự động. Bạn có thể chọn và sao chép đường dẫn đang hiển thị.",
@@ -124,11 +104,11 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
       const uploaded = await CloudinaryService.uploadImage(file, {
         folder: "student-food/restaurants",
       });
-      if (uploadRequestId.current === requestId) {
+      if (mounted.current && uploadRequestId.current === requestId) {
         setAvatar(uploaded.secureUrl);
       }
     } catch (err) {
-      if (uploadRequestId.current === requestId) {
+      if (mounted.current && uploadRequestId.current === requestId) {
         setError(
           err instanceof Error
             ? err.message
@@ -136,79 +116,50 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
         );
       }
     } finally {
-      if (uploadRequestId.current === requestId) {
+      if (mounted.current && uploadRequestId.current === requestId) {
         setReading(false);
       }
     }
   }
-  function saveInfo(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const cleanedPhone = phone.replace(/[\s.-]/g, "");
-    if (
-      !name.trim() ||
-      !description.trim() ||
-      !/^(0\d{9}|\+84\d{9})$/.test(cleanedPhone)
-    ) {
-      setError(
-        "Nhập tên, mô tả và số điện thoại Việt Nam hợp lệ (10 số hoặc +84). ",
-      );
-      return;
+  async function persist(patch: SellerRestaurantPatch) {
+    if (pending.current) return;
+    pending.current = true;
+    setSaving(true); setError(""); setNotice("");
+    try {
+      await updateSellerRestaurant(actorId, initial.id, patch);
+      if (!mounted.current || useAuthStore.getState().user?.id !== actorId) return;
+      // Chỉ đánh dấu những giá trị vừa gửi đã lưu; không ghi lại field từ snapshot cũ.
+      for (const field of ["name", "description", "location"] as const) {
+        if (patch[field] !== undefined) baseline.current[field] = patch[field].trim();
+      }
+      if (patch.name !== undefined) setName(patch.name.trim());
+      if (patch.description !== undefined) setDescription(patch.description.trim());
+      if (patch.location !== undefined) setLocation(patch.location.trim());
+      message(patch.schedule ? "Đã lưu lịch hoạt động vào cửa hàng." : "Đã lưu thông tin cửa hàng. Ảnh xem trước không được lưu cùng thông tin.");
+    } catch (err) {
+      if (mounted.current && useAuthStore.getState().user?.id === actorId)
+        setError(err instanceof Error ? err.message : "Không thể lưu cửa hàng.");
+    } finally {
+      pending.current = false;
+      if (mounted.current) setSaving(false);
     }
-    update({
-      name: name.trim(),
-      description: description.trim(),
-      location,
-      contactPhonePreview: cleanedPhone,
-      avatar_url: avatar,
-    });
-    const draft = useSellerPreviewStore.getState().draft;
-    if (draft)
-      useSellerPreviewStore
-        .getState()
-        .registerPreview({
-          ...draft,
-          name: name.trim(),
-          description: description.trim(),
-          location,
-          avatar_url: avatar,
-        });
-    message("Đã lưu thông tin trong bản demo, chưa ghi database.");
   }
-  function saveSchedule(event: FormEvent<HTMLFormElement>) {
+  async function saveInfo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!schedule.some((day) => day.enabled)) {
-      setError("Chọn ít nhất một ngày hoạt động.");
-      return;
+    const patch: SellerRestaurantPatch = {};
+    for (const [field, value, max] of [["name", name, 100], ["description", description, 300], ["location", location, 200]] as const) {
+      if (value !== baseline.current[field]) {
+        if (!value.trim() || value.length > max) { setError(`Kiểm tra ${field}: không được trống, tối đa ${max} ký tự.`); return; }
+        patch[field] = value;
+      }
     }
-    if (
-      schedule.some(
-        (day) =>
-          day.enabled && (!day.opens || !day.closes || day.opens >= day.closes),
-      )
-    ) {
-      setError("Giờ đóng phải sau giờ mở. Demo hiện chưa hỗ trợ lịch qua đêm.");
-      return;
-    }
-    update({ daysPreview: schedule, scheduleModePreview: mode });
-    const draft = useSellerPreviewStore.getState().draft;
-    if (draft)
-      useSellerPreviewStore
-        .getState()
-        .registerPreview({
-          ...draft,
-          hours: mode === "same" ? `${opens} - ${closes}` : "Theo từng ngày",
-        });
-    message("Đã lưu lịch hoạt động trong bản demo.");
+    if (!Object.keys(patch).length) { message("Không có thay đổi tên, mô tả hoặc địa điểm để lưu. Ảnh chỉ xem trước."); return; }
+    await persist(patch);
   }
-  function saveStatus() {
-    if (open && !rows.some(({ item }) => item.is_active && item.is_available)) {
-      setError("Cần ít nhất một món đang hiển thị và đang bán để mở nhận đơn.");
-      return;
-    }
-    update({ openPreview: open, startPausedPreview: paused });
-    message(
-      "Đã lưu trạng thái demo. Chưa thay đổi trạng thái nhận đơn trên hệ thống.",
-    );
+  async function saveSchedule(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try { await persist({ schedule: shopSchedulePayload(mode, days, opens, closes) }); }
+    catch (err) { setError(err instanceof Error ? err.message : "Lịch hoạt động không hợp lệ."); }
   }
 
   return (
@@ -219,8 +170,8 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
           <p>Quản lý thông tin và trạng thái hoạt động của cửa hàng bạn.</p>
         </div>
         <div className={styles.headerActions}>
-          <span className={styles.badge} data-open={shop.openPreview}>
-            ● {shop.openPreview ? "Đang nhận đơn" : "Tạm ngừng nhận đơn"}
+          <span className={styles.badge} data-open={open}>
+            ● {open ? "Đang nhận đơn" : "Tạm ngừng nhận đơn"}
           </span>
           <Link href={restaurantPath} className={styles.neutral}>
             <ExternalLink size={18} />
@@ -248,6 +199,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
       <section className={styles.card}>
         <h2>Thông tin cửa hàng</h2>
         <form onSubmit={saveInfo} className={styles.info}>
+          <fieldset disabled={saving} style={{ display: "contents" }}>
           <div className={styles.avatarField}>
             <button
               type="button"
@@ -272,7 +224,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
             </button>
             <strong>Ảnh đại diện</strong>
             <small>
-              {reading ? "Đang tải lên Cloudinary…" : "Không bắt buộc"}
+              {reading ? "Đang tải lên Cloudinary…" : avatar !== initial.avatar_url ? "Ảnh chỉ xem trước; chưa lưu vào quán" : "Ảnh từ DB; thay ảnh hiện chỉ xem trước"}
             </small>
             <input
               ref={upload}
@@ -304,7 +256,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                 Tên cửa hàng <b>*</b>
                 <input
                   required
-                  maxLength={120}
+                  maxLength={100}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                 />
@@ -313,7 +265,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                 Mô tả ngắn <b>*</b>
                 <input
                   required
-                  maxLength={200}
+                  maxLength={300}
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                 />
@@ -322,24 +274,11 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
             <div className={styles.infoBottom}>
               <label>
                 Khu vực / địa điểm <b>*</b>
-                <select
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                >
-                  {locations.map((value) => (
-                    <option key={value}>{value}</option>
-                  ))}
-                </select>
+                <input required maxLength={200} value={location} onChange={(event) => setLocation(event.target.value)} />
               </label>
               <label>
-                Số điện thoại liên hệ <b>*</b>
-                <input
-                  required
-                  type="tel"
-                  maxLength={20}
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                />
+                Số điện thoại liên hệ
+                <input disabled value="Chưa hỗ trợ lưu ở màn này" readOnly />
               </label>
               <label>
                 Đường dẫn quán
@@ -365,18 +304,21 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
               <button
                 type="submit"
                 className={styles.primary}
-                disabled={reading}
+                disabled={reading || saving}
               >
                 Lưu thông tin
               </button>
             </footer>
           </div>
+          </fieldset>
         </form>
       </section>
       <div className={styles.middle}>
         <section className={styles.card}>
           <h2>Giờ hoạt động</h2>
           <form onSubmit={saveSchedule}>
+            <fieldset disabled={saving} style={{ display: "contents" }}>
+            {!parsedSchedule.recognized && <p role="status">Lịch cũ chưa theo quy ước hiện tại. Chỉ thay thế lịch khi bạn bấm Lưu lịch.</p>}
             <div className={styles.scheduleColumns}>
               <div>
                 <div className={styles.radios}>
@@ -404,6 +346,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                     />
                     Thiết lập theo từng ngày
                   </label>
+                  <label><input type="radio" name="schedule-mode" checked={mode === "later"} onChange={() => setMode("later")} />Thiết lập sau</label>
                 </div>
                 {mode === "same" ? (
                   <>
@@ -452,7 +395,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                       ))}
                     </div>
                   </>
-                ) : (
+                ) : mode === "daily" ? (
                   <div className={styles.daily}>
                     {days.map((day, index) => (
                       <div key={day.label}>
@@ -509,13 +452,13 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                       </div>
                     ))}
                   </div>
-                )}
+                ) : <p>Lưu lựa chọn này sẽ xóa lịch hiện tại (SQL NULL).</p>}
               </div>
               <aside className={styles.schedulePreview}>
                 <strong>
                   Lịch hoạt động <small>(xem trước)</small>
                 </strong>
-                {previewDays.map((day) => (
+                {mode === "later" ? <p>Chưa thiết lập lịch</p> : previewDays.map((day) => (
                   <div key={day.label}>
                     <span>{day.label}</span>
                     <span>
@@ -526,49 +469,42 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
               </aside>
             </div>
             <footer>
-              <button className={styles.outline} type="submit">
+              <button className={styles.outline} type="submit" disabled={saving}>
                 Lưu lịch
               </button>
             </footer>
+            </fieldset>
           </form>
         </section>
-        <section className={styles.card}>
-          <h2>Trạng thái hoạt động</h2>
-          <div className={styles.statusPanel} data-open={open}>
-            <span>
-              <Store size={36} />
-            </span>
-            <div>
-              <strong>{open ? "Đang nhận đơn" : "Tạm ngừng nhận đơn"}</strong>
-              <p>
-                {open
-                  ? "Cửa hàng đang mở trong bản xem trước."
-                  : "Cửa hàng đang tạm ngừng trong bản xem trước."}
-              </p>
+        <div className={styles.rightStack}>
+          <section className={styles.card}>
+            <h2>Trạng thái hoạt động</h2>
+            <div className={styles.statusCompactRow} data-open={open}>
+              <div className={styles.statusCompactInfo}>
+                <span className={styles.statusCompactIcon} aria-hidden="true">
+                  <Store size={26} />
+                </span>
+                <div className={styles.statusCompactCopy}>
+                  <strong>
+                    <Store size={16} aria-hidden="true" />
+                    {open ? "Đang mở" : "Tạm ngừng"}
+                  </strong>
+                  <p>{open ? "Đang nhận đơn" : "Chưa nhận đơn"}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className={open ? styles.outline : styles.statusActionBtn}
+                disabled
+                title="Chưa nối thay đổi trạng thái ở màn này"
+              >
+                {open ? "Tạm ngừng" : "Mở nhận đơn"}
+              </button>
             </div>
-          </div>
-          <label className={styles.pause}>
-            Bắt đầu ở trạng thái tạm dừng
-            <input
-              type="checkbox"
-              role="switch"
-              checked={paused}
-              onChange={(event) => setPaused(event.target.checked)}
-            />
-            <HelpCircle
-              size={18}
-              aria-label="Thiết lập demo, chưa áp dụng tự động khi đăng nhập lại"
-            />
-          </label>
-          <footer>
-            <button className={styles.outline} onClick={() => setOpen(!open)}>
-              {open ? "Tạm ngừng nhận đơn" : "Mở nhận đơn"}
-            </button>
-            <button className={styles.primary} onClick={saveStatus}>
-              Lưu trạng thái
-            </button>
-          </footer>
-        </section>
+          </section>
+
+          <StaffRecruitment />
+        </div>
       </div>
       <section className={styles.card}>
         <div className={styles.deliveryHeading}>
@@ -616,10 +552,9 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
         </small>
       </section>
       <p className={styles.demo}>
-        Demo frontend · Chưa ghi DB. Trang quán vẫn dùng dữ liệu
-        mẫu. Liên kết giao hàng demo không hoạt động và không cấp quyền truy
-        cập. Thông tin đăng ký cơ bản giữ trong phiên; các cài đặt mới ở đây mất
-        khi tải lại trang.
+        Thông tin và lịch được lưu qua API. Ảnh tải lên Cloudinary chỉ xem trước,
+        chưa cập nhật avatar_url. Đổi trạng thái và liên kết giao hàng ở màn này chưa nối backend.
+
       </p>
       {manage && (
         <dialog

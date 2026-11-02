@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
-import { assertPurchaseAccess } from "@/lib/auth/purchase-access";
 import type { CreateOrderInput, CreateOrderResponse, OrderedSummary } from "@/types/order.types";
+import { assertPurchaseAccess } from "@/lib/auth/purchase-access";
 
 export const OrderServices = {
 	// Create order from the selected list of cart_items 
@@ -50,7 +50,7 @@ export const OrderServices = {
 		};
 
 		// Staff được phép ở application; RPC/RLS vẫn quyết định quyền thực thi thật.
-		// SQL create_checkout_orders trong repo còn chặn staff; không đổi RPC hoặc fallback quyền cao.
+		// Giữ contract restaurantPreferences của nhánh tích hợp; không fallback quyền cao.
 		await assertPurchaseAccess(supabaseBrowser);
 		const { data, error } = await supabaseBrowser.rpc('create_checkout_orders', payload);
 

@@ -1,5 +1,11 @@
 # Đăng ký seller — đợt 2
 
+> Cập nhật 2026-10-28: phần pg dưới đây là snapshot lịch sử. Implementation hiện
+> dùng session SDK gọi register_seller theo định nghĩa/quyền quản lý DB đã cung cấp.
+> Contract thêm appLockPin bắt buộc đúng4 chữ số; nhập qua ô password, không chia sẻ
+> giá trị. Form gọi API thật, không tạo preview khi lỗi. Không còn yêu cầu DATABASE_URL.
+> Xem [trạng thái chuyển SDK](seller-supabase-migration.md) trước khi kiểm thử.
+
 `POST /api/seller/register` chạy trong Node.js, xác minh cookie session bằng
 Supabase Auth, dùng `SellerServices.validateRegistration`, rồi ghi PostgreSQL bằng
 `pg`. Cần header `Origin` cùng origin ứng dụng. Chưa nối UI.

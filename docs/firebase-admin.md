@@ -3,7 +3,7 @@
 ## Cấu hình một lần
 
 1. Firebase Console → Project settings → Service accounts → Generate new private key.
-2. Lấy `project_id`, `client_email`, `private_key` từ JSON và điền ba biến `FIREBASE_ADMIN_*` trong `.env.local` theo `firebase.env.example`.
+2. Lấy `project_id`, `client_email`, `private_key` từ JSON và điền ba biến `FIREBASE_ADMIN_*` trong `.env.local` theo `.env.example` (chỉ là mẫu, không dùng placeholder để chạy thật).
 3. Project phải trùng project Firebase Web đang đăng ký token. Bật Firebase Cloud Messaging API (V1) cho project.
 4. Khởi động lại Next.js. Trên hosting, lưu các giá trị bằng hệ thống secrets/environment của hosting.
 

@@ -1,12 +1,12 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import type { PoolClient } from "pg";
-import { DatabaseConfigurationError, getDatabasePool } from "@/lib/database/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { isRecord } from "@/utilities/system.utility";
 import type {
   SellerBankCreate,
   SellerBankPatch,
   SellerBankResult,
+  SellerBankListResult,
   StaffInvitationResult,
   StaffJoinResult,
   SellerDayId,
@@ -15,6 +15,7 @@ import type {
   SellerRegistrationSchedule,
   SellerRestaurantPatch,
   SellerRestaurantUpdateResult,
+  SellerRestaurantOpenResult,
   ValidatedSellerRegistration,
 } from "@/types/seller.types";
 
@@ -22,7 +23,8 @@ export class SellerValidationError extends Error {}
 
 export type SellerRegistrationErrorCode =
   | "PROFILE_NOT_FOUND" | "ACCOUNT_INACTIVE" | "ROLE_CONFLICT"
-  | "SLUG_CONFLICT" | "DATABASE_CONFIGURATION_MISSING" | "DATABASE_CONFIGURATION_INVALID" | "REGISTRATION_FAILED";
+  | "SLUG_CONFLICT" | "UNAUTHORIZED" | "DATABASE_ACCESS_DENIED"
+  | "REGISTRATION_RPC_UNAVAILABLE" | "REGISTRATION_RESULT_UNKNOWN" | "REGISTRATION_FAILED";
 
 export class SellerRegistrationError extends Error {
   constructor(public readonly code: SellerRegistrationErrorCode) {
@@ -32,7 +34,7 @@ export class SellerRegistrationError extends Error {
 
 export type SellerRestaurantUpdateErrorCode =
   | "PROFILE_NOT_FOUND" | "ACCOUNT_INACTIVE" | "SELLER_REQUIRED" | "RESTAURANT_NOT_FOUND"
-  | "DATABASE_CONFIGURATION_MISSING" | "DATABASE_CONFIGURATION_INVALID" | "UPDATE_FAILED";
+  | "UNAUTHORIZED" | "DATABASE_ACCESS_DENIED" | "UPDATE_FAILED";
 
 export class SellerRestaurantUpdateError extends Error {
   constructor(public readonly code: SellerRestaurantUpdateErrorCode) {
@@ -40,10 +42,19 @@ export class SellerRestaurantUpdateError extends Error {
   }
 }
 
+export type SellerRestaurantOpenErrorCode =
+  | "UNAUTHORIZED" | "PROFILE_NOT_FOUND" | "ACCOUNT_INACTIVE" | "SELLER_REQUIRED"
+  | "RESTAURANT_NOT_FOUND" | "OPERATING_STATUS_CONFLICT" | "DATABASE_ACCESS_DENIED"
+  | "RESTAURANT_OPEN_RPC_UNAVAILABLE" | "RESTAURANT_OPEN_RESULT_UNKNOWN" | "RESTAURANT_OPEN_FAILED";
+
+export class SellerRestaurantOpenError extends Error {
+  constructor(public readonly code: SellerRestaurantOpenErrorCode) { super(code); }
+}
+
 export type SellerBankErrorCode =
   | "PROFILE_NOT_FOUND" | "ACCOUNT_INACTIVE" | "SELLER_REQUIRED" | "RESTAURANT_NOT_FOUND"
-  | "BANK_NOT_FOUND" | "BANK_ACCOUNT_CONFLICT" | "BANK_WRITE_FAILED"
-  | "DATABASE_CONFIGURATION_MISSING" | "DATABASE_CONFIGURATION_INVALID";
+  | "BANK_NOT_FOUND" | "BANK_ACCOUNT_CONFLICT" | "BANK_WRITE_FAILED" | "BANK_READ_FAILED"
+  | "UNAUTHORIZED" | "DATABASE_ACCESS_DENIED" | "BANK_DEFAULT_ATOMICITY_UNAVAILABLE";
 
 export class SellerBankError extends Error {
   constructor(public readonly code: SellerBankErrorCode) {
@@ -55,7 +66,7 @@ export type SellerStaffErrorCode =
   | "PROFILE_NOT_FOUND" | "ACCOUNT_INACTIVE" | "SELLER_REQUIRED" | "RESTAURANT_NOT_FOUND"
   | "ISSUER_NOT_ALLOWED" | "STAFF_ROLE_CONFLICT" | "STAFF_MEMBERSHIP_CONFLICT"
   | "STAFF_TOKEN_CONFIGURATION_MISSING" | "INVALID_STAFF_TOKEN" | "STAFF_TOKEN_EXPIRED"
-  | "DATABASE_CONFIGURATION_MISSING" | "DATABASE_CONFIGURATION_INVALID" | "STAFF_OPERATION_FAILED";
+  | "DATABASE_CONFIGURATION_MISSING" | "DATABASE_CONFIGURATION_INVALID" | "STAFF_OPERATION_FAILED" | "STAFF_JOIN_ATOMICITY_UNAVAILABLE" | "STAFF_JOIN_RPC_UNAVAILABLE" | "STAFF_JOIN_RESULT_UNKNOWN" | "UNAUTHORIZED" | "DATABASE_ACCESS_DENIED";
 
 export class SellerStaffError extends Error {
   constructor(public readonly code: SellerStaffErrorCode) { super(code); }
@@ -70,34 +81,10 @@ function staffTokenCall<T>(tools: StaffTokenTools, action: () => T): T {
   }
 }
 
-async function staffTransaction<T>(action: (client: PoolClient) => Promise<T>): Promise<T> {
-  const client = await (async () => {
-    try { return await getDatabasePool().connect(); }
-    catch (error) { throw new SellerStaffError(error instanceof DatabaseConfigurationError ? error.code : "STAFF_OPERATION_FAILED"); }
-  })();
-  let started = false;
-  let discard = false;
-  try {
-    await client.query("BEGIN");
-    started = true;
-    const result = await action(client);
-    await client.query("COMMIT");
-    started = false;
-    return result;
-  } catch (error) {
-    if (started) {
-      try { await client.query("ROLLBACK"); }
-      catch { discard = true; throw new SellerStaffError("STAFF_OPERATION_FAILED"); }
-    } else discard = true;
-    if (error instanceof SellerStaffError) throw error;
-    throw new SellerStaffError("STAFF_OPERATION_FAILED");
-  } finally { client.release(discard); }
-}
-
 const dayIds: readonly string[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const registrationFields = [
   "name", "description", "location", "cash", "bank", "scheduleMode",
-  "days", "openTime", "closeTime", "startClosed",
+  "days", "openTime", "closeTime", "startClosed", "appLockPin",
 ];
 
 function invalid(field: string, reason: string): never {
@@ -242,19 +229,6 @@ function uuidValue(value: unknown, field = "restaurantId"): string {
   return value;
 }
 
-function restaurantSlug(name: string): string {
-  const base = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[đĐ]/g, "d").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  return `${base || "quan"}-${randomUUID()}`;
-}
-
-function isSlugConflict(error: unknown): boolean {
-  // Tên constraint mặc định từ UNIQUE(slug) trong schema repository.
-  // Không retry lỗi unique của owner, ID hoặc lỗi phát sinh từ bảng khác trong trigger.
-  return isRecord(error) && error.code === "23505" && error.schema === "public"
-    && error.table === "restaurants" && error.constraint === "restaurants_slug_key";
-}
-
 const bankTextFields = ["bank_name", "account_no", "account_name"] as const;
 
 function bankPayload(input: unknown): Record<string, unknown> {
@@ -268,141 +242,166 @@ type BankOperation =
   | { mode: "create"; data: SellerBankCreate }
   | { mode: "update"; bankId: string; data: SellerBankPatch };
 
-async function writeRestaurantBank(userId: string, restaurantId: string, operation: BankOperation): Promise<SellerBankResult> {
-  const client = await (async () => {
-    try {
-      return await getDatabasePool().connect();
-    } catch (error) {
-      throw new SellerBankError(error instanceof DatabaseConfigurationError ? error.code : "BANK_WRITE_FAILED");
-    }
-  })();
-  let transactionStarted = false;
-  let discardConnection = false;
+// Session client không nâng quyền; không dùng admin cho các thao tác seller này.
+// Quản lý DB xác nhận RLS đang tắt/quyền bảng rộng: các check API không bảo vệ
+// được đường gọi Data API trực tiếp. Không tự sửa DB để che rủi ro đó.
+// API truyền client đã xác thực; service vẫn kiểm tra danh tính cho caller trực tiếp.
+class SellerAccessError extends Error {
+  constructor(public readonly code: "UNAUTHORIZED" | "PROFILE_NOT_FOUND" | "ACCOUNT_INACTIVE" | "DATABASE_ACCESS_DENIED" | "SUPABASE_OPERATION_FAILED") { super(code); }
+}
+function checkSdkError(error: { code?: string } | null) {
+  if (error) throw new SellerAccessError(error.code === "42501" ? "DATABASE_ACCESS_DENIED" : "SUPABASE_OPERATION_FAILED");
+}
+async function sellerSession(userId: string, supplied?: SupabaseClient) {
+  const client = supplied ?? await (await import("@/lib/supabase/server")).createClient();
+  const { data, error } = await client.auth.getUser();
+  if (error || !data.user || data.user.id !== userId) throw new SellerAccessError("UNAUTHORIZED");
+  const { data: profile, error: profileError } = await client.from("users")
+    .select("role,status").eq("id", data.user.id).maybeSingle();
+  checkSdkError(profileError);
+  if (!profile) throw new SellerAccessError("PROFILE_NOT_FOUND");
+  if (profile.status !== "active") throw new SellerAccessError("ACCOUNT_INACTIVE");
+  return { client, profile };
+}
+async function ownsRestaurant(client: SupabaseClient, userId: string, restaurantId: string) {
+  const { data, error } = await client.from("restaurants").select("id")
+    .eq("id", restaurantId).eq("owner_id", userId).maybeSingle();
+  checkSdkError(error);
+  return !!data;
+}
+function isBankConstraint(error: unknown, constraint: string): boolean {
+  if (!isRecord(error) || error.code !== "23505") return false;
+  if (error.schema !== undefined && error.schema !== "public") return false;
+  if (error.table !== undefined && error.table !== "restaurant_banks") return false;
+  // PostgREST chỉ có code/message/details/hint, không có trường constraint của pg.
+  return error.constraint === constraint || (typeof error.message === "string" && error.message.includes('"' + constraint + '"'));
+}
+function staffAccessError(error: unknown): SellerStaffError {
+  if (error instanceof SellerStaffError) return error;
+  if (error instanceof SellerAccessError && error.code !== "SUPABASE_OPERATION_FAILED") return new SellerStaffError(error.code);
+  return new SellerStaffError("STAFF_OPERATION_FAILED");
+}
+const bankColumns = "id,restaurant_id,bank_name,account_no,account_name,is_default";
+async function writeRestaurantBank(userId: string, restaurantId: string, operation: BankOperation, supplied?: SupabaseClient): Promise<SellerBankResult> {
   try {
-    await client.query("BEGIN");
-    transactionStarted = true;
-    // Cùng thứ tự khóa với đăng ký/cập nhật quán: user → restaurant → bank.
-    // Theo repo, public.users.id là Auth UUID; vẫn tự kiểm tra quyền nếu DB vượt RLS.
-    const profile = await client.query<{ role: string; status: string }>(
-      "SELECT role, status FROM public.users WHERE id = $1 FOR UPDATE", [userId],
-    );
-    const user = profile.rows[0];
-    if (!user) throw new SellerBankError("PROFILE_NOT_FOUND");
-    if (user.status !== "active") throw new SellerBankError("ACCOUNT_INACTIVE");
-    if (user.role !== "seller") throw new SellerBankError("SELLER_REQUIRED");
-    const owned = await client.query<{ id: string }>(
-      "SELECT id FROM public.restaurants WHERE id = $1 AND owner_id = $2 FOR UPDATE", [restaurantId, userId],
-    );
-    // Khóa quán kể cả chưa có bank để tuần tự hóa thao tác mặc định của cùng quán.
-    if (!owned.rows.length) throw new SellerBankError("RESTAURANT_NOT_FOUND");
+    const { client, profile } = await sellerSession(userId, supplied);
+    if (profile.role !== "seller") throw new SellerBankError("SELLER_REQUIRED");
+    if (!await ownsRestaurant(client, userId, restaurantId)) throw new SellerBankError("RESTAURANT_NOT_FOUND");
     if (operation.mode === "update") {
-      const bank = await client.query<{ id: string }>(
-        "SELECT id FROM public.restaurant_banks WHERE id = $1 AND restaurant_id = $2 FOR UPDATE",
-        [operation.bankId, restaurantId],
-      );
-      // Xác minh tài khoản đích trước mọi thay đổi mặc định, không tiết lộ quán khác.
-      if (!bank.rows.length) throw new SellerBankError("BANK_NOT_FOUND");
+      const { data, error } = await client.from("restaurant_banks").select("id")
+        .eq("id", operation.bankId).eq("restaurant_id", restaurantId).maybeSingle();
+      checkSdkError(error);
+      if (!data) throw new SellerBankError("BANK_NOT_FOUND");
     }
-
     if (operation.data.is_default === true) {
-      // Bỏ mặc định cũ trước khi ghi đích để không va partial unique index.
-      // Không đụng quán khác; PATCH loại chính tài khoản đích khỏi truy vấn này.
-      if (operation.mode === "update") {
-        await client.query(
-          `UPDATE public.restaurant_banks SET is_default = false, updated_at = now()
-           WHERE restaurant_id = $1 AND is_default = true AND id <> $2`, [restaurantId, operation.bankId],
-        );
-      } else {
-        await client.query(
-          `UPDATE public.restaurant_banks SET is_default = false, updated_at = now()
-           WHERE restaurant_id = $1 AND is_default = true`, [restaurantId],
-        );
-      }
+      let query = client.from("restaurant_banks").select("id")
+        .eq("restaurant_id", restaurantId).eq("is_default", true);
+      if (operation.mode === "update") query = query.neq("id", operation.bankId);
+      const { data, error } = await query.limit(1).maybeSingle();
+      checkSdkError(error);
+      // Chưa có định nghĩa RPC chuyển default trong repo: không demote bằng request
+      // riêng rồi ghi đích. Nếu đã có default khác, dừng trước bất kỳ thao tác ghi.
+      if (data) throw new SellerBankError("BANK_DEFAULT_ATOMICITY_UNAVAILABLE");
     }
-
-    let result;
-    if (operation.mode === "create") {
-      const data = operation.data;
-      result = await client.query<SellerBankResult["bank"]>(
-        `INSERT INTO public.restaurant_banks (id, restaurant_id, bank_name, account_no, account_name, is_default)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id, restaurant_id, bank_name, account_no, account_name, is_default`,
-        [randomUUID(), restaurantId, data.bank_name, data.account_no, data.account_name, data.is_default],
-      );
-    } else {
-      const values: (string | boolean)[] = [];
-      const assignments: string[] = [];
-      // Tên cột từ allowlist cố định, chỉ ghi field PATCH đã được kiểm tra.
-      for (const column of [...bankTextFields, "is_default"] as const) {
-        if (Object.hasOwn(operation.data, column)) {
-          values.push(operation.data[column]!);
-          assignments.push(`${column} = $${values.length}`);
-        }
-      }
-      assignments.push("updated_at = now()");
-      values.push(operation.bankId, restaurantId);
-      result = await client.query<SellerBankResult["bank"]>(
-        `UPDATE public.restaurant_banks SET ${assignments.join(", ")}
-         WHERE id = $${values.length - 1} AND restaurant_id = $${values.length}
-         RETURNING id, restaurant_id, bank_name, account_no, account_name, is_default`, values,
-      );
-      if (result.rowCount === 0) throw new SellerBankError("BANK_NOT_FOUND");
-    }
-    if (result.rowCount !== 1 || result.rows.length !== 1) throw new SellerBankError("BANK_WRITE_FAILED");
-    const row = result.rows[0];
-    const response: SellerBankResult = { bank: {
-      id: row.id, restaurant_id: row.restaurant_id, bank_name: row.bank_name,
-      account_no: row.account_no, account_name: row.account_name, is_default: row.is_default,
-    } };
-    await client.query("COMMIT");
-    transactionStarted = false;
-    return response;
+    // Chỉ MỘT mutation. Unique account/partial unique default trong schema là hàng
+    // rào DB cho request cạnh tranh; không xóa bù hoặc coi các request là transaction.
+    const mutation = operation.mode === "create"
+      ? client.from("restaurant_banks").insert({ id: randomUUID(), restaurant_id: restaurantId, ...operation.data })
+      : client.from("restaurant_banks").update({ ...operation.data, updated_at: new Date().toISOString() })
+        .eq("id", operation.bankId).eq("restaurant_id", restaurantId);
+    const { data, error } = await mutation.select(bankColumns).maybeSingle();
+    if (isBankConstraint(error, "uq_restaurant_banks_account")) throw new SellerBankError("BANK_ACCOUNT_CONFLICT");
+    if (isBankConstraint(error, "uq_restaurant_banks_one_default")) throw new SellerBankError("BANK_DEFAULT_ATOMICITY_UNAVAILABLE");
+    checkSdkError(error);
+    if (!data) throw new SellerBankError(operation.mode === "update" ? "BANK_NOT_FOUND" : "BANK_WRITE_FAILED");
+    return { bank: { id: data.id, restaurant_id: data.restaurant_id, bank_name: data.bank_name,
+      account_no: data.account_no, account_name: data.account_name, is_default: data.is_default } };
   } catch (error) {
-    if (transactionStarted) {
-      try {
-        await client.query("ROLLBACK");
-      } catch {
-        discardConnection = true;
-        throw new SellerBankError("BANK_WRITE_FAILED");
-      }
-    } else {
-      discardConnection = true;
-    }
-    // Chỉ đúng unique (restaurant_id, account_no) mới là lỗi trùng tài khoản.
-    // Không UPSERT/retry; lỗi khác kể cả unique default được trả chung, không lộ DB.
-    if (isRecord(error) && error.code === "23505" && error.schema === "public"
-      && error.table === "restaurant_banks" && error.constraint === "uq_restaurant_banks_account") {
-      throw new SellerBankError("BANK_ACCOUNT_CONFLICT");
-    }
     if (error instanceof SellerBankError) throw error;
+    if (error instanceof SellerAccessError && error.code !== "SUPABASE_OPERATION_FAILED") throw new SellerBankError(error.code);
     throw new SellerBankError("BANK_WRITE_FAILED");
-  } finally {
-    client.release(discardConnection);
   }
 }
 
 export const SellerServices = {
-  async createStaffInvitation(userId: string, restaurantId: unknown, input: unknown): Promise<StaffInvitationResult> {
+  // Endpoint chuyên biệt closed -> open; không mở rộng PATCH thông tin quán.
+  async openRestaurant(userId: string, restaurantId: unknown, input: unknown, supplied?: SupabaseClient): Promise<SellerRestaurantOpenResult> {
+    const id = uuidValue(restaurantId);
+    if (!isRecord(input)) invalid("payload", "Phải là object JSON.");
+    assertFields(input, ["operating_status"], "payload");
+    if (!Object.hasOwn(input, "operating_status") || input.operating_status !== "open") invalid("operating_status", "Chỉ chấp nhận open.");
+    try {
+      const { client, profile } = await sellerSession(userId, supplied);
+      if (profile.role !== "seller") throw new SellerRestaurantOpenError("SELLER_REQUIRED");
+      const { data: restaurant, error: readError } = await client.from("restaurants")
+        .select("id,operating_status").eq("id", id).eq("owner_id", userId).maybeSingle();
+      checkSdkError(readError);
+      if (!restaurant) throw new SellerRestaurantOpenError("RESTAURANT_NOT_FOUND");
+      // Lặp sau khi đã mở là no-op, không gọi RPC để đổi timestamp lần nữa.
+      if (restaurant.operating_status === "open") return { restaurant: { id, operating_status: "open" }, alreadyOpen: true };
+      if (restaurant.operating_status !== "closed") throw new SellerRestaurantOpenError("OPERATING_STATUS_CONFLICT");
+      let result;
+      try {
+        result = await client.rpc("set_restaurant_operating_status", { p_restaurant_id: id, p_operating_status: "open" });
+      } catch { throw new SellerRestaurantOpenError("RESTAURANT_OPEN_RESULT_UNKNOWN"); }
+      if (result.error) {
+        if (result.error.code === "42501" || result.error.message === "NOT_ALLOWED") throw new SellerRestaurantOpenError("DATABASE_ACCESS_DENIED");
+        if (["PGRST202", "42883"].includes(result.error.code) || result.error.message === "INVALID_OPERATING_STATUS")
+          throw new SellerRestaurantOpenError("RESTAURANT_OPEN_RPC_UNAVAILABLE");
+        if (!result.error.code) throw new SellerRestaurantOpenError("RESTAURANT_OPEN_RESULT_UNKNOWN");
+        throw new SellerRestaurantOpenError("RESTAURANT_OPEN_FAILED");
+      }
+      if (!isRecord(result.data) || result.data.success !== true || result.data.operating_status !== "open")
+        throw new SellerRestaurantOpenError("RESTAURANT_OPEN_RESULT_UNKNOWN");
+      // Một RPC bằng session, không SDK UPDATE/ghi bù/retry sau kết quả chưa rõ.
+      // RPC đã cung cấp kiểm tra owner tại UPDATE; active/seller vẫn là precheck
+      // application, không khẳng định đã sửa quyền Data API hoặc race đổi role.
+      return { restaurant: { id, operating_status: "open" }, alreadyOpen: false };
+    } catch (error) {
+      if (error instanceof SellerRestaurantOpenError) throw error;
+      if (error instanceof SellerAccessError && error.code !== "SUPABASE_OPERATION_FAILED") throw new SellerRestaurantOpenError(error.code);
+      throw new SellerRestaurantOpenError("RESTAURANT_OPEN_FAILED");
+    }
+  },
+  // Đọc riêng ngân hàng của quán đã xác minh; không lấy dữ liệu mẫu hoặc dùng admin.
+  async listRestaurantBanks(userId: string, restaurantId: unknown, supplied?: SupabaseClient): Promise<SellerBankListResult> {
+    const id = uuidValue(restaurantId);
+    try {
+      const { client, profile } = await sellerSession(userId, supplied);
+      if (profile.role !== "seller") throw new SellerBankError("SELLER_REQUIRED");
+      if (!await ownsRestaurant(client, userId, id)) throw new SellerBankError("RESTAURANT_NOT_FOUND");
+      const banks: SellerBankListResult["banks"] = [];
+      // Không coi giới hạn max_rows của Data API là toàn bộ danh sách.
+      for (let offset = 0; ; ) {
+        const { data, error } = await client.from("restaurant_banks").select(bankColumns)
+          .eq("restaurant_id", id).order("id").range(offset, offset + 99);
+        checkSdkError(error);
+        if (!data) throw new SellerBankError("BANK_READ_FAILED");
+        if (!data.length) break;
+        for (const row of data) banks.push({ id: row.id, restaurant_id: row.restaurant_id,
+          bank_name: row.bank_name, account_no: row.account_no, account_name: row.account_name, is_default: row.is_default });
+        offset += data.length;
+      }
+      return { banks };
+    } catch (error) {
+      if (error instanceof SellerBankError) throw error;
+      if (error instanceof SellerAccessError && error.code !== "SUPABASE_OPERATION_FAILED") throw new SellerBankError(error.code);
+      throw new SellerBankError("BANK_READ_FAILED");
+    }
+  },
+  async createStaffInvitation(userId: string, restaurantId: unknown, input: unknown, supplied?: SupabaseClient): Promise<StaffInvitationResult> {
     const id = uuidValue(restaurantId).toLowerCase();
     if (!isRecord(input)) invalid("payload", "Phải là object JSON.");
     assertFields(input, [], "payload");
     // Import lười để thiếu secret QR không ảnh hưởng đăng ký/quán/ngân hàng.
     const tokens = await import("@/lib/seller/staff-token");
     staffTokenCall(tokens, () => tokens.assertStaffTokenConfiguration());
-    await staffTransaction(async (client) => {
-      const profile = await client.query<{ role: string; status: string }>(
-        "SELECT role, status FROM public.users WHERE id = $1 FOR UPDATE", [userId],
-      );
-      const user = profile.rows[0];
-      if (!user) throw new SellerStaffError("PROFILE_NOT_FOUND");
-      if (user.status !== "active") throw new SellerStaffError("ACCOUNT_INACTIVE");
-      if (user.role !== "seller") throw new SellerStaffError("SELLER_REQUIRED");
-      const restaurant = await client.query<{ id: string }>(
-        "SELECT id FROM public.restaurants WHERE id = $1 AND owner_id = $2 FOR UPDATE", [id, userId],
-      );
-      // Không lọc status/operating_status: quán inactive hoặc closed vẫn tuyển được.
-      if (!restaurant.rows.length) throw new SellerStaffError("RESTAURANT_NOT_FOUND");
-    });
+    try {
+      const { client, profile } = await sellerSession(userId, supplied);
+      if (profile.role !== "seller") throw new SellerStaffError("SELLER_REQUIRED");
+      // No status/operating_status filter: closed/inactive restaurants may recruit.
+      if (!await ownsRestaurant(client, userId, id)) throw new SellerStaffError("RESTAURANT_NOT_FOUND");
+    } catch (error) { throw staffAccessError(error); }
     const issued = staffTokenCall(tokens, () => tokens.issueStaffToken(id, userId));
     const qrPayload = JSON.stringify({ type: "studentfood.staff-invite", version: 1, token: issued.token });
     try {
@@ -413,45 +412,46 @@ export const SellerServices = {
     } catch { throw new SellerStaffError("STAFF_OPERATION_FAILED"); }
   },
 
-  async joinStaff(userId: string, input: unknown): Promise<StaffJoinResult> {
+  async joinStaff(userId: string, input: unknown, supplied?: SupabaseClient): Promise<StaffJoinResult> {
     if (!isRecord(input)) invalid("payload", "Phải là object JSON.");
     assertFields(input, ["token"], "payload");
     if (typeof input.token !== "string" || !input.token) invalid("token", "Phải gửi token.");
     const tokens = await import("@/lib/seller/staff-token");
     const claims = staffTokenCall(tokens, () => tokens.verifyStaffToken(input.token));
-    const studentId = uuidValue(userId, "userId").toLowerCase();
-    return await staffTransaction(async (client) => {
-      // Khóa tất cả user theo thứ tự UUID cố định trước quán để tránh vòng chờ.
-      const ids = Array.from(new Set([studentId, claims.issuedBy])).sort();
-      const profiles = await client.query<{ id: string; role: string; status: string; work_for_restaurant_id: string | null }>(
-        `SELECT id, role, status, work_for_restaurant_id FROM public.users
-         WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE`, [ids],
-      );
-      const issuer = profiles.rows.find((row) => row.id === claims.issuedBy);
-      if (!issuer || issuer.status !== "active" || issuer.role !== "seller") throw new SellerStaffError("ISSUER_NOT_ALLOWED");
-      const student = profiles.rows.find((row) => row.id === studentId);
-      if (!student) throw new SellerStaffError("PROFILE_NOT_FOUND");
-      if (student.status !== "active") throw new SellerStaffError("ACCOUNT_INACTIVE");
-      if (student.work_for_restaurant_id !== null) throw new SellerStaffError("STAFF_MEMBERSHIP_CONFLICT");
-      if (student.role !== "student") throw new SellerStaffError("STAFF_ROLE_CONFLICT");
-      const restaurant = await client.query<{ id: string }>(
-        "SELECT id FROM public.restaurants WHERE id = $1 AND owner_id = $2 FOR UPDATE", [claims.restaurantId, claims.issuedBy],
-      );
-      if (!restaurant.rows.length) throw new SellerStaffError("RESTAURANT_NOT_FOUND");
-      // Kiểm tra lại hạn dùng sau khi chờ khóa. Không tiêu thụ nonce, không lưu token.
+    try {
+      const { client, profile } = await sellerSession(userId, supplied);
+      const { data: membership, error } = await client.from("users").select("work_for_restaurant_id").eq("id", userId).maybeSingle();
+      checkSdkError(error);
+      if (!membership) throw new SellerStaffError("PROFILE_NOT_FOUND");
+      if (membership.work_for_restaurant_id !== null) throw new SellerStaffError("STAFF_MEMBERSHIP_CONFLICT");
+      if (profile.role !== "student") throw new SellerStaffError("STAFF_ROLE_CONFLICT");
+      const { data: issuer, error: issuerError } = await client.from("users").select("role,status").eq("id", claims.issuedBy).maybeSingle();
+      checkSdkError(issuerError);
+      if (!issuer || issuer.role !== "seller" || issuer.status !== "active") throw new SellerStaffError("ISSUER_NOT_ALLOWED");
+      if (!await ownsRestaurant(client, claims.issuedBy, claims.restaurantId)) throw new SellerStaffError("RESTAURANT_NOT_FOUND");
       staffTokenCall(tokens, () => tokens.verifyStaffToken(input.token));
-      const updated = await client.query<StaffJoinResult["profile"]>(
-        `UPDATE public.users SET role = 'staff', work_for_restaurant_id = $1, updated_at = now()
-         WHERE id = $2 AND status = 'active' AND role = 'student' AND work_for_restaurant_id IS NULL
-         RETURNING id, role, work_for_restaurant_id`, [claims.restaurantId, studentId],
-      );
-      if (updated.rowCount !== 1 || updated.rows.length !== 1) throw new SellerStaffError("STAFF_ROLE_CONFLICT");
-      const row = updated.rows[0];
-      if (row.id !== studentId || row.role !== "staff" || row.work_for_restaurant_id !== claims.restaurantId) {
-        throw new SellerStaffError("STAFF_OPERATION_FAILED");
+      // The reviewed migration re-verifies the signed token and locks/rechecks all
+      // identities in DB. Session client only; one RPC, no retries/compensation.
+      let result;
+      try { result = await client.rpc("join_staff_qr", { p_token: input.token }); }
+      catch { throw new SellerStaffError("STAFF_JOIN_RESULT_UNKNOWN"); }
+      if (result.error) {
+        const known = ["UNAUTHORIZED", "PROFILE_NOT_FOUND", "ACCOUNT_INACTIVE", "STAFF_ROLE_CONFLICT",
+          "STAFF_MEMBERSHIP_CONFLICT", "ISSUER_NOT_ALLOWED", "RESTAURANT_NOT_FOUND", "INVALID_STAFF_TOKEN",
+          "STAFF_TOKEN_EXPIRED", "STAFF_TOKEN_CONFIGURATION_MISSING"] as const;
+        const code = known.find(code => code === result.error.message);
+        if (code) throw new SellerStaffError(code);
+        if (["PGRST202", "42883"].includes(result.error.code)) throw new SellerStaffError("STAFF_JOIN_RPC_UNAVAILABLE");
+        if (result.error.code === "42501") throw new SellerStaffError("DATABASE_ACCESS_DENIED");
+        throw new SellerStaffError("STAFF_JOIN_RESULT_UNKNOWN");
       }
-      return { profile: { id: row.id, role: row.role, work_for_restaurant_id: row.work_for_restaurant_id } };
-    });
+      const row = result.data?.profile;
+      if (!row || row.id !== userId || row.role !== "staff" || row.work_for_restaurant_id !== claims.restaurantId) {
+        throw new SellerStaffError("STAFF_JOIN_RESULT_UNKNOWN");
+      }
+      return { profile: { id: row.id, role: "staff", work_for_restaurant_id: row.work_for_restaurant_id } };
+
+    } catch (error) { throw staffAccessError(error); }
   },
 
   validateBankCreate(input: unknown): SellerBankCreate {
@@ -476,17 +476,17 @@ export const SellerServices = {
   },
 
   // userId luôn do API truyền từ session đã xác minh, restaurant_id không lấy từ body.
-  async createRestaurantBank(userId: string, restaurantId: unknown, input: unknown): Promise<SellerBankResult> {
+  async createRestaurantBank(userId: string, restaurantId: unknown, input: unknown, client?: SupabaseClient): Promise<SellerBankResult> {
     const id = uuidValue(restaurantId);
     const data = SellerServices.validateBankCreate(input);
-    return await writeRestaurantBank(userId, id, { mode: "create", data });
+    return await writeRestaurantBank(userId, id, { mode: "create", data }, client);
   },
 
-  async updateRestaurantBank(userId: string, restaurantId: unknown, bankId: unknown, input: unknown): Promise<SellerBankResult> {
+  async updateRestaurantBank(userId: string, restaurantId: unknown, bankId: unknown, input: unknown, client?: SupabaseClient): Promise<SellerBankResult> {
     const id = uuidValue(restaurantId);
     const targetId = uuidValue(bankId, "bankId");
     const data = SellerServices.validateBankUpdate(input);
-    return await writeRestaurantBank(userId, id, { mode: "update", bankId: targetId, data });
+    return await writeRestaurantBank(userId, id, { mode: "update", bankId: targetId, data }, client);
   },
 
   validateRestaurantUpdate(input: unknown): SellerRestaurantPatch {
@@ -501,90 +501,36 @@ export const SellerServices = {
     return patch;
   },
 
-  // Danh tính userId được API xác minh; kiểm tra ID và toàn bộ PATCH trước khi xin connection.
-  async updateRestaurant(userId: string, restaurantId: unknown, input: unknown): Promise<SellerRestaurantUpdateResult> {
+  // PATCH chỉ gửi các cột đã validate. Session client và owner filter bảo vệ dữ liệu;
+  // RLS phải kiểm tra quyền hiện tại ngay tại UPDATE, không dùng admin bỏ qua policy.
+  async updateRestaurant(userId: string, restaurantId: unknown, input: unknown, supplied?: SupabaseClient): Promise<SellerRestaurantUpdateResult> {
     const id = uuidValue(restaurantId);
     const patch = SellerServices.validateRestaurantUpdate(input);
-    const client = await (async () => {
-      try {
-        return await getDatabasePool().connect();
-      } catch (error) {
-        throw new SellerRestaurantUpdateError(error instanceof DatabaseConfigurationError ? error.code : "UPDATE_FAILED");
-      }
-    })();
-    let transactionStarted = false;
-    let discardConnection = false;
     try {
-      await client.query("BEGIN");
-      transactionStarted = true;
-      // Giữ cùng thứ tự khóa với đăng ký: user trước, quán sau.
-      // public.users.id = Auth UUID là giả định theo repository, chưa xác minh DB thật.
-      const profile = await client.query<{ role: string; status: string }>(
-        "SELECT role, status FROM public.users WHERE id = $1 FOR UPDATE", [userId],
-      );
-      const user = profile.rows[0];
-      if (!user) throw new SellerRestaurantUpdateError("PROFILE_NOT_FOUND");
-      if (user.status !== "active") throw new SellerRestaurantUpdateError("ACCOUNT_INACTIVE");
-      if (user.role !== "seller") throw new SellerRestaurantUpdateError("SELLER_REQUIRED");
-
-      const owned = await client.query<{ id: string }>(
-        "SELECT id FROM public.restaurants WHERE id = $1 AND owner_id = $2 FOR UPDATE", [id, userId],
-      );
-      // Không phân biệt quán không tồn tại và quán thuộc người khác; không lọc status quán.
-      if (!owned.rows.length) throw new SellerRestaurantUpdateError("RESTAURANT_NOT_FOUND");
-      const values: (string | null)[] = [];
-      const assignments: string[] = [];
-      // Tên cột chỉ xuất phát từ allowlist cố định, không nội suy tên field của client.
+      const { client, profile } = await sellerSession(userId, supplied);
+      if (profile.role !== "seller") throw new SellerRestaurantUpdateError("SELLER_REQUIRED");
+      if (!await ownsRestaurant(client, userId, id)) throw new SellerRestaurantUpdateError("RESTAURANT_NOT_FOUND");
+      const values: Record<string, unknown> = { updated_at: new Date().toISOString() };
       for (const column of ["name", "description", "location"] as const) {
-        if (Object.hasOwn(patch, column)) {
-          values.push(patch[column]!);
-          assignments.push(`${column} = $${values.length}`);
-        }
+        if (Object.hasOwn(patch, column)) values[column] = patch[column];
       }
-      if (patch.schedule !== undefined) {
-        const hours = operatingHours(patch.schedule);
-        values.push(hours === null ? null : JSON.stringify(hours));
-        assignments.push(`operating_hours = $${values.length}::jsonb`);
-      }
-      assignments.push("updated_at = now()");
-      values.push(id, userId);
-      const updated = await client.query<SellerRestaurantUpdateResult["restaurant"]>(
-        `UPDATE public.restaurants SET ${assignments.join(", ")}
-         WHERE id = $${values.length - 1} AND owner_id = $${values.length}
-         RETURNING id, name, description, location, operating_hours`, values,
-      );
-      if (updated.rowCount === 0) throw new SellerRestaurantUpdateError("RESTAURANT_NOT_FOUND");
-      if (updated.rowCount !== 1 || updated.rows.length !== 1) throw new SellerRestaurantUpdateError("UPDATE_FAILED");
-      // Dựng response theo allowlist trước commit; không trả slug, status hoặc delivery_token.
-      const row = updated.rows[0];
-      const result: SellerRestaurantUpdateResult = { restaurant: {
-        id: row.id, name: row.name, description: row.description,
-        location: row.location, operating_hours: row.operating_hours,
-      } };
-      await client.query("COMMIT");
-      transactionStarted = false;
-      return result;
+      if (patch.schedule !== undefined) values.operating_hours = operatingHours(patch.schedule);
+      const { data, error } = await client.from("restaurants").update(values)
+        .eq("id", id).eq("owner_id", userId).select("id,name,description,location,operating_hours").maybeSingle();
+      checkSdkError(error);
+      if (!data) throw new SellerRestaurantUpdateError("RESTAURANT_NOT_FOUND");
+      return { restaurant: { id: data.id, name: data.name, description: data.description,
+        location: data.location, operating_hours: data.operating_hours } };
     } catch (error) {
-      if (transactionStarted) {
-        try {
-          await client.query("ROLLBACK");
-        } catch {
-          discardConnection = true;
-          throw new SellerRestaurantUpdateError("UPDATE_FAILED");
-        }
-      } else {
-        discardConnection = true;
-      }
       if (error instanceof SellerRestaurantUpdateError) throw error;
+      if (error instanceof SellerAccessError && error.code !== "SUPABASE_OPERATION_FAILED") throw new SellerRestaurantUpdateError(error.code);
       throw new SellerRestaurantUpdateError("UPDATE_FAILED");
-    } finally {
-      client.release(discardConnection);
     }
   },
 
   // Nhận JSON đã parse dưới dạng unknown; kiểm tra toàn bộ trước khi trả kết quả.
   // Hàm validation không tự xác thực/ghi DB. API lấy danh tính từ session;
-  // register gọi hàm này trước khi xin connection và thực hiện transaction.
+  // register gọi hàm này trước khi kiểm tra điều kiện đăng ký và cơ chế ghi nguyên tử.
   validateRegistration(input: unknown): ValidatedSellerRegistration {
     if (!isRecord(input)) invalid("payload", "Phải là object JSON.");
     // Từ chối cả trường lạ và owner_id/user_id/role, không spread input vào output.
@@ -595,98 +541,70 @@ export const SellerServices = {
     const cash = booleanValue(input.cash, "cash");
     const bank = booleanValue(input.bank, "bank");
     if (!cash && !bank) invalid("payment", "Phải chọn ít nhất một phương thức thanh toán.");
+    if (typeof input.appLockPin !== "string" || !/^[0-9]{4}$/.test(input.appLockPin)) {
+      invalid("appLockPin", "PIN phải là chuỗi đúng 4 chữ số.");
+    }
 
     // Chấp nhận boolean của UI cũ nhưng không trả lại: quán mới phải closed
     // theo quy tắc server; client không được quyết định trạng thái ban đầu.
     if (input.startClosed !== undefined) booleanValue(input.startClosed, "startClosed");
     const schedule = validateSchedule(input);
-    return { name, description, location, cash, bank, schedule };
+    return { name, description, location, cash, bank, appLockPin: input.appLockPin, schedule };
   },
 
-  // userId chỉ do server truyền sau auth.getUser(), không lấy từ JSON client.
-  async register(userId: string, input: unknown): Promise<SellerRegistrationResult> {
+  // register_seller đã được quản lý DB cung cấp định nghĩa đang triển khai:
+  // auth.uid() → khóa user → active/student → đổi role và tạo quán closed trong
+  // cùng lời gọi RPC. Không ghi bổ sung qua SDK/pg và không retry khi chưa rõ commit.
+  async register(userId: string, input: unknown, supplied?: SupabaseClient): Promise<SellerRegistrationResult> {
     const validated = SellerServices.validateRegistration(input);
-    const hours = operatingHours(validated.schedule);
-    // Validation hoàn tất trước khi xin connection; không fallback qua Supabase Data API.
-    const client = await (async () => {
-      try {
-        return await getDatabasePool().connect();
-      } catch (error) {
-        throw new SellerRegistrationError(error instanceof DatabaseConfigurationError
-          ? error.code : "REGISTRATION_FAILED");
-      }
-    })();
-    let discardConnection = false;
     try {
-      // Chỉ retry tối đa 3 lần khi đúng constraint slug; mỗi lần là transaction mới
-      // trên cùng connection và phải khóa/kiểm tra lại user sau rollback.
-      for (let attempt = 0; attempt < 3; attempt++) {
-        let transactionStarted = false;
-        try {
-          await client.query("BEGIN");
-          transactionStarted = true;
-          // Giả định theo code hiện có: public.users.id chính là Supabase Auth UUID.
-          // Khóa user, không đếm quán hoặc áp đặt giới hạn một quán mỗi chủ.
-          const profile = await client.query<{ role: string; status: string }>(
-            "SELECT role, status FROM public.users WHERE id = $1 FOR UPDATE", [userId],
-          );
-          const user = profile.rows[0];
-          if (!user) throw new SellerRegistrationError("PROFILE_NOT_FOUND");
-          if (user.status !== "active") throw new SellerRegistrationError("ACCOUNT_INACTIVE");
-          // Request lặp/sau request đồng thời đã commit sẽ dừng ở đây trước insert.
-          if (user.role !== "student") throw new SellerRegistrationError("ROLE_CONFLICT");
-
-          const restaurant = await client.query<SellerRegistrationResult["restaurant"]>(
-            `INSERT INTO public.restaurants
-              (id, owner_id, name, slug, description, location, operating_hours, operating_status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'closed')
-             RETURNING id, slug, operating_status`,
-            [randomUUID(), userId, validated.name, restaurantSlug(validated.name), validated.description,
-              validated.location, hours === null ? null : JSON.stringify(hours)],
-          );
-          if (restaurant.rowCount !== 1 || restaurant.rows.length !== 1
-            || restaurant.rows[0].operating_status !== "closed") {
-            throw new SellerRegistrationError("REGISTRATION_FAILED");
-          }
-          // Không truyền status để dùng default trong schema repo; không trả delivery_token.
-          const updated = await client.query(
-            `UPDATE public.users SET role = 'seller', updated_at = now()
-             WHERE id = $1 AND role = 'student' AND status = 'active'`, [userId],
-          );
-          if (updated.rowCount !== 1) throw new SellerRegistrationError("ROLE_CONFLICT");
-          await client.query("COMMIT");
-          transactionStarted = false;
-          const row = restaurant.rows[0];
-          return {
-            restaurant: { id: row.id, slug: row.slug, operating_status: row.operating_status },
-            role: "seller",
-            paymentSelectionPersisted: false,
-            message: "Đăng ký thành công. Cửa hàng đang đóng; lựa chọn thanh toán chưa được lưu hoặc áp dụng.",
-          };
-        } catch (error) {
-          if (transactionStarted) {
-            try {
-              await client.query("ROLLBACK");
-            } catch {
-              // Không trả connection có transaction lỗi vào pool.
-              discardConnection = true;
-              throw new SellerRegistrationError("REGISTRATION_FAILED");
-            }
-          } else {
-            discardConnection = true;
-          }
-          if (isSlugConflict(error)) {
-            if (attempt < 2) continue;
-            throw new SellerRegistrationError("SLUG_CONFLICT");
-          }
-          if (error instanceof SellerRegistrationError) throw error;
-          // Không log/trả lỗi PostgreSQL thô, query parameters hoặc credential.
-          throw new SellerRegistrationError("REGISTRATION_FAILED");
-        }
+      const { client, profile } = await sellerSession(userId, supplied);
+      if (profile.role !== "student") throw new SellerRegistrationError("ROLE_CONFLICT");
+      let result;
+      try {
+        result = await client.rpc("register_seller", {
+          p_restaurant_name: validated.name,
+          p_description: validated.description,
+          p_location: validated.location,
+          p_operating_hours: operatingHours(validated.schedule),
+          p_app_lock_pin: validated.appLockPin,
+        });
+      } catch {
+        throw new SellerRegistrationError("REGISTRATION_RESULT_UNKNOWN");
       }
+      const { data, error } = result;
+      if (error) {
+        // Chỉ map các exception đã biết; không log/return message/details từ DB.
+        const known = {
+          UNAUTHORIZED: "UNAUTHORIZED", USER_NOT_FOUND: "PROFILE_NOT_FOUND",
+          ACCOUNT_INACTIVE: "ACCOUNT_INACTIVE", ALREADY_SELLER: "ROLE_CONFLICT",
+          INVALID_ROLE: "ROLE_CONFLICT", RESTAURANT_ALREADY_EXISTS: "ROLE_CONFLICT",
+        } as const;
+        if (Object.hasOwn(known, error.message)) throw new SellerRegistrationError(known[error.message as keyof typeof known]);
+        if (error.message === "INVALID_PIN") invalid("appLockPin", "PIN phải là chuỗi đúng 4 chữ số.");
+        if (error.message === "VALIDATION_ERROR") invalid("payload", "Dữ liệu đăng ký chưa hợp lệ.");
+        if (error.code === "42501") throw new SellerRegistrationError("DATABASE_ACCESS_DENIED");
+        if (error.code === "PGRST202" || error.code === "42883") throw new SellerRegistrationError("REGISTRATION_RPC_UNAVAILABLE");
+        if (error.code === "23505" && typeof error.message === "string" && error.message.includes('"restaurants_slug_key"')) {
+          throw new SellerRegistrationError("SLUG_CONFLICT");
+        }
+        if (!error.code) throw new SellerRegistrationError("REGISTRATION_RESULT_UNKNOWN");
+        throw new SellerRegistrationError("REGISTRATION_FAILED");
+      }
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!isRecord(data) || data.success !== true || !isRecord(data.user) || data.user.id !== userId || data.user.role !== "seller"
+        || !isRecord(data.restaurant) || typeof data.restaurant.id !== "string" || !uuid.test(data.restaurant.id)
+        || typeof data.restaurant.slug !== "string" || !data.restaurant.slug.trim() || data.restaurant.operating_status !== "closed") {
+        // RPC có thể đã commit: không xóa bù/đổi role bù hay tự gọi lại.
+        throw new SellerRegistrationError("REGISTRATION_RESULT_UNKNOWN");
+      }
+      return { restaurant: { id: data.restaurant.id, slug: data.restaurant.slug, operating_status: "closed" },
+        role: "seller", paymentSelectionPersisted: false,
+        message: "Đăng ký thành công. Cửa hàng đang đóng; lựa chọn thanh toán chưa được lưu hoặc áp dụng." };
+    } catch (error) {
+      if (error instanceof SellerRegistrationError || error instanceof SellerValidationError) throw error;
+      if (error instanceof SellerAccessError && error.code !== "SUPABASE_OPERATION_FAILED") throw new SellerRegistrationError(error.code);
       throw new SellerRegistrationError("REGISTRATION_FAILED");
-    } finally {
-      client.release(discardConnection);
     }
   },
 };

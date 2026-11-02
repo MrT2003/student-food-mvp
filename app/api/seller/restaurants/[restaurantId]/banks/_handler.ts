@@ -11,8 +11,10 @@ const bankErrors = {
   BANK_NOT_FOUND: { status: 404, message: "Không tìm thấy tài khoản ngân hàng." },
   BANK_ACCOUNT_CONFLICT: { status: 409, message: "Số tài khoản đã tồn tại trong cửa hàng này." },
   BANK_WRITE_FAILED: { status: 500, message: "Không thể lưu tài khoản ngân hàng. Vui lòng thử lại." },
-  DATABASE_CONFIGURATION_MISSING: { status: 503, message: "Chức năng ngân hàng chưa được cấu hình." },
-  DATABASE_CONFIGURATION_INVALID: { status: 503, message: "Cấu hình chức năng ngân hàng chưa hợp lệ." },
+  BANK_READ_FAILED: { status: 500, message: "Không thể tải tài khoản ngân hàng. Vui lòng thử lại." },
+  UNAUTHORIZED: { status: 401, message: "Vui lòng đăng nhập lại." },
+  DATABASE_ACCESS_DENIED: { status: 403, message: "Không có quyền lưu tài khoản ngân hàng." },
+  BANK_DEFAULT_ATOMICITY_UNAVAILABLE: { status: 503, message: "Chưa có cơ chế chuyển ngân hàng mặc định nguyên tử được xác minh. Không thay đổi mặc định hiện tại." },
 } as const;
 
 function failure(code: string, message: string, status: number) {
@@ -23,9 +25,9 @@ function failure(code: string, message: string, status: number) {
 export async function handleBankRequest(
   request: Request,
   params: Promise<{ restaurantId: string; bankId?: string }>,
-  mode: "create" | "update",
+  mode: "create" | "update" | "read",
 ) {
-  if (!isSameOrigin(request)) {
+  if (mode !== "read" && !isSameOrigin(request)) {
     return failure("FORBIDDEN", "Yêu cầu không hợp lệ.", 403);
   }
   try {
@@ -33,6 +35,10 @@ export async function handleBankRequest(
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) return failure("UNAUTHORIZED", "Vui lòng đăng nhập lại.", 401);
     const { restaurantId, bankId } = await params;
+    if (mode === "read") {
+      const result = await SellerServices.listRestaurantBanks(data.user.id, restaurantId, supabase);
+      return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
+    }
     let input: unknown;
     try {
       input = await request.json();
@@ -40,8 +46,8 @@ export async function handleBankRequest(
       return failure("INVALID_JSON", "Nội dung JSON không hợp lệ.", 400);
     }
     const result = mode === "create"
-      ? await SellerServices.createRestaurantBank(data.user.id, restaurantId, input)
-      : await SellerServices.updateRestaurantBank(data.user.id, restaurantId, bankId, input);
+      ? await SellerServices.createRestaurantBank(data.user.id, restaurantId, input, supabase)
+      : await SellerServices.updateRestaurantBank(data.user.id, restaurantId, bankId, input, supabase);
     return NextResponse.json(result, { status: mode === "create" ? 201 : 200, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof SellerValidationError) return failure("VALIDATION_ERROR", error.message, 400);
@@ -49,6 +55,7 @@ export async function handleBankRequest(
       const detail = bankErrors[error.code];
       return failure(error.code, detail.message, detail.status);
     }
-    return failure("BANK_WRITE_FAILED", bankErrors.BANK_WRITE_FAILED.message, 500);
+    const code = mode === "read" ? "BANK_READ_FAILED" : "BANK_WRITE_FAILED";
+    return failure(code, bankErrors[code].message, 500);
   }
 }

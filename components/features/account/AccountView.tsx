@@ -15,6 +15,7 @@ import {
   type FormEvent,
 } from "react";
 import AccountSecurity from "./AccountSecurity";
+import AccountStoreJoin from "./AccountStoreJoin";
 import AccountNotifications from "./AccountNotifications";
 import AccountSuccessModal from "./AccountSuccessModal";
 
@@ -260,6 +261,8 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
           </form>
         </div>
       </section>
+
+      <AccountStoreJoin />
 
       <AccountSecurity />
       {/* Component riêng quản lý quyền và đăng ký FCM, không phụ thuộc form sửa profile. */}

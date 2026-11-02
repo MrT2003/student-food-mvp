@@ -1,4 +1,12 @@
+> Bản chuẩn bị DB mới: xem [staff-qr-db-rollout.md](./staff-qr-db-rollout.md). Application đã gọi join_staff_qr bằng session; migration mới CHƯA ÁP DỤNG. Các mô tả chặn cố định/pg bên dưới là lịch sử.
+
+> Cập nhật hiện tại: xem [staff-sdk-ui.md](./staff-sdk-ui.md). QR đã dùng session SDK; join chặn trước ghi vì chưa xác minh cơ chế DB nguyên tử. Nội dung pg bên dưới là lịch sử, không phản ánh implementation QR hiện tại.
+
 # QR tuyển staff và quyền staff — đợt 4B
+
+> Ngày 2026-10-28: seller registration/quán/ngân hàng đã được tách khỏi yêu cầu pg
+> theo seller-supabase-migration.md. Riêng hai API QR/join dưới đây vẫn giữ nguyên
+> pg/DATABASE_URL và STAFF_INVITATION_SECRET; không suy ra chúng đã được chuyển SDK.
 
 Prompt 4B ưu tiên hơn question.md và thiết kế 4A: không pending, không seller duyệt
 tuyển dụng. QR nhiều người dùng trong 300 giây; tham gia thành công không tiêu thụ
@@ -107,7 +115,7 @@ trước khi thử lại; không có idempotency/single-use token.
 - 410 STAFF_TOKEN_EXPIRED: tạo mã mới, không sửa hạn token.
 - 503 thiếu/sai cấu hình; 500 STAFF_OPERATION_FAILED. Không trả/log lỗi DB/token thô.
 
-## Staff mua hàng — có phụ thuộc DB chưa đáp ứng
+## Staff mua hàng — cần xác minh RPC/RLS triển khai
 
 Application guard assertPurchaseAccess cho active student/staff mua hàng của chính
 UUID được xác minh. CartServices dùng guard cho đọc giỏ và mọi mutation RPC;
@@ -116,20 +124,28 @@ Không thêm checkout, không đổi tính giá, tồn kho, payment hoặc quy�
 Review cuối đã bỏ log/trả nguyên lỗi DB/RPC ở cart/order; giữ các thông báo nghiệp
 vụ checkout đã biết, lỗi không biết dùng thông báo cố định. Không đổi RPC/payload.
 
-**Blocker xác định trong repo:** services/order.service.ts gọi create_checkout_orders;
-supabase/rpc/create_checkout_orders.sql chỉ kiểm tra role='student' (khoảng dòng 44),
-nên staff bị ACCOUNT_NOT_ALLOWED nếu DB dùng đúng bản này. create_checkout_order.sql
-có cho student/staff nhưng khác contract và còn chứa ALTER TABLE, không được đổi
-caller/chạy SQL để né giới hạn. Không thay đổi cả hai RPC.
+**Sau merge pre-develop trên phong-seller-integration:** OrderServices gọi
+create_checkout_orders với p_restaurant_preferences (thanh toán/ghi chú từng quán).
+SQL hiện tại trong repo đã nhận active student/staff. Nhận định student-only trong
+báo cáo trước merge là lịch sử, không còn mô tả bản repo này. Chưa chứng minh RPC
+đang triển khai trên DB thật khớp repo; không chạy hoặc sửa SQL để ép test đạt.
 
 add_to_cart, update_cart_item_quantity, update_cart_item_options, delete_cart_item
 được gọi từ CartServices nhưng chưa thấy đầy đủ định nghĩa quyền trong repo.
 RLS đọc/ghi carts/orders cho staff cũng chưa xác minh. Không fallback pg/admin.
 
-Đường UI hiện có: useCartStore re-export useStudentMockStore, OrderConfirmView gọi
-checkoutCart → simulateCheckout; useOrders/useOrderDetail đọc mock store.
-Mock checkout vốn nhận student/staff nhưng tài khoản fixture mặc định student.
-Không sửa hoặc coi UI mock là bằng chứng đã nối DB thật; Triều tích hợp riêng.
+Đường UI hiện có là hỗn hợp: useCartStore re-export useStudentMockStore, nhưng store
+có syncFromDatabase → CartServices.getCart và đọc orders bằng session; các action
+addToDatabaseCart/updateDatabaseCartQuantity/removeDatabaseCartItem/checkoutDatabaseCart
+đã gọi service thật. AddToCartBtn cũng gọi CartServices trực tiếp. Tên store có chữ
+Mock không đủ để kết luận mọi thao tác là giả.
+
+Tuy nhiên OrderConfirmView.handleConfirm vẫn gọi checkoutCart → simulateCheckout;
+useOrders/useOrderDetail/useCheckout đọc orderRecords trong store. syncFromDatabase
+gộp orders thật với state cũ và nuốt lỗi bằng console.error; khi không có serverCart,
+update/remove database-cart còn chuyển sang action local. Các nhánh này có thể hiển
+thị state cũ/demo thay cho lỗi, chưa phải bằng chứng DB đã cập nhật. Triều cần nối
+đúng action và xử lý lỗi; không sửa UI/store trong lượt kiểm thử backend.
 
 ## Staff/seller chấp nhận đơn
 

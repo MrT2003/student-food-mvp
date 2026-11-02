@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { FirebaseAdminService } from "@/services/firebase-admin.service";
+import { isSameOrigin } from "@/lib/http/request-origin";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ function respond(body: object, status = 200, extraHeaders: Record<string, string
 export async function POST(request: Request) {
   if (process.env.NODE_ENV !== "development") return respond({ code: "NOT_FOUND" }, 404);
   // Cookie tự gửi từ browser: kiểm tra origin để trang khác không kích hoạt push thử.
-  if (request.headers.get("origin") !== new URL(request.url).origin) {
+  if (!isSameOrigin(request)) {
     return respond({ code: "INVALID_ORIGIN", message: "Nguồn yêu cầu không hợp lệ." }, 403);
   }
   try {

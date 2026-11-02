@@ -16,6 +16,8 @@ export function useForegroundNotifications(userId: string) {
   useEffect(() => {
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
+    let starting = false;
+    let generation = 0;
     // Giữ tối đa 200 ID trong vòng đời listener, kể cả toast đã đóng; tránh tăng bộ nhớ vô hạn.
     const seen = new Set<string>();
     const canReceive = () => {
@@ -26,15 +28,30 @@ export function useForegroundNotifications(userId: string) {
         return saved?.userId === userId && saved.enabled && Boolean(saved.token);
       } catch { return false; }
     };
-    const clearIfDisabled = () => { if (!canReceive()) setNotifications([]); };
+    const clearIfDisabled = () => {
+      if (!canReceive()) { setNotifications([]); setError(null); }
+      syncSubscription();
+    };
     const onStorage = (event: StorageEvent) => {
       if (event.key === PUSH_STORAGE_KEY || event.key === null) clearIfDisabled();
     };
     window.addEventListener(PUSH_CHANGED, clearIfDisabled);
     window.addEventListener("storage", onStorage);
 
-    void (async () => {
-      if (!await FirebaseService.isBrowserSupported() || disposed) return;
+    // FCM is optional: a logged-in seller who never enabled push must not
+    // initialize Firebase (or see config errors) just by opening the dashboard.
+    function syncSubscription() {
+      if (disposed) return;
+      if (!canReceive()) {
+        generation++; starting = false;
+        unsubscribe?.(); unsubscribe = undefined;
+        return;
+      }
+      if (starting || unsubscribe) return;
+      const run = ++generation;
+      starting = true;
+      void (async () => {
+      if (!await FirebaseService.isBrowserSupported() || disposed || run !== generation || !canReceive()) return;
       const stop = await FirebaseService.onForegroundMessage((payload) => {
         if (disposed || document.visibilityState !== "visible" || !canReceive()) return;
         const data = payload.data;
@@ -54,13 +71,15 @@ export function useForegroundNotifications(userId: string) {
         setNotifications((current) => [...current, notification].slice(-3));
       });
       // SDK import bất đồng bộ có thể hoàn tất sau unmount/Strict Mode cleanup.
-      if (disposed) stop(); else unsubscribe = stop;
-    })().catch(() => {
-      if (!disposed) setError("Chưa thể nhận thông báo trong trang. Vui lòng tải lại để thử lại.");
-    });
+      if (disposed || run !== generation || !canReceive()) stop(); else unsubscribe = stop;
+      })().catch(() => {
+        if (!disposed && run === generation && canReceive()) setError("Chưa thể nhận thông báo trong trang. Vui lòng tải lại để thử lại.");
+      }).finally(() => { if (run === generation) starting = false; });
+    }
+    syncSubscription();
 
     return () => {
-      disposed = true;
+      disposed = true; generation++;
       unsubscribe?.();
       window.removeEventListener(PUSH_CHANGED, clearIfDisabled);
       window.removeEventListener("storage", onStorage);

@@ -74,7 +74,7 @@ async function sendToUser(input: UserPushMessage): Promise<PushSendResult> {
     recipientUserId: input.userId, // Frontend kiểm tra owner trước khi hiển thị message đến trễ.
     ...(input.orderId ? { orderId: input.orderId } : {}) };
   if (Buffer.byteLength(JSON.stringify(data), "utf8") > 3500) throw new Error("PUSH_MESSAGE_TOO_LARGE");
-  // Create supabase admin client 
+  // Create supabase admin client
   const admin = createAdminClient();
   const { data: user, error: userError } = await admin.from("users").select("status").eq("id", input.userId).maybeSingle();
   if (userError) throw new Error("PUSH_USER_LOOKUP_FAILED");
@@ -90,7 +90,7 @@ async function sendToUser(input: UserPushMessage): Promise<PushSendResult> {
     const { data: rows, error } = await query;
     // Không throw sau khi đã gửi một phần: caller cần biết kết quả để tránh gửi lại các token thành công.
     if (error) { result.lookupFailed = true; break; }
-    if (!rows?.length) break; 
+    if (!rows?.length) break;
     const messaging = messagingClient();
     result.attempted += rows.length;
     let responses;

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSellerPreviewStore } from "@/store/useSellerPreviewStore";
+import { submitSellerRegistration } from "@/lib/seller/register-client";
 import { CloudinaryService } from "@/services/cloudinary.service";
 import {
   useEffect,
@@ -83,6 +83,7 @@ export default function SellerRegistrationView() {
   const [cash, setCash] = useState(true);
   const [bank, setBank] = useState(true);
   const [startClosed, setStartClosed] = useState(false);
+  const [appLockPin, setAppLockPin] = useState("");
 
   const [imagePreview, setImagePreview] = useState("");
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -90,6 +91,8 @@ export default function SellerRegistrationView() {
 
   const [errors, setErrors] = useState<string[]>([]);
   const [message, setMessage] = useState("");
+  const [pending, setPending] = useState(false);
+  const submitting = useRef(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadRequestIdRef = useRef(0);
@@ -149,8 +152,9 @@ export default function SellerRegistrationView() {
     );
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting.current) return;
     setMessage("");
 
     const nextErrors: string[] = [];
@@ -166,6 +170,9 @@ export default function SellerRegistrationView() {
     }
     if (!cash && !bank) {
       nextErrors.push("Vui lòng chọn ít nhất một phương thức thanh toán.");
+    }
+    if (!/^[0-9]{4}$/.test(appLockPin)) {
+      nextErrors.push("Vui lòng nhập PIN gồm đúng 4 chữ số.");
     }
     if (isUploadingImage) {
       nextErrors.push("Vui lòng chờ tải ảnh lên Cloudinary hoàn tất.");
@@ -203,21 +210,25 @@ export default function SellerRegistrationView() {
     setErrors(nextErrors);
     if (nextErrors.length > 0) return;
 
-    // Replace with a successful API response before navigating in production.
-    // Session draft does not create a restaurant or grant roles.
+    // Chỉ chuyển trang sau API thành công và tải lại profile; không tạo preview
+    // hoặc thông báo thành công nếu cơ chế DB/permission còn chặn đăng ký.
+    submitting.current = true;
+    setPending(true);
     try {
-      useSellerPreviewStore.getState().registerPreview({
-        name: name.trim(), description: description.trim(), location: location.trim(), cash, bank,
-        avatar_url: imagePreview || null,
-        hours: scheduleMode === "later" ? "Giờ hoạt động: Chưa thiết lập" : scheduleMode === "same"
-          ? `${enabledDays.map((day) => day.label).join(", ")}: ${openTime} – ${closeTime}`
-          : enabledDays.map((day) => `${day.label}: ${day.open} – ${day.close}`).join("; "),
+      const result = await submitSellerRegistration({
+        name, description, location, cash, bank, scheduleMode,
+        days, openTime, closeTime, startClosed, appLockPin,
       });
-    } catch {
-      setErrors(["Không lưu được bản xem trước trong phiên trình duyệt. Vui lòng kiểm tra quyền lưu trữ và thử lại."]);
-      return;
+      setMessage(result.message);
+      router.push("/seller");
+      router.refresh();
+    } catch (error) {
+      setErrors([error instanceof Error ? error.message : "Không thể đăng ký cửa hàng. Vui lòng thử lại sau."]);
+    } finally {
+      setAppLockPin("");
+      submitting.current = false;
+      setPending(false);
     }
-    router.push("/seller");
   }
 
   return (
@@ -572,6 +583,15 @@ export default function SellerRegistrationView() {
             </div>
           </fieldset>
 
+          <div className={styles.field}>
+            <label htmlFor="seller-app-lock-pin">PIN khóa ứng dụng <span>*</span></label>
+            <input id="seller-app-lock-pin" type="password" inputMode="numeric"
+              autoComplete="off" minLength={4} maxLength={4} pattern="[0-9]{4}"
+              required value={appLockPin} disabled={pending}
+              onChange={(event) => setAppLockPin(event.target.value)} />
+            <small>PIN gồm đúng 4 chữ số, dùng để khóa ứng dụng.</small>
+          </div>
+
           <label className={styles.closedOption}>
             <input
               type="checkbox"
@@ -605,7 +625,6 @@ export default function SellerRegistrationView() {
           {message && (
             <p className={styles.previewNotice} role="status">
               {message}
-              {" "}<Link href="/seller">Xem tổng quan seller (demo)</Link>
             </p>
           )}
 
@@ -613,23 +632,20 @@ export default function SellerRegistrationView() {
             <Link href="/account" className={styles.outlineButton}>
               Quay lại
             </Link>
-            <button
-              type="submit"
-              className={styles.primaryButton}
-              disabled={isUploadingImage}
-            >
-              {isUploadingImage ? "Đang tải ảnh…" : "Tạo cửa hàng"}
+            <button type="submit" className={styles.primaryButton} disabled={pending || isUploadingImage} aria-busy={pending || isUploadingImage}>
+              {pending ? "Đang đăng ký…" : isUploadingImage ? "Đang tải ảnh…" : "Tạo cửa hàng"}
               <ArrowRight size={21} aria-hidden="true" />
             </button>
           </div>
 
           <p className={styles.footerNote}>
+            Quán mới ở trạng thái đóng. Phương thức thanh toán sẽ được thiết lập sau.
+            Ảnh đã tải lên chưa được gắn vào quán trong bước này.
+            {" "}
             Sau khi tạo cửa hàng, bạn sẽ được chuyển đến Seller Dashboard để
             quản lý cửa hàng.
           </p>
-          <p className={styles.previewLabel}>
-            Bản UI mẫu: lưu thông tin bản xem trước trong phiên trình duyệt và chuyển đến Tổng quan.
-          </p>
+
         </form>
       </section>
     </div>

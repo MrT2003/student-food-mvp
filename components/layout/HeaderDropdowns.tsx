@@ -1,3 +1,4 @@
+import SellerAccountLink from "./SellerAccountLink";
 import { useSignOut } from "@/lib/auth/useAuthFlow";
 import styles from "@/styles/header-dropdowns.module.css";
 import {
@@ -5,7 +6,6 @@ import {
   CupSoda,
   LogOut,
   Soup,
-  Store,
   UserRound,
 } from "lucide-react";
 import Image from "next/image";
@@ -127,10 +127,7 @@ export function AccountDropdown({
           <UserRound aria-hidden="true" />
           Tài khoản của tôi
         </Link>
-        <Link href="/seller/register" onClick={onNavigate}>
-          <Store aria-hidden="true" />
-          Đăng ký bán hàng
-        </Link>
+        <SellerAccountLink onNavigate={onNavigate} />
       </div>
 
       <button

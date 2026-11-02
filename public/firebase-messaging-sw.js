@@ -10,38 +10,38 @@ function orderUrl(orderId) {
 }
 
 // Đăng ký trước khi import Firebase để handler của SDK không ghi đè thao tác click của app.
-// Lắng nghe hành động click chuột vào hộp thoại thông báo nổi trên màn hình của người dùng 
+// Lắng nghe hành động click chuột vào hộp thoại thông báo nổi trên màn hình của người dùng
 self.addEventListener("notificationclick", (event) => {
   const data = event.notification.data;
-  // Kiểm tra nguồn thông báo đến từ chính ứng dụng student-food hoặc 
-  // các thông báo gửi từ firebase, tránh việc bắt nhầm thông báo từ các trang 
-  // web khác chạy chung domain 
+  // Kiểm tra nguồn thông báo đến từ chính ứng dụng student-food hoặc
+  // các thông báo gửi từ firebase, tránh việc bắt nhầm thông báo từ các trang
+  // web khác chạy chung domain
   const ownNotification = data?.source === "student-food";
   // FCM_MSG là metadata của thông báo do Firebase tự hiển thị (notification payload).
   const firebaseMessage = data?.FCM_MSG;
   if (!ownNotification && !firebaseMessage) return;
-  // Ngăn các hộp thoại thông báo khác cùng hiển thị đồng thời 
+  // Ngăn các hộp thoại thông báo khác cùng hiển thị đồng thời
   event.stopImmediatePropagation();
-  // Thu hồi hộp thoại ngay lập tức sau khi người dùng bấm vào 
+  // Thu hồi hộp thoại ngay lập tức sau khi người dùng bấm vào
   event.notification.close();
   // Tự động trích xuất mã đơn hàng  và tạo ra đường link URL tương ứng
   const url = orderUrl(ownNotification ? data.orderId : firebaseMessage.data?.orderId);
   event.waitUntil((async () => {
     // Scan toàn bộ các cửa sổ đang mở ứng dụng student-
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    // Kiếm cửa sổ có đường dẫn URL là đường URL tạo từ hàm orderUrl() phía trên 
+    // Kiếm cửa sổ có đường dẫn URL là đường URL tạo từ hàm orderUrl() phía trên
     // và mở cửa sổ đó
     const existing = windows.find((client) => client.url === url);
     // Nếu trang đó có tồn tại thì trình duyệt không load lại trang mà chỉ
-    // dưa tab đó nổi lên trên màn hình để người dùng xem ngay lập tức 
+    // dưa tab đó nổi lên trên màn hình để người dùng xem ngay lập tức
     if (existing) return existing.focus();
-    // Nếu browser của user chưa truy cập vào trang có đường dẫn URL đã kiểm 
-    // tra phía trên thì tạo tab mới có đường dẫn là URL vừa tạo phía trên 
+    // Nếu browser của user chưa truy cập vào trang có đường dẫn URL đã kiểm
+    // tra phía trên thì tạo tab mới có đường dẫn là URL vừa tạo phía trên
     return self.clients.openWindow(url);
   })());
 });
 
-// Dynamic import vì worker nằm trong public  ---> File js / ts không được 
+// Dynamic import vì worker nằm trong public  ---> File js / ts không được
 importScripts("/api/firebase/worker-config");
 importScripts("https://www.gstatic.com/firebasejs/13.1.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/13.1.0/firebase-messaging-compat.js");

@@ -12,7 +12,7 @@ type Props = {
 };
 
 export default function RegisterView({ mode = "register" }: Props) {
-  const { pending, error, continueWithGoogle, continueWithZalo } = useSignIn();
+  const { pendingProvider, error, continueWithGoogle, continueWithZalo } = useSignIn();
   const logoutStatus = useAuthStore((state) => state.logoutStatus);
   const { logout, signOutError } = useSignOut();
   const finishingLogout = logoutStatus === "pending" || logoutStatus === "failed";
@@ -44,7 +44,7 @@ export default function RegisterView({ mode = "register" }: Props) {
             </h1>
 
             <p className="mt-4 leading-relaxed text-[#526a9e]">
-              Đăng nhập hoặc tạo tài khoản để tiếp tục.
+              {isRegister ? "Tạo tài khoản để tiếp tục." : "Đăng nhập để tiếp tục."}
             </p>
           </div>
 
@@ -62,8 +62,8 @@ export default function RegisterView({ mode = "register" }: Props) {
               <button type="button" onClick={() => void logout()}>Thử lại đăng xuất</button>
             </div>}
             <SocialAuthButtons
-              mode={mode}
-              pending={pending || finishingLogout}
+              pendingProvider={pendingProvider}
+              disabled={finishingLogout}
               error={error}
               onGoogle={() => void continueWithGoogle()}
               onZalo={() => void continueWithZalo()}

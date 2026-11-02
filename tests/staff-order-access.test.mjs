@@ -11,6 +11,7 @@ function load(file, mocks = {}) {
   const exports = {};
   vm.runInNewContext(output, { exports, URL, console: { error() { throw new Error("Must not log raw database errors"); } }, require(id) {
     if (id === "server-only") return {};
+    if (id === "@/lib/orders/approval-http") return load("../lib/orders/approval-http.ts", mocks);
     if (id === "@/lib/http/request-origin") return load("../lib/http/request-origin.ts");
     if (id in mocks) return mocks[id];
     if (id === "@/utilities/system.utility") return load("../utilities/system.utility.ts");
@@ -39,17 +40,18 @@ function fixture(options = {}) {
           if (table === "users") return { data: options.missingProfile ? null : {
             role: options.role ?? "staff", status: options.status ?? "active", work_for_restaurant_id: "work" in options ? options.work : restaurantId,
           }, error: null };
+          if (table === "carts") return { data: options.cartData ?? null, error: null };
           if (table === "restaurants") return { data: options.notOwner ? null : { id: restaurantId }, error: null };
           if (table === "orders") {
             if (call.update) {
               if (options.policyError) return { data: null, error: { code: "42501", message: "SECRET_POLICY" } };
-              if (options.hiddenUpdate || status !== "pending") return { data: null, error: null };
+              if (options.rpcConflict || status !== "pending") return { data: null, error: null };
               writes++; status = "accepted";
               return { data: { id: orderId, restaurant_id: restaurantId, order_status: status, accepted_at: call.update.accepted_at, token: "SECRET_TOKEN" }, error: null };
             }
             const staffFilter = call.filters.find(([field]) => field === "restaurant_id");
             if (options.missingOrder || (staffFilter && staffFilter[1] !== restaurantId)) return { data: null, error: null };
-            return { data: { id: orderId, restaurant_id: restaurantId, order_status: status }, error: null };
+            return { data: { id: orderId, restaurant_id: restaurantId, order_status: status, accepted_at: status === "accepted" ? "2026-11-02T03:00:00.000Z" : null }, error: null };
           }
           return { data: null, error: null };
         },
@@ -57,6 +59,13 @@ function fixture(options = {}) {
     },
     async rpc(name, payload) {
       calls.push({ rpc: name, payload });
+      if (name === "accept_order" || name === "reject_order") {
+        // Model the supplied RPC's locked pending check, not a real SQL transaction.
+        if (options.policyError) return {data:null,error:{code:"42501",message:"SECRET_POLICY"}};
+        if (options.rpcConflict || status !== "pending") return {data:null,error:{code:"P0001",message:"ORDER_INVALID_STATUS"}};
+        writes++;status=name === "accept_order" ? "accepted" : "rejected";
+        return {data:{success:true,order_id:orderId,order_status:status},error:null};
+      }
       if (options.rpcError) return { data: null, error: { message: options.rpcError } };
       if (options.rpcBlocked) return { data: null, error: { message: "ACCOUNT_NOT_ALLOWED" } };
       return { data: { orders: [], sessionCheckoutId: "test-session" }, error: null };
@@ -74,17 +83,35 @@ for (const role of ["student", "staff"]) {
   test(`${role} createOrder keeps existing RPC/price payload`, async () => {
     const f = fixture({ role });
     const { OrderServices } = load("../services/order.service.ts", { "@/lib/supabase/client": { createClient: () => f.client }, "@/lib/auth/purchase-access": f });
-    await OrderServices.createOrder({ items: [{ cartItemId: orderId, quantity: 1, expectedUnitPrice: 10000 }], deliveryAddress: "KTX A", paymentMethod: "cash", expectedTotal: 10000 });
+    await OrderServices.createOrder({ items: [{ cartItemId: orderId, quantity: 1, expectedUnitPrice: 10000 }], deliveryAddress: "KTX A", restaurantPreferences: [{ restaurant_id: restaurantId, payment_method: "cash", customer_notes: null }], expectedTotal: 10000 });
     const rpc = f.calls.find((call) => call.rpc);
     assert.equal(rpc.rpc, "create_checkout_orders"); assert.equal(rpc.payload.p_expected_total, 10000);
     assert.equal(rpc.payload.p_checkout_items[0].cart_item_id, orderId);
+    assert.deepEqual(JSON.parse(JSON.stringify(rpc.payload.p_restaurant_preferences)), [{ restaurant_id: restaurantId, payment_method: "cash", customer_notes: null }]);
+    assert.equal(Object.hasOwn(rpc.payload, "p_payment_method"), false);
   });
 }
-test("staff still blocked by existing RPC is not rerouted to elevated DB/new checkout", async () => {
+test("RPC permission failure is not rerouted to elevated DB/new checkout", async () => {
   const f = fixture({ rpcBlocked: true });
   const { OrderServices } = load("../services/order.service.ts", { "@/lib/supabase/client": { createClient: () => f.client }, "@/lib/auth/purchase-access": f });
-  await assert.rejects(OrderServices.createOrder({ items: [{ cartItemId: orderId, quantity: 1, expectedUnitPrice: 1 }], deliveryAddress: "A", paymentMethod: "cash", expectedTotal: 1 }), /ACCOUNT_NOT_ALLOWED/);
+  await assert.rejects(OrderServices.createOrder({ items: [{ cartItemId: orderId, quantity: 1, expectedUnitPrice: 1 }], deliveryAddress: "A", restaurantPreferences: [{ restaurant_id: restaurantId, payment_method: "cash", customer_notes: null }], expectedTotal: 1 }), /ACCOUNT_NOT_ALLOWED/);
   assert.equal(f.calls.filter((call) => call.rpc).length, 1);
+});
+
+test("merged order service preserves pre-develop ordered-item history alongside guarded checkout", async () => {
+  const f = fixture();
+  f.client.rpc = async (name, payload) => {
+    f.calls.push({ rpc: name, payload });
+    return { data: [{ restaurantAvailability: "closed", menuAvailability: "paused", price: null }], error: null };
+  };
+  const { OrderServices } = load("../services/order.service.ts", { "@/lib/supabase/client": { createClient: () => f.client }, "@/lib/auth/purchase-access": f });
+  const rows = await OrderServices.fetchOrdered(5);
+  assert.equal(f.calls[0].rpc, "fetch_ordered_items");
+  assert.equal(f.calls[0].payload.p_fetch_items, 5);
+  assert.equal(rows[0].isDimmed, true);
+  assert.equal(rows[0].notices.length, 2);
+  assert.equal(rows[0].price, null);
+  await assert.rejects(OrderServices.fetchOrdered(0));
 });
 
 test("checkout sanitizes unknown RPC errors and preserves known business messages", async () => {
@@ -94,7 +121,7 @@ test("checkout sanitizes unknown RPC errors and preserves known business message
     ["INVALID_QUANTITY_TO_BUY", "Số lượng đặt mua"], ["UNAUTHORIZED", "Phiên đăng nhập"]]) {
     const f = fixture({ rpcError: message });
     const { OrderServices } = load("../services/order.service.ts", { "@/lib/supabase/client": { createClient: () => f.client }, "@/lib/auth/purchase-access": f });
-    await assert.rejects(OrderServices.createOrder({ items: [{ cartItemId: orderId, quantity: 1, expectedUnitPrice: 1 }], deliveryAddress: "A", paymentMethod: "cash", expectedTotal: 1 }),
+    await assert.rejects(OrderServices.createOrder({ items: [{ cartItemId: orderId, quantity: 1, expectedUnitPrice: 1 }], deliveryAddress: "A", restaurantPreferences: [{ restaurant_id: restaurantId, payment_method: "cash", customer_notes: null }], expectedTotal: 1 }),
       (error) => error.message.includes(expected) && !error.message.includes("PRIVATE_DATABASE_DETAIL"));
     assert.equal(f.calls.filter((call) => call.rpc).length, 1);
   }
@@ -121,6 +148,40 @@ for (const options of [{ role: "seller" }, { status: "inactive" }, { noUser: tru
     const f = fixture(options); await assert.rejects(f.assertPurchaseAccess(f.client, userId));
   });
 }
+
+test("integrated checkout keeps per-restaurant payment/notes and rejects missing preferences", async () => {
+  const f = fixture();
+  const { OrderServices } = load("../services/order.service.ts", { "@/lib/supabase/client": { createClient: () => f.client }, "@/lib/auth/purchase-access": f });
+  const input = { items: [{ cartItemId: orderId, quantity: 2, expectedUnitPrice: 10000 }], deliveryAddress: " KTX A ", expectedTotal: 20000, sessionCheckoutId: " session ",
+    restaurantPreferences: [{ restaurant_id: restaurantId, payment_method: "cash", customer_notes: " ít cay " }, { restaurant_id: other, payment_method: "bank_transfer", customer_notes: " " }] };
+  await OrderServices.createOrder(input);
+  const { payload } = f.calls.find((call) => call.rpc);
+  assert.deepEqual(JSON.parse(JSON.stringify(payload)), { p_checkout_items: [{ cart_item_id: orderId, quantity: 2, expected_unit_price: 10000 }], p_delivery_address: "KTX A",
+    p_restaurant_preferences: [{ restaurant_id: restaurantId, payment_method: "cash", customer_notes: "ít cay" }, { restaurant_id: other, payment_method: "bank_transfer", customer_notes: null }], p_expected_total: 20000, p_checkout_session_id: "session" });
+  for (const preferences of [undefined, []]) {
+    await assert.rejects(OrderServices.createOrder({ ...input, restaurantPreferences: preferences }), /phương thức thanh toán/);
+  }
+  assert.equal(f.calls.filter((call) => call.rpc).length, 1);
+});
+
+test("integrated cart retains catalog option mapping, pricing and current user filter", async () => {
+  const row = { id: "cart-item", restaurant_id: restaurantId, quantity: 2, created_at: "2026-01-01", selected_options: [{ group_id: "group", options: [{ id: "option" }] }],
+    restaurant: { id: restaurantId, name: "Quán", location: "KTX", status: "active", operating_status: "open" },
+    menu: { id: orderId, name: "Cơm", price: 10000, category: "food", is_active: true, is_available: true,
+      option_groups: [{ id: "group", name: "Thêm", is_active: true, is_required: true, is_multiple: false, options: [{ id: "option", option_name: "Trứng", additional_price: 3000, is_active: true }] }] } };
+  for (const role of ["student", "staff"]) {
+    const f = fixture({ role, cartData: { id: "cart", student_id: userId, cart_items: [row] } });
+    const { CartServices } = load("../services/cart.service.ts", { "@/lib/supabase/client": { createClient: () => f.client }, "@/lib/auth/purchase-access": f,
+      "@/utilities/cart_order.utility": {}, "@/lib/cart/calculations": load("../lib/cart/calculations.ts") });
+    const result = await CartServices.getCart(userId);
+    assert.equal(result.subtotal, 26000); assert.equal(result.quantity, 2); assert.equal(result.restaurants[0].isOpen, true);
+    assert.equal(result.items[0].extras[0].name, "Thêm: Trứng");
+    assert.deepEqual(f.calls.find((call) => call.table === "carts").filters, [["student_id", userId]]);
+    row.menu.option_groups[0].options[0].is_active = false;
+    await assert.rejects(CartServices.getCart(userId), /không còn hợp lệ/);
+    row.menu.option_groups[0].options[0].is_active = true;
+  }
+});
 test("purchase guard denies another user id", async () => {
   const f = fixture(); await assert.rejects(f.assertPurchaseAccess(f.client, other)); assert.equal(f.calls.length, 0);
 });
@@ -145,9 +206,11 @@ for (const role of ["seller", "staff"]) {
     const result = await f.OrderApprovalServices.acceptOrder(f.client, userId, orderId, {});
     assert.equal(result.order.order_status, "accepted");
     assert.deepEqual(Object.keys(result.order).sort(), ["accepted_at", "id", "order_status", "restaurant_id"]);
-    const update = f.calls.find((c) => c.update);
-    assert.deepEqual(Object.keys(update.update).sort(), ["accepted_at", "order_status"]);
-    assert.deepEqual(update.filters, [["id", orderId], ["restaurant_id", restaurantId], ["order_status", "pending"]]);
+    assert.equal(f.calls.some(c=>c.update),false);
+    const rpc=f.calls.find(c=>c.rpc);assert.equal(rpc.rpc,"accept_order");
+    assert.deepEqual(JSON.parse(JSON.stringify(rpc.payload)),{p_order_id:orderId});
+    const reads=f.calls.filter(c=>c.table==="orders");
+    assert.deepEqual(reads.at(-1).filters,[["id",orderId],["restaurant_id",restaurantId]]);
     if (role === "seller") assert.deepEqual(f.calls.find((c) => c.table === "restaurants").filters, [["id", restaurantId], ["owner_id", userId]]);
     if (role === "staff") assert.deepEqual(f.calls.find((c) => c.table === "orders" && !c.update).filters, [["id", orderId], ["restaurant_id", restaurantId]]);
     assert.ok(!JSON.stringify(result).includes("SECRET"));
@@ -160,7 +223,7 @@ for (const [options, code] of [
   [{ missingOrder: true }, "ORDER_NOT_FOUND"], [{ orderStatus: "accepted" }, "ORDER_CONFLICT"],
   [{ orderStatus: "completed" }, "ORDER_CONFLICT"], [{ orderStatus: "cancelled" }, "ORDER_CONFLICT"],
   [{ orderStatus: "rejected" }, "ORDER_CONFLICT"], [{ policyError: true }, "ORDER_FORBIDDEN"],
-  [{ hiddenUpdate: true }, "ORDER_CONFLICT"], [{ queryError: true }, "ORDER_APPROVAL_FAILED"],
+  [{ rpcConflict: true }, "ORDER_CONFLICT"], [{ queryError: true }, "ORDER_APPROVAL_FAILED"],
 ]) {
   test(`approval rejects ${JSON.stringify(options)}`, async () => {
     const f = fixture(options); await assert.rejects(f.OrderApprovalServices.acceptOrder(f.client, userId, orderId, {}), { message: code });
@@ -173,7 +236,7 @@ for (const input of [null, [], { order_status: "completed" }, { restaurantId }, 
     assert.equal(f.calls.length, 0);
   });
 }
-test("approval invalid UUID and two concurrent accepts/repeat only update once (mock)", async () => {
+test("approval invalid UUID and two concurrent accepts/repeat call locked RPC only once successfully (mock)", async () => {
   const f = fixture(); await assert.rejects(f.OrderApprovalServices.acceptOrder(f.client, userId, "bad", {}), /VALIDATION_ERROR/);
   const results = await Promise.allSettled([f.OrderApprovalServices.acceptOrder(f.client, userId, orderId, {}), f.OrderApprovalServices.acceptOrder(f.client, userId, orderId, {})]);
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1); assert.equal(f.writes(), 1);
@@ -190,7 +253,7 @@ function apiFixture(options = {}) {
     call(request) { return route.POST(request, { params: Promise.resolve({ orderId }) }); },
   };
 }
-for (const [options, expected] of [[{}, 200], [{ noUser: true }, 401], [{ role: "student" }, 403], [{ work: other }, 404], [{ hiddenUpdate: true }, 409], [{ queryError: true }, 500]]) {
+for (const [options, expected] of [[{}, 200], [{ noUser: true }, 401], [{ role: "student" }, 403], [{ work: other }, 404], [{ rpcConflict: true }, 409], [{ queryError: true }, 500]]) {
   test(`approval API verifies session/RLS errors ${JSON.stringify(options)}`, async () => {
     const f = apiFixture(options); const response = await f.call(f.request());
     assert.equal(response.status, expected); assert.equal(response.headers.get("Cache-Control"), "no-store");

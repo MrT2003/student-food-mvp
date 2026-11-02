@@ -45,7 +45,7 @@ function waitForActiveWorker(registration: ServiceWorkerRegistration): Promise<S
     const observed = new Set<ServiceWorker>();
     // expectedURL là URL được tạo dẫn tới file chưas đoạn code firebase-
     const expectedUrl = new URL(WORKER_PATH, window.location.origin).href;
-    // cleanUp xóa toàn bộ eventListener và timer để tránh gây memory leakage 
+    // cleanUp xóa toàn bộ eventListener và timer để tránh gây memory leakage
     const cleanup = () => {
       clearTimeout(timer);
       registration.removeEventListener("updatefound", check);
@@ -54,10 +54,10 @@ function waitForActiveWorker(registration: ServiceWorkerRegistration): Promise<S
     const fail = (message: string) => { cleanup(); reject(new Error(message)); };
     const check = () => {
       const active = registration.active;
-      // Kiểm tra woker đã ở trạng thái activated chưa 
+      // Kiểm tra woker đã ở trạng thái activated chưa
       if (active?.state === "activated") {
-        // Nếu dã activated, kiểm tra đường link hiện tại có map với URL 
-        // chứa đoạn code firebase-worker được khai báo phía trên chưa 
+        // Nếu dã activated, kiểm tra đường link hiện tại có map với URL
+        // chứa đoạn code firebase-worker được khai báo phía trên chưa
         if (active.scriptURL !== expectedUrl) {
           fail("Scope thông báo đang dùng một Service Worker khác.");
         } else {
@@ -72,7 +72,7 @@ function waitForActiveWorker(registration: ServiceWorkerRegistration): Promise<S
       for (const worker of workers) {
         if (worker && !observed.has(worker)) {
           observed.add(worker);
-          // Đăng kí một listener cho worker, mỗi khi state thay đổi thì tự động gọi 
+          // Đăng kí một listener cho worker, mỗi khi state thay đổi thì tự động gọi
           // lại hàm check
           worker.addEventListener("statechange", check);
         }
@@ -88,12 +88,12 @@ function waitForActiveWorker(registration: ServiceWorkerRegistration): Promise<S
   });
 }
 
-// Đăng kí worker 
+// Đăng kí worker
 async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
   // Nếu hiện tại không có yêu cầu đăng kí worker mới nào tồn tại
   if (!registrationPromise) {
     registrationPromise = (async () => {
-      // Kiểm tra trình duyệt có hỗ trợ firebase 
+      // Kiểm tra trình duyệt có hỗ trợ firebase
       if (!(await isBrowserSupported())) throw new Error("Trình duyệt chưa hỗ trợ FCM Web hoặc kết nối chưa an toàn.");
       // Phát hiện cấu hình thiếu trước khi bắt browser tải worker.
       readWebConfig();
@@ -110,14 +110,14 @@ async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
   return registrationPromise;
 }
 
-// Kiểm tra trình duyệt có hỗ trợ FIREBASE CLOUD MESSAGING không 
+// Kiểm tra trình duyệt có hỗ trợ FIREBASE CLOUD MESSAGING không
 async function isBrowserSupported(): Promise<boolean> {
   if (typeof window === "undefined" || !window.isSecureContext) return false;
   const sdk = await import("firebase/messaging");
   return sdk.isSupported();
 }
 
-// Trả về Firebase Cloud Messaging Client 
+// Trả về Firebase Cloud Messaging Client
 async function getMessagingClient(): Promise<Messaging> {
   if (!messagingPromise) {
     messagingPromise = (async () => {
@@ -171,7 +171,7 @@ export const FirebaseService = {
     const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY?.trim();
     // VAPID PUBLIC key là khóa P-256 uncompressed mã hóa base64url (65 bytes).
     if (!vapidKey || !/^[A-Za-z0-9_-]{87}$/.test(vapidKey)) {
-      throw new Error("NEXT_PUBLIC_FIREBASE_VAPID_PUBLIC_KEY không đúng định dạng public key.");
+      throw new Error("NEXT_PUBLIC_FIREBASE_VAPID_KEY không đúng định dạng public key.");
     }
     const decoded = atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/") + "=");
     if (decoded.length !== 65 || decoded.charCodeAt(0) !== 4) throw new Error("VAPID public key không hợp lệ.");
@@ -198,5 +198,3 @@ export const FirebaseService = {
     return deleteToken(messaging);
   },
 };
-
-

@@ -1,5 +1,10 @@
 # Đối chiếu cuối Seller Services
 
+> Snapshot trước chuyển SDK. Từ 2026-10-28, xem seller-supabase-migration.md:
+> sửa quán/ngân hàng một hàng dùng SDK; đăng ký gọi register_seller đã được quản lý
+> DB cung cấp định nghĩa và yêu cầu PIN. Chuyển default giữa hai bank còn bị chặn;
+> RLS tắt/quyền bảng rộng là rủi ro riêng, không kết luận toàn hệ thống an toàn.
+
 Đã đọc toàn bộ DormitoryFood_Task_SellerServices.md và question.md trong Downloads,
 AGENTS.md, implementation/route/type, form SellerRegistrationView, các test liên
 quan và tài liệu các đợt. Quyết định mới nhất trong hội thoại ưu tiên hơn question.md:

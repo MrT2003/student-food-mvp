@@ -1,98 +1,66 @@
-# Seller thêm/sửa tài khoản ngân hàng — đợt 3B
+# Seller quản lý ngân hàng qua Supabase session SDK
 
-Hai endpoint dùng Node.js runtime, cookie Supabase Auth và Origin cùng origin ứng
-dụng. Dùng lại pg/DATABASE_URL và TLS verify-full đã review, không thay đổi schema.
-Chưa có GET/DELETE, UI hoặc xác minh tài khoản qua dịch vụ ngoài.
+Trạng thái cập nhật: đọc/thêm/sửa một tài khoản đã có implementation và caller UI.
+**Chuyển mặc định giữa hai tài khoản vẫn bị chặn trước ghi**, chưa có cơ chế DB
+nguyên tử được xác minh. Không dùng pg, DATABASE_URL hoặc admin client.
+Xem [báo cáo review](seller-bank-review.md) và [đề xuất SQL chưa áp dụng](seller-bank-default-proposal.sql).
 
-## Contract
+## API và contract
 
-POST `/api/seller/restaurants/[restaurantId]/banks`:
+- GET `/api/seller/restaurants/[restaurantId]/banks`: trả `{banks:[...]}`;
+  đọc phân trang theo ID, chỉ quán thuộc active seller đã xác minh.
+- POST cùng URL: ba chuỗi `bank_name`, `account_no`, `account_name` bắt buộc;
+  `is_default` boolean tùy chọn, bỏ qua là false. Trả 201 `{bank:{...}}`.
+- PATCH `/api/seller/restaurants/[restaurantId]/banks/[bankId]`: ít nhất một field
+  cùng allowlist; field vắng mặt giữ nguyên. Trả 200 `{bank:{...}}`.
 
-```json
-{
-  "bank_name": "Ngân hàng mẫu",
-  "account_no": "0012345678",
-  "account_name": "NGUYEN VAN A",
-  "is_default": true
-}
-```
+Chuỗi trim đầu/cuối, không rỗng/null/number. account_no luôn string, giữ số 0 đầu
+và ký tự bên trong. Không áp giới hạn 6–19 chữ số hoặc tự đổi hoa tên chủ tài khoản.
+Schema repo dùng varchar không ghi maximum. ID route phải UUID. Không nhận id,
+restaurant_id, owner_id, role, timestamp trong body. Không UPSERT hoặc DELETE.
 
-Ba field chuỗi bắt buộc, không nhận null/number/chuỗi trắng, trim đầu/cuối.
-account_no luôn là string, giữ số 0 đầu và các ký tự bên trong. Schema repo chỉ
-ghi varchar không có giới hạn độ dài, không thêm maximum hoặc quy tắc từng ngân hàng.
-is_default tùy chọn, mặc định false; không tự chọn tài khoản đầu tiên làm mặc định.
+Response chỉ gồm id,restaurant_id,bank_name,account_no,account_name,is_default;
+không log số tài khoản hoặc lỗi DB. Không cache. GET không yêu cầu Origin cho thao
+ tác đọc; POST/PATCH bắt buộc cùng Origin và session được auth.getUser xác minh.
+Service xác minh lại actor, profile active/seller, owner; PATCH kiểm tra bank thuộc
+quán và UPDATE kèm id + restaurant_id. Không giới hạn status/operating_status quán.
 
-PATCH `/api/seller/restaurants/[restaurantId]/banks/[bankId]`:
+## Default, lỗi và cạnh tranh
 
-```json
-{ "account_name": "TEN CHU TAI KHOAN MOI", "is_default": false }
-```
+- PATCH không gửi is_default: giữ nguyên; false: chỉ bỏ default đích, không chọn lại.
+- true khi không có default khác: một mutation; tối đa một default phụ thuộc partial
+  unique index thực tế. Kết quả SELECT người dùng gửi 2026-11-01 xác nhận index
+  uq_restaurant_banks_one_default đúng biểu thức và valid/ready=true; chưa test ghi thật.
+- true khi có default khác: 503 BANK_DEFAULT_ATOMICITY_UNAVAILABLE, không ghi đích,
+  không demote mặc định cũ. UI giữ nguyên dữ liệu và hiển thị lỗi.
+- UNIQUE `(restaurant_id,account_no)` đã khớp metadata DB người dùng gửi, tên
+  uq_restaurant_banks_account: chỉ đúng lỗi 23505 của constraint này được map 409
+  BANK_ACCOUNT_CONFLICT. Partial index uq_restaurant_banks_one_default map 503.
+  Unknown unique/error không bị báo nhầm là trùng tài khoản. Chưa test lỗi ghi live.
+- Không có hàng UPDATE trả 404; INSERT không có hàng trả lỗi. RLS 42501 trả 403;
+  các lỗi khác trả mã/thông báo an toàn, không lỗi PostgreSQL thô.
 
-Ít nhất một field trong cùng allowlist; field không gửi giữ nguyên. is_default
-phải là boolean nếu gửi. Từ chối mọi field khác, gồm id, restaurant_id, owner_id,
-user_id, role và timestamp. restaurantId/bankId phải là UUID. ID do server sinh,
-restaurant_id lấy từ route sau xác minh quyền; timestamp dùng default/now().
+Các SELECT kiểm tra quyền + mutation SDK không phải transaction. RLS từng được
+quản lý báo tắt/quyền bảng rộng: API owner filter không bảo vệ Data API trực tiếp
+hoặc race role/ownership thay đổi sau precheck. Cần DBA xử lý riêng; không tự sửa.
+Kết quả mới xác nhận quyền hiệu lực SELECT/INSERT/UPDATE mọi cột cho cả anon và
+authenticated; file chỉ chứa result set cuối của nhóm SQL quyền, chưa có kết quả
+RLS/schema USAGE/quyền bảng và policy mới. Không suy ra các kết quả bị thiếu.
+Không có trigger không-internal trên bank và không có function khớp bộ lọc bank/
+restaurant_banks được cung cấp; chưa có cơ chế chuyển default atomic được xác minh.
 
-POST trả 201, PATCH trả 200, không cache. Ví dụ response:
+## Caller và giới hạn
 
-```json
-{
-  "bank": {
-    "id": "33333333-3333-4333-8333-333333333333",
-    "restaurant_id": "22222222-2222-4222-8222-222222222222",
-    "bank_name": "Ngân hàng mẫu",
-    "account_no": "0012345678",
-    "account_name": "NGUYEN VAN A",
-    "is_default": true
-  }
-}
-```
+`SellerPaymentView` lấy quán qua SellerAccessProvider và danh sách qua GET thật.
+Form thêm/sửa gọi POST/PATCH, chỉ gửi field đã đổi, đọc lại danh sách sau success.
+State không persist/cache chung giữa user; component key theo user + quán, client
+kiểm tra identity trước/sau request, kết quả muộn sau unmount bị bỏ qua. Lỗi API
+không báo lưu thành công. Lỗi mạng yêu cầu đọc lại trước gửi lại, không tự retry.
 
-Chỉ trả tài khoản đích của seller đã được xác minh, không trả user/token/tài khoản
-quán khác. Không log số tài khoản, payload hoặc lỗi DB thô.
+Cash/bank chưa lưu/áp dụng. Có tài khoản ngân hàng không có nghĩa chuyển khoản đã
+bật. Không QR thanh toán, branch, xác minh tài khoản, chuyển tiền hoặc đối soát.
+Không thêm xóa bank. Không dùng quán/tài khoản có sẵn của người khác để test.
 
-## Quyền, mặc định và transaction
-
-Danh tính từ auth.getUser(), giả định public.users.id bằng Auth UUID như code hiện
-có. Mỗi thao tác dùng một connection: BEGIN → khóa user → kiểm tra active/seller →
-khóa quán theo id/owner_id → với PATCH khóa bank theo id/restaurant_id → ghi → COMMIT.
-Khóa quán tuần tự hóa thao tác cùng quán kể cả chưa có bank. Không kiểm tra số quán
-của owner, không thêm điều kiện status quán. Kiểm tra quyền dù kết nối DB vượt RLS.
-
-- is_default=true: bỏ mặc định cũ của chính quán (PATCH loại tài khoản đích), rồi
-  ghi tài khoản đích trong cùng transaction. PATCH xác minh đích trước khi bỏ mặc định.
-- is_default=false: chỉ tài khoản đích false, không tự chọn tài khoản khác.
-- PATCH không gửi is_default: không sửa mặc định.
-- Cho phép không có mặc định; yêu cầu tối đa một, không phải đúng một.
-
-UPDATE đích luôn kèm id và restaurant_id; SET theo allowlist cố định, mọi giá trị
-qua parameters. Kiểm tra đúng một hàng ghi. Lỗi rollback cả phần bỏ mặc định cũ;
-luôn release connection, rollback lỗi thì hủy connection.
-
-Schema repo có UNIQUE(restaurant_id, account_no) tên uq_restaurant_banks_account
-và partial unique index uq_restaurant_banks_one_default. Chỉ lỗi 23505 đúng schema
-public, bảng restaurant_banks và constraint tài khoản nói trên được trả 409.
-Không UPSERT, không retry/xóa để xử lý trùng. Lỗi unique khác không bị coi là trùng
-số tài khoản. Tài khoản cùng số ở hai quán khác nhau không bị cấm bởi contract.
-
-400: JSON/UUID/validation lỗi; 401: chưa xác thực; 403: Origin hoặc hồ sơ/quyền
-seller không hợp lệ; 404 chung cho quán không tồn tại/không thuộc seller, hoặc bank
-không tồn tại/thuộc quán khác; 409: trùng tài khoản; 503: cấu hình; 500: lỗi hệ thống.
-
-Thêm/sửa ngân hàng không đổi role, status/operating_status quán hoặc cấu hình thanh
-toán. Việc lưu/áp dụng cash/bank vẫn hoãn theo đợt 2, không suy ra từ việc có ngân hàng.
-
-## Giới hạn kiểm chứng
-
-Giả định bảng/cột/default/constraint/index khớp ERD và SQL repo, kết nối đủ quyền,
-RLS/trigger không chặn/đổi hành vi. Chưa xác minh trên DB thật; không tự tạo đối tượng
-DB còn thiếu. Khác biệt ERD auth_uid/work_for_restaurant_id đã ghi ở các đợt trước,
-không sửa trong đợt này. Không cần cấu hình mới ngoài DATABASE_URL đã có.
-
-```sh
-node --test tests/seller-validation.test.mjs tests/seller-registration.test.mjs tests/seller-restaurant-update.test.mjs tests/seller-banks.test.mjs
-```
-
-Test gọi implementation thật với mock Auth/DB, không mở socket hay đọc .env. Mock
-chỉ kiểm tra điều phối và tình huống mô phỏng, chưa chứng minh khóa, unique index,
-rollback hoặc TLS handshake trên PostgreSQL thật.
+Test service/API với Supabase mock và test component/helper thực tế nằm trong
+seller-banks.test.mjs, seller-management.test.mjs. Chúng không chứng minh constraint,
+RLS, trigger, transaction SQL đề xuất hoặc concurrency trên database thật.

@@ -4,6 +4,7 @@ import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 import * as crypto from "node:crypto";
+import { testPin } from "./seller-sdk-fixture.mjs";
 
 // Chạy service thật và helper thật; không cấp DB, network hoặc biến môi trường.
 function load(file) {
@@ -30,13 +31,14 @@ function load(file) {
 
 const { SellerServices } = load("../services/seller.service.ts");
 const validate = (input) => SellerServices.validateRegistration(input);
-const plain = (value) => JSON.parse(JSON.stringify(value));
+const plain = (value) => JSON.parse(JSON.stringify(value, (key, field) => key === "appLockPin" ? "<redacted>" : field));
 const valid = (patch = {}) => ({
   name: "  Cơm sinh viên  ",
   description: "  Cơm trưa mỗi ngày  ",
   location: "  KTX A  ",
   cash: true,
   bank: false,
+  appLockPin: testPin(),
   scheduleMode: "same",
   openTime: "10:00",
   closeTime: "14:00",
@@ -63,6 +65,7 @@ test("same: trims text, returns only checked active fields and leaves input unch
   assert.deepEqual(plain(output), {
     name: "Cơm sinh viên", description: "Cơm trưa mỗi ngày", location: "KTX A",
     cash: true, bank: false,
+    appLockPin: "<redacted>",
     schedule: { mode: "same", dayIds: ["mon"], openTime: "10:00", closeTime: "14:00" },
   });
   output.schedule.dayIds.push("fri");
@@ -89,7 +92,7 @@ test("later: days and hours are optional, including all-disabled or empty UI sta
 
 test("no bank details, phone, image, slug or client identity are required", () => {
   const output = validate({
-    name: "Quán", description: "Mô tả", location: "KTX B", cash: false, bank: true, scheduleMode: "later",
+    name: "Quán", description: "Mô tả", location: "KTX B", cash: false, bank: true, appLockPin: testPin(), scheduleMode: "later",
   });
   assert.equal(output.bank, true);
   assert.equal(output.schedule.mode, "later");
@@ -99,7 +102,7 @@ for (const input of [null, undefined, [], "json", 1, true]) {
   test(`rejects non-object payload: ${JSON.stringify(input)}`, () => rejects(input, "payload"));
 }
 
-for (const field of ["name", "description", "location", "cash", "bank", "scheduleMode", "days", "openTime", "closeTime"]) {
+for (const field of ["name", "description", "location", "cash", "bank", "appLockPin", "scheduleMode", "days", "openTime", "closeTime"]) {
   test(`rejects missing required field in same mode: ${field}`, () => {
     const input = valid();
     delete input[field];

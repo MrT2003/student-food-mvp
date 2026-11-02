@@ -1,8 +1,8 @@
 # Seller cập nhật quán — đợt 3A
 
 `PATCH /api/seller/restaurants/[restaurantId]`, Node.js runtime. Cần cookie
-Supabase Auth hợp lệ và header Origin cùng origin ứng dụng. Dùng lại pg,
-DATABASE_URL và cấu hình TLS đã review của đăng ký seller; không thay đổi DB.
+Supabase Auth hợp lệ và header Origin cùng origin ứng dụng. Dùng lại
+Supabase session client hiện có; không cần DATABASE_URL, không thay đổi DB.
 
 ## Contract PATCH
 
@@ -63,19 +63,24 @@ Response 200:
 
 ## Quyền và nhất quán
 
-Service validate UUID/body trước khi xin connection. Một transaction trên cùng
-connection: khóa user FOR UPDATE → kiểm tra active/seller → khóa quán theo cả
-id và owner_id → UPDATE cùng điều kiện id/owner_id → kiểm tra đúng một hàng →
-COMMIT. Không suy ra một seller chỉ có một quán, không thêm điều kiện status quán.
-Lỗi rollback; luôn release, rollback lỗi thì hủy connection.
+Service validate UUID/body trước khi dùng SDK. Xác minh getUser/UUID, profile
+active/seller, đọc quán theo id/owner_id, rồi một UPDATE cùng điều kiện id/owner_id.
+Session client chịu RLS; policy phải kiểm tra quyền hiện tại ngay tại UPDATE để
+bảo vệ race đổi quyền sau precheck. Các SELECT và UPDATE không phải một transaction.
+Không dùng admin/pg khi policy chặn. Không thêm điều kiện status hoặc giới hạn số quán.
 
-SET chỉ lấy tên cột từ allowlist cố định và giá trị từ query parameters.
-updated_at = now() do server quản lý. Không sửa slug khi đổi tên; lịch không đổi
+Cập nhật theo metadata quản lý cung cấp 2026-10-28: RLS thực tế đang tắt và quyền
+bảng authenticated rộng. Các guard/filter application vẫn giữ, nhưng không bảo vệ
+đường Data API/RPC trực tiếp hoặc race thay đổi quyền. Nhóm DB cần xử lý riêng;
+không suy ra hệ thống an toàn chỉ vì PATCH ghi được.
+
+Payload UPDATE chỉ lấy tên cột từ allowlist cố định.
+updated_at do server đặt. Không sửa slug khi đổi tên; lịch không đổi
 status/operating_status. Không trả delivery_token hoặc lỗi PostgreSQL thô.
 
 400: JSON/UUID/validation lỗi; 401: session không hợp lệ; 403: Origin hoặc quyền
-seller không hợp lệ; 404 chung: quán không tồn tại/không thuộc seller; 503: thiếu
-hoặc sai cấu hình DB; 500: lỗi hệ thống. Response không cache.
+seller/RLS không hợp lệ; 404 chung: quán không tồn tại/không thuộc seller hoặc UPDATE
+không thấy hàng; 500: lỗi hệ thống. Response không cache. Xem seller-supabase-migration.md.
 
 ## Giới hạn xác minh
 
@@ -92,4 +97,20 @@ Test gọi implementation thật với mock, không chứng minh khóa, rollback
 node --test tests/seller-validation.test.mjs tests/seller-registration.test.mjs tests/seller-restaurant-update.test.mjs
 ```
 
-Chưa làm tạo thêm quán, ngân hàng, thanh toán, upload ảnh, QR/staff, UI hoặc checkout.
+## Caller hiện tại
+
+SellerShopView lấy quán từ SellerAccessProvider (GET /api/seller/access), không còn
+khởi tạo tên/lịch từ preview store hoặc dữ liệu mẫu. Thông tin chỉ PATCH field đã
+đổi; lịch có nút lưu riêng, không gửi kèm tên/slug/status. Same/daily/later đều có UI.
+Lịch JSON không nhận dạng được được cảnh báo; sửa tên không tự chuyển lịch cũ.
+Sau success dispatch seller-access-changed để menu/sidebar/dashboard đọc lại DB.
+Lỗi không báo đã lưu; chặn bấm gửi trùng, bỏ kết quả của account cũ/unmount.
+
+Tên/mô tả/địa điểm dùng đúng max100/300/200. Không bắt số điện thoại ngoài contract.
+Ảnh đọc từ avatar_url; upload Cloudinary vẫn chỉ là preview, không ghi avatar_url
+qua PATCH thông tin. Xóa ảnh ở đây chỉ bỏ preview, không xóa ảnh Cloudinary/DB.
+UI nêu rõ điều đó; không thêm hệ thống ảnh. Đổi trạng thái bị vô hiệu ở màn này vì
+chưa nối backend; liên kết giao hàng demo vẫn được ghi rõ chưa hoạt động.
+QR đang chuẩn bị được giữ nguyên, không sửa trong review này.
+
+Chưa thêm tạo nhiều quán, thanh toán hoặc checkout. Xem seller-bank-review.md.

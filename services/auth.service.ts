@@ -191,19 +191,22 @@ export async function getCurrentProfile(): Promise<AuthProfile | null> {
     throw error;
   }
 
+  // Authorization fields must come from an existing DB profile, never metadata/defaults.
+  if (!data) throw new Error("USER_NOT_FOUND");
+
   // 5. Nếu tài khoản đã có trong DB và bị khóa thì mới báo lỗi
-  if (data && data.status && data.status !== "active") {
+  if (data.status !== "active") {
     throw new Error("Tài khoản hiện không hoạt động.");
   }
 
   // 6. Trả về Profile kết hợp (Ưu tiên dữ liệu trong DB, nếu rỗng thì dùng dữ liệu Google)
   return {
     id: user.id,
-    role: data?.role ?? "student",
+    role: data.role,
     name: data?.name || googleName,
     phone: data?.phone || user.phone || "",
     avatar_url: data?.avatar_url || googleAvatar,
-    status: data?.status ?? "active",
+    status: data.status,
     work_for_restaurant_id: data?.work_for_restaurant_id ?? null,
     authProviders: [
       ...(user.identities?.some((identity) => identity.provider === "google")

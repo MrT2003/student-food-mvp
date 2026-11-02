@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isSameOrigin } from "@/lib/http/request-origin";
 
 export const runtime = "nodejs";
 
@@ -51,7 +52,7 @@ async function readToken(request: Request): Promise<string | null> {
 
 async function handle(request: Request, action: "register" | "remove") {
   // API dùng cookie: chặn request khác origin trước khi thực hiện thao tác đặc quyền.
-  if (request.headers.get("origin") !== new URL(request.url).origin) {
+  if (!isSameOrigin(request)) {
     return respond({ error: "Nguồn yêu cầu không hợp lệ." }, 403);
   }
   try {
