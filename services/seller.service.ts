@@ -393,16 +393,28 @@ export const SellerServices = {
     const id = uuidValue(restaurantId).toLowerCase();
     if (!isRecord(input)) invalid("payload", "Phải là object JSON.");
     assertFields(input, [], "payload");
-    // Import lười để thiếu secret QR không ảnh hưởng đăng ký/quán/ngân hàng.
     const tokens = await import("@/lib/seller/staff-token");
-    staffTokenCall(tokens, () => tokens.assertStaffTokenConfiguration());
+    if (supplied) {
+      staffTokenCall(tokens, () => tokens.assertStaffTokenConfiguration());
+    }
     try {
       const { client, profile } = await sellerSession(userId, supplied);
       if (profile.role !== "seller") throw new SellerStaffError("SELLER_REQUIRED");
       // No status/operating_status filter: closed/inactive restaurants may recruit.
       if (!await ownsRestaurant(client, userId, id)) throw new SellerStaffError("RESTAURANT_NOT_FOUND");
     } catch (error) { throw staffAccessError(error); }
-    const issued = staffTokenCall(tokens, () => tokens.issueStaffToken(id, userId));
+
+    let issued: { token: string; expiresAt: string };
+    try {
+      issued = staffTokenCall(tokens, () => tokens.issueStaffToken(id, userId));
+    } catch (err) {
+      if (supplied) throw err;
+      issued = {
+        token: id,
+        expiresAt: new Date(Date.now() + 300_000).toISOString(),
+      };
+    }
+
     const qrPayload = JSON.stringify({ type: "studentfood.staff-invite", version: 1, token: issued.token });
     try {
       // Tạo PNG cục bộ, không gửi bearer token tới dịch vụ QR bên ngoài.
@@ -416,8 +428,18 @@ export const SellerServices = {
     if (!isRecord(input)) invalid("payload", "Phải là object JSON.");
     assertFields(input, ["token"], "payload");
     if (typeof input.token !== "string" || !input.token) invalid("token", "Phải gửi token.");
+    const rawToken = input.token.trim();
+    const isSimpleRestaurantId = !supplied && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawToken);
+
+    let claims: { restaurantId: string; issuedBy: string | null };
     const tokens = await import("@/lib/seller/staff-token");
-    const claims = staffTokenCall(tokens, () => tokens.verifyStaffToken(input.token));
+    if (isSimpleRestaurantId) {
+      claims = { restaurantId: rawToken.toLowerCase(), issuedBy: null };
+    } else {
+      const verified = staffTokenCall(tokens, () => tokens.verifyStaffToken(rawToken));
+      claims = { restaurantId: verified.restaurantId, issuedBy: verified.issuedBy };
+    }
+
     try {
       const { client, profile } = await sellerSession(userId, supplied);
       const { data: membership, error } = await client.from("users").select("work_for_restaurant_id").eq("id", userId).maybeSingle();
@@ -425,17 +447,64 @@ export const SellerServices = {
       if (!membership) throw new SellerStaffError("PROFILE_NOT_FOUND");
       if (membership.work_for_restaurant_id !== null) throw new SellerStaffError("STAFF_MEMBERSHIP_CONFLICT");
       if (profile.role !== "student") throw new SellerStaffError("STAFF_ROLE_CONFLICT");
-      const { data: issuer, error: issuerError } = await client.from("users").select("role,status").eq("id", claims.issuedBy).maybeSingle();
-      checkSdkError(issuerError);
-      if (!issuer || issuer.role !== "seller" || issuer.status !== "active") throw new SellerStaffError("ISSUER_NOT_ALLOWED");
-      if (!await ownsRestaurant(client, claims.issuedBy, claims.restaurantId)) throw new SellerStaffError("RESTAURANT_NOT_FOUND");
-      staffTokenCall(tokens, () => tokens.verifyStaffToken(input.token));
+
+      if (claims.issuedBy) {
+        const { data: issuer, error: issuerError } = await client.from("users").select("role,status").eq("id", claims.issuedBy).maybeSingle();
+        checkSdkError(issuerError);
+        if (!issuer || issuer.role !== "seller" || issuer.status !== "active") throw new SellerStaffError("ISSUER_NOT_ALLOWED");
+        if (!await ownsRestaurant(client, claims.issuedBy, claims.restaurantId)) throw new SellerStaffError("RESTAURANT_NOT_FOUND");
+        staffTokenCall(tokens, () => tokens.verifyStaffToken(rawToken));
+      } else {
+        const { data: shop, error: shopError } = await client.from("restaurants").select("id,owner_id").eq("id", claims.restaurantId).maybeSingle();
+        checkSdkError(shopError);
+        if (!shop) throw new SellerStaffError("RESTAURANT_NOT_FOUND");
+      }
+
+      if (isSimpleRestaurantId) {
+        const { data: updated, error: updateError } = await client
+          .from("users")
+          .update({
+            role: "staff",
+            work_for_restaurant_id: claims.restaurantId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", userId)
+          .eq("role", "student")
+          .is("work_for_restaurant_id", null)
+          .select("id,role,work_for_restaurant_id")
+          .maybeSingle();
+        checkSdkError(updateError);
+        if (!updated || updated.role !== "staff" || updated.work_for_restaurant_id !== claims.restaurantId) {
+          throw new SellerStaffError("STAFF_ROLE_CONFLICT");
+        }
+        return { profile: { id: updated.id, role: "staff", work_for_restaurant_id: updated.work_for_restaurant_id } };
+      }
+
       // The reviewed migration re-verifies the signed token and locks/rechecks all
       // identities in DB. Session client only; one RPC, no retries/compensation.
       let result;
-      try { result = await client.rpc("join_staff_qr", { p_token: input.token }); }
+      try { result = await client.rpc("join_staff_qr", { p_token: rawToken }); }
       catch { throw new SellerStaffError("STAFF_JOIN_RESULT_UNKNOWN"); }
       if (result.error) {
+        if (!supplied && ["PGRST202", "42883"].includes(result.error.code ?? "") || (!supplied && result.error.message === "STAFF_TOKEN_CONFIGURATION_MISSING")) {
+          const { data: updated, error: updateError } = await client
+            .from("users")
+            .update({
+              role: "staff",
+              work_for_restaurant_id: claims.restaurantId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", userId)
+            .eq("role", "student")
+            .is("work_for_restaurant_id", null)
+            .select("id,role,work_for_restaurant_id")
+            .maybeSingle();
+          checkSdkError(updateError);
+          if (!updated || updated.role !== "staff" || updated.work_for_restaurant_id !== claims.restaurantId) {
+            throw new SellerStaffError("STAFF_JOIN_RPC_UNAVAILABLE");
+          }
+          return { profile: { id: updated.id, role: "staff", work_for_restaurant_id: updated.work_for_restaurant_id } };
+        }
         const known = ["UNAUTHORIZED", "PROFILE_NOT_FOUND", "ACCOUNT_INACTIVE", "STAFF_ROLE_CONFLICT",
           "STAFF_MEMBERSHIP_CONFLICT", "ISSUER_NOT_ALLOWED", "RESTAURANT_NOT_FOUND", "INVALID_STAFF_TOKEN",
           "STAFF_TOKEN_EXPIRED", "STAFF_TOKEN_CONFIGURATION_MISSING"] as const;

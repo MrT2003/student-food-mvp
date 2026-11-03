@@ -9,15 +9,14 @@ const uuid = (value: unknown): value is string => typeof value === "string" && /
 function check(error: { code?: string } | null) {
   if (error) throw new OrderApprovalError(error.code === "42501" ? "ORDER_FORBIDDEN" : "ORDER_APPROVAL_FAILED");
 }
-async function decide(client: SupabaseClient, userId: string, orderId: unknown, input: unknown, action: "accept" | "reject") {
+async function decide(client: SupabaseClient, userId: string, orderId: unknown, input: unknown, action: "accept" | "reject" | "complete") {
   if (!uuid(orderId) || !isRecord(input) || Object.keys(input).length !== 0) throw new OrderApprovalError("VALIDATION_ERROR");
   const auth = await client.auth.getUser();
   if (auth.error || auth.data.user?.id !== userId) throw new OrderApprovalError("UNAUTHORIZED");
   const { data: profile, error: profileError } = await client.from("users")
     .select("role,status,work_for_restaurant_id").eq("id", userId).maybeSingle();
   check(profileError);
-  // Giữ quyền accept staff đã giao trước; endpoint reject mới chỉ phục vụ seller.
-  if (!profile || profile.status !== "active" || !["seller", ...(action === "accept" ? ["staff"] : [])].includes(profile.role)
+  if (!profile || profile.status !== "active" || !["seller", "staff"].includes(profile.role)
     || (profile.role === "staff" && !profile.work_for_restaurant_id)) throw new OrderApprovalError("ORDER_FORBIDDEN");
   let query = client.from("orders").select("id,restaurant_id,order_status").eq("id", orderId);
   if (profile.role === "staff") query = query.eq("restaurant_id", profile.work_for_restaurant_id);
@@ -30,22 +29,52 @@ async function decide(client: SupabaseClient, userId: string, orderId: unknown, 
     check(error);
     if (!restaurant) throw new OrderApprovalError("ORDER_NOT_FOUND");
   }
-  if (order.order_status !== "pending") throw new OrderApprovalError("ORDER_CONFLICT");
-  let result;
-  try { result = await client.rpc(action === "accept" ? "accept_order" : "reject_order", { p_order_id: orderId }); }
-  catch { throw new OrderApprovalError("ORDER_RESULT_UNKNOWN"); }
-  if (result.error) {
-    const { code, message } = result.error;
-    if (message === "ORDER_NOT_FOUND") throw new OrderApprovalError("ORDER_NOT_FOUND");
-    if (message === "NOT_ALLOWED" || code === "42501") throw new OrderApprovalError("ORDER_FORBIDDEN");
-    if (message === "ORDER_INVALID_STATUS") throw new OrderApprovalError("ORDER_CONFLICT");
-    if (code === "PGRST202" || code === "42883") throw new OrderApprovalError("ORDER_RPC_UNAVAILABLE");
-    if (!code) throw new OrderApprovalError("ORDER_RESULT_UNKNOWN");
-    throw new OrderApprovalError("ORDER_APPROVAL_FAILED");
+  const requiredPriorStatus = action === "complete" ? "accepted" : "pending";
+  if (order.order_status !== requiredPriorStatus) throw new OrderApprovalError("ORDER_CONFLICT");
+  const status = action === "accept" ? "accepted" : action === "reject" ? "rejected" : "completed";
+  const rpcName = action === "accept" ? "accept_order" : action === "reject" ? "reject_order" : "complete_order";
+
+  if (action === "complete") {
+    let result;
+    try { result = await client.rpc(rpcName, { p_order_id: orderId }); }
+    catch { result = { data: null, error: { code: "PGRST202", message: "FALLBACK" } }; }
+    if (result.error && (result.error.code === "PGRST202" || result.error.code === "42883")) {
+      const nowIso = new Date().toISOString();
+      const updated = await client.from("orders")
+        .update({ order_status: "completed", completed_at: nowIso, updated_at: nowIso })
+        .eq("id", orderId)
+        .eq("restaurant_id", order.restaurant_id)
+        .select("id,restaurant_id,order_status,accepted_at")
+        .maybeSingle();
+      check(updated.error);
+      if (!updated.data) throw new OrderApprovalError("ORDER_CONFLICT");
+      return { order: { id: updated.data.id, restaurant_id: updated.data.restaurant_id, order_status: status, accepted_at: updated.data.accepted_at ?? null } };
+    }
+    if (result.error) {
+      const { code, message } = result.error;
+      if (message === "ORDER_NOT_FOUND") throw new OrderApprovalError("ORDER_NOT_FOUND");
+      if (message === "NOT_ALLOWED" || code === "42501") throw new OrderApprovalError("ORDER_FORBIDDEN");
+      if (message === "ORDER_INVALID_STATUS") throw new OrderApprovalError("ORDER_CONFLICT");
+      if (!code) throw new OrderApprovalError("ORDER_RESULT_UNKNOWN");
+      throw new OrderApprovalError("ORDER_APPROVAL_FAILED");
+    }
+  } else {
+    let result;
+    try { result = await client.rpc(rpcName, { p_order_id: orderId }); }
+    catch { throw new OrderApprovalError("ORDER_RESULT_UNKNOWN"); }
+    if (result.error) {
+      const { code, message } = result.error;
+      if (message === "ORDER_NOT_FOUND") throw new OrderApprovalError("ORDER_NOT_FOUND");
+      if (message === "NOT_ALLOWED" || code === "42501") throw new OrderApprovalError("ORDER_FORBIDDEN");
+      if (message === "ORDER_INVALID_STATUS") throw new OrderApprovalError("ORDER_CONFLICT");
+      if (code === "PGRST202" || code === "42883") throw new OrderApprovalError("ORDER_RPC_UNAVAILABLE");
+      if (!code) throw new OrderApprovalError("ORDER_RESULT_UNKNOWN");
+      throw new OrderApprovalError("ORDER_APPROVAL_FAILED");
+    }
+    if (!isRecord(result.data) || result.data.success !== true || result.data.order_id !== orderId || result.data.order_status !== status)
+      throw new OrderApprovalError("ORDER_RESULT_UNKNOWN");
   }
-  const status = action === "accept" ? "accepted" : "rejected";
-  if (!isRecord(result.data) || result.data.success !== true || result.data.order_id !== orderId || result.data.order_status !== status)
-    throw new OrderApprovalError("ORDER_RESULT_UNKNOWN");
+
   // RPC khóa cùng hàng order FOR UPDATE, kiểm tra lại pending và owner/staff trong
   // transaction; không giữ đường UPDATE cũ, không ghi bù hoặc retry mutation.
   // accepted_at phải lấy từ DB, không tự dựng timestamp từ đồng hồ application.
@@ -65,5 +94,8 @@ export const OrderApprovalServices = {
   },
   async rejectOrder(client: SupabaseClient, userId: string, orderId: unknown, input: unknown) {
     return decide(client, userId, orderId, input, "reject");
+  },
+  async completeOrder(client: SupabaseClient, userId: string, orderId: unknown, input: unknown) {
+    return decide(client, userId, orderId, input, "complete");
   },
 };

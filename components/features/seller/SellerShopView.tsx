@@ -27,13 +27,14 @@ import styles from "@/styles/seller-shop.module.css";
 
 export default function SellerShopView() {
   const { data, error, retry } = useSellerAccess();
+  const isStaff = data?.user.role === "staff";
   return (
     <div className={`${shell.page} ${styles.page}`}>
       <StudentHeader variant="seller" />
       <div className={styles.workspace}>
         <SellerSidebar active="shop" name={data?.restaurant?.name ?? ""} />
         {data?.restaurant ? (
-          <ShopForm key={`${data.user.id}:${data.restaurant.id}`} initial={data.restaurant} actorId={data.user.id} />
+          <ShopForm key={`${data.user.id}:${data.restaurant.id}`} initial={data.restaurant} actorId={data.user.id} isStaff={isStaff} />
         ) : (
           <main className={styles.card}>{error || "Đang tải thông tin cửa hàng…"}{error && <button onClick={retry}>Thử lại</button>}</main>
         )}
@@ -42,7 +43,7 @@ export default function SellerShopView() {
   );
 }
 
-export function ShopForm({ initial, actorId }: { initial: NonNullable<SellerAccess["restaurant"]>; actorId: string }) {
+export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNullable<SellerAccess["restaurant"]>; actorId: string; isStaff?: boolean }) {
   const parsedSchedule = readShopSchedule(initial.operating_hours);
   const baseline = useRef({ name: initial.name, description: initial.description ?? "", location: initial.location ?? "" });
   const pending = useRef(false);
@@ -167,7 +168,7 @@ export function ShopForm({ initial, actorId }: { initial: NonNullable<SellerAcce
       <header className={styles.heading}>
         <div>
           <h1>Cửa hàng</h1>
-          <p>Quản lý thông tin và trạng thái hoạt động của cửa hàng bạn.</p>
+          <p>{isStaff ? "Xem thông tin và trạng thái hoạt động của cửa hàng." : "Quản lý thông tin và trạng thái hoạt động của cửa hàng bạn."}</p>
         </div>
         <div className={styles.headerActions}>
           <span className={styles.badge} data-open={open}>
@@ -188,24 +189,24 @@ export function ShopForm({ initial, actorId }: { initial: NonNullable<SellerAcce
           </button>
         </div>
       </header>
-      {(error || notice) && (
+      {(error || notice || isStaff) && (
         <p
           className={error ? styles.error : styles.notice}
           role={error ? "alert" : "status"}
         >
-          {error || notice}
+          {error || notice || "Bạn đang xem thông tin cửa hàng với quyền Nhân viên (Chỉ đọc)."}
         </p>
       )}
       <section className={styles.card}>
         <h2>Thông tin cửa hàng</h2>
         <form onSubmit={saveInfo} className={styles.info}>
-          <fieldset disabled={saving} style={{ display: "contents" }}>
+          <fieldset disabled={saving || isStaff} style={{ display: "contents" }}>
           <div className={styles.avatarField}>
             <button
               type="button"
               className={styles.avatar}
               aria-label="Thay ảnh đại diện cửa hàng"
-              onClick={() => upload.current?.click()}
+              onClick={() => !isStaff && upload.current?.click()}
             >
               {avatar ? (
                 <Image
@@ -218,13 +219,15 @@ export function ShopForm({ initial, actorId }: { initial: NonNullable<SellerAcce
               ) : (
                 <Image src="/seller-store-placeholder.svg" alt="Ảnh minh họa cửa hàng" width={150} height={150} />
               )}
-              <span>
-                <Camera size={21} />
-              </span>
+              {!isStaff && (
+                <span>
+                  <Camera size={21} />
+                </span>
+              )}
             </button>
             <strong>Ảnh đại diện</strong>
             <small>
-              {reading ? "Đang tải lên Cloudinary…" : avatar !== initial.avatar_url ? "Ảnh chỉ xem trước; chưa lưu vào quán" : "Ảnh từ DB; thay ảnh hiện chỉ xem trước"}
+              {isStaff ? "Ảnh đại diện cửa hàng" : reading ? "Đang tải lên Cloudinary…" : avatar !== initial.avatar_url ? "Ảnh chỉ xem trước; chưa lưu vào quán" : "Ảnh từ DB; thay ảnh hiện chỉ xem trước"}
             </small>
             <input
               ref={upload}
@@ -236,7 +239,7 @@ export function ShopForm({ initial, actorId }: { initial: NonNullable<SellerAcce
                 event.target.value = "";
               }}
             />
-            {avatar && (
+            {avatar && !isStaff && (
               <button
                 type="button"
                 className={styles.textButton}
@@ -300,15 +303,17 @@ export function ShopForm({ initial, actorId }: { initial: NonNullable<SellerAcce
                 </div>
               </label>
             </div>
-            <footer>
-              <button
-                type="submit"
-                className={styles.primary}
-                disabled={reading || saving}
-              >
-                Lưu thông tin
-              </button>
-            </footer>
+            {!isStaff && (
+              <footer>
+                <button
+                  type="submit"
+                  className={styles.primary}
+                  disabled={reading || saving}
+                >
+                  Lưu thông tin
+                </button>
+              </footer>
+            )}
           </div>
           </fieldset>
         </form>
@@ -317,7 +322,7 @@ export function ShopForm({ initial, actorId }: { initial: NonNullable<SellerAcce
         <section className={styles.card}>
           <h2>Giờ hoạt động</h2>
           <form onSubmit={saveSchedule}>
-            <fieldset disabled={saving} style={{ display: "contents" }}>
+            <fieldset disabled={saving || isStaff} style={{ display: "contents" }}>
             {!parsedSchedule.recognized && <p role="status">Lịch cũ chưa theo quy ước hiện tại. Chỉ thay thế lịch khi bạn bấm Lưu lịch.</p>}
             <div className={styles.scheduleColumns}>
               <div>
@@ -468,11 +473,13 @@ export function ShopForm({ initial, actorId }: { initial: NonNullable<SellerAcce
                 ))}
               </aside>
             </div>
-            <footer>
-              <button className={styles.outline} type="submit" disabled={saving}>
-                Lưu lịch
-              </button>
-            </footer>
+            {!isStaff && (
+              <footer>
+                <button className={styles.outline} type="submit" disabled={saving}>
+                  Lưu lịch
+                </button>
+              </footer>
+            )}
             </fieldset>
           </form>
         </section>
@@ -492,71 +499,75 @@ export function ShopForm({ initial, actorId }: { initial: NonNullable<SellerAcce
                   <p>{open ? "Đang nhận đơn" : "Chưa nhận đơn"}</p>
                 </div>
               </div>
-              <button
-                type="button"
-                className={open ? styles.outline : styles.statusActionBtn}
-                disabled
-                title="Chưa nối thay đổi trạng thái ở màn này"
-              >
-                {open ? "Tạm ngừng" : "Mở nhận đơn"}
-              </button>
+              {!isStaff && (
+                <button
+                  type="button"
+                  className={open ? styles.outline : styles.statusActionBtn}
+                  disabled
+                  title="Chưa nối thay đổi trạng thái ở màn này"
+                >
+                  {open ? "Tạm ngừng" : "Mở nhận đơn"}
+                </button>
+              )}
             </div>
           </section>
 
-          <StaffRecruitment />
+          {!isStaff && <StaffRecruitment />}
         </div>
       </div>
-      <section className={styles.card}>
-        <div className={styles.deliveryHeading}>
-          <h2>Quyền giao hàng</h2>
-          <p>
-            Cho phép shipper xem đơn cần giao qua liên kết riêng khi backend
-            được kết nối.
-          </p>
-        </div>
-        <div className={styles.delivery}>
-          <div className={styles.linkBox}>
-            <input
-              readOnly
-              value={
-                demoToken
-                  ? `/delivery/demo/${demoToken}`
-                  : "Chưa tạo liên kết giao hàng demo"
-              }
-              aria-label="Liên kết giao hàng demo"
-            />
+      {!isStaff && (
+        <section className={styles.card}>
+          <div className={styles.deliveryHeading}>
+            <h2>Quyền giao hàng</h2>
+            <p>
+              Cho phép shipper xem đơn cần giao qua liên kết riêng khi backend
+              được kết nối.
+            </p>
           </div>
-          <button
-            className={styles.outline}
-            disabled={!demoToken}
-            onClick={() =>
-              void copy(`${window.location.origin}/delivery/demo/${demoToken}`)
-            }
-          >
-            <Copy size={18} />
-            Sao chép liên kết
-          </button>
-          <button className={styles.outline} onClick={() => setManage(true)}>
-            <Settings size={18} />
-            Quản lý liên kết
-          </button>
-          <span className={styles.warning}>
-            <TriangleAlert size={19} />
-            Tạo lại liên kết sẽ thay thế mã demo cũ.
-          </span>
-        </div>
-        <small className={styles.updated}>
-          {tokenUpdated
-            ? `Cập nhật lần cuối: ${tokenUpdated}`
-            : "Chưa có liên kết. Demo này chưa cấp quyền xem đơn giao hàng."}
-        </small>
-      </section>
+          <div className={styles.delivery}>
+            <div className={styles.linkBox}>
+              <input
+                readOnly
+                value={
+                  demoToken
+                    ? `/delivery/demo/${demoToken}`
+                    : "Chưa tạo liên kết giao hàng demo"
+                }
+                aria-label="Liên kết giao hàng demo"
+              />
+            </div>
+            <button
+              className={styles.outline}
+              disabled={!demoToken}
+              onClick={() =>
+                void copy(`${window.location.origin}/delivery/demo/${demoToken}`)
+              }
+            >
+              <Copy size={18} />
+              Sao chép liên kết
+            </button>
+            <button className={styles.outline} onClick={() => setManage(true)}>
+              <Settings size={18} />
+              Quản lý liên kết
+            </button>
+            <span className={styles.warning}>
+              <TriangleAlert size={19} />
+              Tạo lại liên kết sẽ thay thế mã demo cũ.
+            </span>
+          </div>
+          <small className={styles.updated}>
+            {tokenUpdated
+              ? `Cập nhật lần cuối: ${tokenUpdated}`
+              : "Chưa có liên kết. Demo này chưa cấp quyền xem đơn giao hàng."}
+          </small>
+        </section>
+      )}
       <p className={styles.demo}>
         Thông tin và lịch được lưu qua API. Ảnh tải lên Cloudinary chỉ xem trước,
         chưa cập nhật avatar_url. Đổi trạng thái và liên kết giao hàng ở màn này chưa nối backend.
 
       </p>
-      {manage && (
+      {manage && !isStaff && (
         <dialog
           ref={dialog}
           className={styles.dialog}
