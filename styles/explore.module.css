@@ -971,3 +971,7 @@ a.outlineButton {
 a.outlineButton {
   width: 100%;
 }
+.results .restaurantGrid > :nth-child(n + 13) { display: none; }
+@media (max-width: 1399px) {
+  .results .restaurantGrid > :nth-child(n + 7) { display: none; }
+}
