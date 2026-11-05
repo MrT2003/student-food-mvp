@@ -23,22 +23,20 @@ const categoryIcons = {
 
 type Props = {
   isAllSelected: boolean;
-  openOnly: boolean;
+  openOnly?: boolean;
   location: Location;
   category: Category | null;
   onReset: () => void;
-  onToggleOpenOnly: () => void;
+  onToggleOpenOnly?: () => void;
   onSelectLocation: (location: Location) => void;
   onSelectCategory: (category: Category | null) => void;
 };
 
 export default function ExploreFilters({
   isAllSelected,
-  openOnly,
   location,
   category,
   onReset,
-  onToggleOpenOnly,
   onSelectLocation,
   onSelectCategory,
 }: Props) {
@@ -51,15 +49,6 @@ export default function ExploreFilters({
     >
       <button type="button" aria-pressed={isAllSelected} onClick={onReset}>
         Tất cả
-      </button>
-
-      <button
-        type="button"
-        aria-pressed={openOnly}
-        onClick={onToggleOpenOnly}
-      >
-        <span className={styles.greenDot} aria-hidden="true" />
-        Đang mở
       </button>
 
       {(["KTX A", "KTX B"] as const).map((loc) => (

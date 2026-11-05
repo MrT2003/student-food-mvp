@@ -5,6 +5,8 @@ import { useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  ChevronDown,
+  ChevronRight,
   Info,
   MapPin,
   Minus,
@@ -38,6 +40,10 @@ export default function CartView() {
   const [message, setMessage] = useState("");
   const [addressError, setAddressError] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [editingMobileAddress, setEditingMobileAddress] = useState(false);
+  const [collapsedRestaurants, setCollapsedRestaurants] = useState<
+    Record<string, boolean>
+  >({});
   const submitting = useRef(false);
   const { items, groups, quantity, subtotal, unknownRestaurantIds } =
     useCartSummary();
@@ -59,6 +65,13 @@ export default function CartView() {
     setMessage(result.ok ? "Đã xóa món khỏi giỏ hàng." : result.message);
   }
 
+  function toggleRestaurantCollapse(restaurantId: string) {
+    setCollapsedRestaurants((prev) => ({
+      ...prev,
+      [restaurantId]: !prev[restaurantId],
+    }));
+  }
+
   function handleCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current) return;
@@ -75,6 +88,7 @@ export default function CartView() {
     }
 
     if (!address.trim()) {
+      setEditingMobileAddress(true);
       setAddressError("Vui lòng nhập chi tiết địa chỉ nhận hàng.");
       return;
     }
@@ -110,7 +124,18 @@ export default function CartView() {
               className={index === 0 ? styles.activeStep : undefined}
             >
               <span>{index + 1}</span>
-              <p>{step}</p>
+              <p>
+                {index === 1 ? (
+                  <>
+                    <span className={styles.desktopStepLabel}>Xác nhận</span>
+                    <span className={styles.mobileStepLabel}>
+                      Xác nhận đơn hàng
+                    </span>
+                  </>
+                ) : (
+                  step
+                )}
+              </p>
             </li>
           ))}
         </ol>
@@ -118,9 +143,103 @@ export default function CartView() {
 
       <div className={styles.cartColumn}>
         <div className={styles.pageHeading}>
-          <h1>Giỏ hàng</h1>
-          <p>Kiểm tra các món ăn trong giỏ hàng của bạn</p>
+          <Link
+            href="/explore"
+            className={styles.mobileBackButton}
+            aria-label="Quay lại Khám phá"
+          >
+            <ArrowLeft size={26} strokeWidth={2.3} aria-hidden="true" />
+          </Link>
+          <div className={styles.pageHeadingText}>
+            <h1>Giỏ hàng</h1>
+            <p>Kiểm tra các món ăn trong giỏ hàng của bạn</p>
+          </div>
         </div>
+
+        <ol className={styles.mobileSteps} aria-label="Các bước đặt hàng">
+          <li aria-current="step" className={styles.activeStep}>
+            <span>1</span>
+            <p>Giỏ hàng</p>
+          </li>
+          <li>
+            <span>2</span>
+            <p>Xác nhận đơn hàng</p>
+          </li>
+        </ol>
+
+        <section
+          className={styles.mobileAddressCard}
+          aria-label="Địa chỉ nhận hàng"
+        >
+          <div className={styles.mobileAddressTop}>
+            <div className={styles.mobileAddressTitle}>
+              <span className={styles.orangeIcon}>
+                <MapPin size={16} aria-hidden="true" />
+              </span>
+              <h2>Địa chỉ nhận hàng</h2>
+            </div>
+
+            <button
+              type="button"
+              className={styles.changeAddressBtn}
+              onClick={() => setEditingMobileAddress((prev) => !prev)}
+            >
+              {editingMobileAddress ? "Xong" : "Thay đổi"}
+              <ChevronRight size={15} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+          </div>
+
+          {!editingMobileAddress ? (
+            <div className={styles.mobileAddressSummary}>
+              <div className={styles.mobileAddressCol}>
+                <span>Khu KTX</span>
+                <strong>{location}</strong>
+              </div>
+              <div className={styles.mobileAddressCol}>
+                <span>Chi tiết địa chỉ</span>
+                <strong>{address.trim() || "Chưa nhập địa chỉ"}</strong>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.mobileAddressForm}>
+              <div className={styles.field}>
+                <label htmlFor="mobile-cart-location">Khu KTX</label>
+                <select
+                  id="mobile-cart-location"
+                  value={location}
+                  onChange={(event) => {
+                    setLocation(event.target.value);
+                    setMessage("");
+                  }}
+                >
+                  <option value="KTX A">KTX A</option>
+                  <option value="KTX B">KTX B</option>
+                </select>
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="mobile-cart-address">Chi tiết địa chỉ</label>
+                <input
+                  id="mobile-cart-address"
+                  value={address}
+                  maxLength={250}
+                  placeholder="Ví dụ: Tòa A1, Phòng 201"
+                  onChange={(event) => {
+                    setAddress(event.target.value);
+                    setAddressError("");
+                    setMessage("");
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {addressError && (
+            <p className={styles.error} role="alert">
+              {addressError}
+            </p>
+          )}
+        </section>
 
         {items.length === 0 ? (
           <section className={styles.empty}>
@@ -140,6 +259,8 @@ export default function CartView() {
               quantity: restaurantQuantity,
               subtotal: restaurantTotal,
             } = group;
+            const isCollapsed = Boolean(collapsedRestaurants[restaurant.id]);
+
             return (
               <section
                 className={styles.restaurantCard}
@@ -151,7 +272,7 @@ export default function CartView() {
                     <FoodPlaceholder kind={restaurant.kind} />
                   </div>
 
-                  <div>
+                  <div className={styles.restaurantHeaderMain}>
                     <div className={styles.restaurantTitle}>
                       <h2 id={`cart-${restaurant.id}`}>{restaurant.name}</h2>
                       <span className={styles.openBadge}>
@@ -164,65 +285,80 @@ export default function CartView() {
                       {restaurant.location}
                     </p>
                   </div>
+
+                  <button
+                    type="button"
+                    className={`${styles.collapseButton} ${
+                      isCollapsed ? styles.collapseButtonClosed : ""
+                    }`}
+                    aria-label={
+                      isCollapsed ? "Mở rộng danh sách món" : "Thu gọn danh sách món"
+                    }
+                    onClick={() => toggleRestaurantCollapse(restaurant.id)}
+                  >
+                    <ChevronDown size={19} strokeWidth={2.2} aria-hidden="true" />
+                  </button>
                 </div>
 
-                <ul className={styles.itemList}>
-                  {restaurantItems.map((item) => (
-                    <li className={styles.itemRow} key={item.id}>
-                      <div className={styles.itemImage}>
-                        <FoodPlaceholder kind={item.kind} />
-                      </div>
-
-                      <div className={styles.itemContent}>
-                        <h3>{item.name}</h3>
-                        <p className={styles.itemPrice}>
-                          {money(item.basePrice)}
-                        </p>
-
-                        {item.extras.map((extra) => (
-                          <p className={styles.itemNote} key={extra.id}>
-                            + {extra.name} (+{money(extra.price)})
-                          </p>
-                        ))}
-                      </div>
-
-                      <div className={styles.itemActions}>
-                        <div className={styles.quantity}>
-                          <button
-                            type="button"
-                            aria-label={`Giảm số lượng ${item.name}`}
-                            disabled={item.quantity <= 1}
-                            onClick={() => changeQuantity(item.id, -1)}
-                          >
-                            <Minus size={18} aria-hidden="true" />
-                          </button>
-
-                          <output aria-label={`Số lượng ${item.name}`}>
-                            {item.quantity}
-                          </output>
-
-                          <button
-                            type="button"
-                            aria-label={`Tăng số lượng ${item.name}`}
-                            disabled={item.quantity >= 99}
-                            onClick={() => changeQuantity(item.id, 1)}
-                          >
-                            <Plus size={18} aria-hidden="true" />
-                          </button>
+                {!isCollapsed && (
+                  <ul className={styles.itemList}>
+                    {restaurantItems.map((item) => (
+                      <li className={styles.itemRow} key={item.id}>
+                        <div className={styles.itemImage}>
+                          <FoodPlaceholder kind={item.kind} />
                         </div>
 
-                        <button
-                          type="button"
-                          className={styles.removeButton}
-                          aria-label={`Xóa ${item.name} khỏi giỏ hàng`}
-                          onClick={() => removeItem(item.id)}
-                        >
-                          <Trash2 size={22} aria-hidden="true" />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                        <div className={styles.itemContent}>
+                          <h3>{item.name}</h3>
+                          <p className={styles.itemPrice}>
+                            {money(item.basePrice)}
+                          </p>
+
+                          {item.extras.map((extra) => (
+                            <p className={styles.itemNote} key={extra.id}>
+                              + {extra.name} (+{money(extra.price)})
+                            </p>
+                          ))}
+                        </div>
+
+                        <div className={styles.itemActions}>
+                          <div className={styles.quantity}>
+                            <button
+                              type="button"
+                              aria-label={`Giảm số lượng ${item.name}`}
+                              disabled={item.quantity <= 1}
+                              onClick={() => changeQuantity(item.id, -1)}
+                            >
+                              <Minus size={18} aria-hidden="true" />
+                            </button>
+
+                            <output aria-label={`Số lượng ${item.name}`}>
+                              {item.quantity}
+                            </output>
+
+                            <button
+                              type="button"
+                              aria-label={`Tăng số lượng ${item.name}`}
+                              disabled={item.quantity >= 99}
+                              onClick={() => changeQuantity(item.id, 1)}
+                            >
+                              <Plus size={18} aria-hidden="true" />
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            className={styles.removeButton}
+                            aria-label={`Xóa ${item.name} khỏi giỏ hàng`}
+                            onClick={() => removeItem(item.id)}
+                          >
+                            <Trash2 size={22} aria-hidden="true" />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
                 <div className={styles.restaurantSubtotal}>
                   <span>Tạm tính ({restaurantQuantity} món)</span>
@@ -235,7 +371,7 @@ export default function CartView() {
       </div>
 
       <form className={styles.sidebar} onSubmit={handleCheckout}>
-        <section className={styles.sideCard}>
+        <section className={`${styles.sideCard} ${styles.desktopAddressCard}`}>
           <div className={styles.cardHeading}>
             <span className={styles.orangeIcon}>
               <MapPin size={25} aria-hidden="true" />
@@ -291,39 +427,47 @@ export default function CartView() {
           )}
         </section>
 
-        <section className={styles.sideCard}>
-          <div className={styles.cardHeading}>
-            <span className={styles.orangeIcon}>
-              <ReceiptText size={24} aria-hidden="true" />
-            </span>
-            <h2>Tổng quan đơn hàng</h2>
-          </div>
+        <section className={`${styles.sideCard} ${styles.summaryCard}`}>
+          <div className={styles.summaryHandle} aria-hidden="true" />
 
-          <div className={styles.summaryRow}>
-            <span>Tạm tính ({quantity} món)</span>
-            <strong>{money(subtotal)}</strong>
-          </div>
+          <div className={styles.summaryContentGrid}>
+            <div className={styles.summaryDetails}>
+              <div className={styles.cardHeading}>
+                <span className={styles.orangeIcon}>
+                  <ReceiptText size={24} aria-hidden="true" />
+                </span>
+                <h2>Tổng quan đơn hàng</h2>
+              </div>
 
-          <div className={styles.summaryRow}>
-            <span>Phí giao hàng</span>
-            <strong>{money(deliveryFee)}</strong>
-          </div>
+              <div className={styles.summaryRow}>
+                <span>Tạm tính ({quantity} món)</span>
+                <strong>{money(subtotal)}</strong>
+              </div>
 
-          <div className={styles.totalRow}>
-            <strong>Tổng cộng</strong>
-            <output aria-live="polite" aria-label="Tổng tiền giỏ hàng">
-              {money(total)}
-            </output>
-          </div>
+              <div className={styles.summaryRow}>
+                <span>Phí giao hàng</span>
+                <strong>{money(deliveryFee)}</strong>
+              </div>
 
-          <button
-            type="submit"
-            className={styles.primaryButton}
-            disabled={items.length === 0 || isSyncing}
-          >
-            {isSyncing ? "Đang cập nhật giỏ hàng…" : "Xác nhận đơn hàng"}
-            <ArrowRight size={23} aria-hidden="true" />
-          </button>
+              <div className={styles.totalRow}>
+                <strong>Tổng cộng</strong>
+                <output aria-live="polite" aria-label="Tổng tiền giỏ hàng">
+                  {money(total)}
+                </output>
+              </div>
+            </div>
+
+            <div className={styles.summaryActionCol}>
+              <button
+                type="submit"
+                className={styles.primaryButton}
+                disabled={items.length === 0 || isSyncing}
+              >
+                {isSyncing ? "Đang cập nhật giỏ hàng…" : "Xác nhận đơn hàng"}
+                <ArrowRight size={20} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
 
           {message && (
             <p className={styles.message} role="status">
@@ -332,7 +476,7 @@ export default function CartView() {
           )}
         </section>
 
-        <section className={styles.sideCard}>
+        <section className={`${styles.sideCard} ${styles.notesCard}`}>
           <div className={styles.cardHeading}>
             <span className={styles.blueIcon}>
               <Info size={26} aria-hidden="true" />

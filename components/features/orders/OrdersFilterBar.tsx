@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import {
   orderDateOptions,
-  orderStatusTabs,
   orderSummaryCards,
   type OrderDateFilter,
   type OrderStatusFilter,
@@ -47,27 +46,6 @@ export default function OrdersFilterBar({
 }: Props) {
   return (
     <section className={styles.filterSection} aria-label="Bộ lọc đơn hàng">
-      <div
-        className={styles.statusTabs}
-        role="group"
-        aria-label="Trạng thái đơn hàng"
-      >
-        {orderStatusTabs.map((tab) => {
-          const active = status === tab.value;
-          return (
-            <button
-              key={tab.value}
-              type="button"
-              aria-pressed={active}
-              className={`${styles.tabButton} ${active ? styles.tabActive : ""}`}
-              onClick={() => onStatusChange(tab.value)}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
       <div className={styles.searchRow}>
         <label className={styles.searchBox}>
           <Search size={18} strokeWidth={2} aria-hidden="true" />
