@@ -6,8 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CheckCircle2, ClipboardList, Clock3, Copy, CookingPot, CupSoda, EyeOff, Folder, Headphones, Lightbulb, Pencil, Plus, Search, Settings2, Trash2 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
+import { useSellerAccess } from "./SellerAccessProvider";
 import { useSellerPreview } from "@/store/useSellerPreviewStore";
-import { demoSellerRestaurant } from "@/lib/mocks/seller-orders.mock";
 import { filterSellerMenu, menuCategories, menuStatus, type MenuTab, type SellerMenuRow } from "@/lib/seller/menu";
 import { useSellerMenuStore } from "@/store/useSellerMenuStore";
 import { formatMoney } from "@/lib/format";
@@ -19,9 +19,23 @@ const tabs: { id: MenuTab; label: string }[] = [
 ];
 
 export default function SellerMenuView() {
+  const { data } = useSellerAccess();
   const draft = useSellerPreview();
+  const restaurantId = data?.restaurant?.id;
+  const shopName = data?.restaurant?.name || draft?.name || "";
+
   const rows = useSellerMenuStore((state) => state.rows);
-  const setRows = useSellerMenuStore((state) => state.setRows);
+  const loadRestaurantMenu = useSellerMenuStore((state) => state.loadRestaurantMenu);
+  const saveMenuItem = useSellerMenuStore((state) => state.saveMenuItem);
+  const updateMenuItemFields = useSellerMenuStore((state) => state.updateMenuItemFields);
+  const deleteMenuItem = useSellerMenuStore((state) => state.deleteMenuItem);
+
+  useEffect(() => {
+    if (restaurantId) {
+      void loadRestaurantMenu(restaurantId);
+    }
+  }, [restaurantId, loadRestaurantMenu]);
+
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [tab, setTab] = useState<MenuTab>("all");
@@ -47,8 +61,8 @@ export default function SellerMenuView() {
     { label: "Đang ẩn", value: rows.filter(({ item }) => menuStatus(item) === "hidden").length, icon: EyeOff, tone: "gray" },
   ];
   function update(id: string, fields: Partial<SellerMenuRow["item"]>) {
-    setRows((current) => current.map((row) => row.item.id === id ? { ...row, item: { ...row.item, ...fields, updated_at: new Date().toISOString() } } : row));
-    setNotice("Đã cập nhật trạng thái món trong bản demo.");
+    void updateMenuItemFields(id, fields);
+    setNotice("Đã cập nhật trạng thái món.");
   }
   function duplicate(row: SellerMenuRow) {
     const id = crypto.randomUUID(), now = new Date().toISOString();
@@ -57,13 +71,26 @@ export default function SellerMenuView() {
       return { ...group, id: groupId, menu_item_id: id, created_at: now, updated_at: now,
         options: group.options.map((option) => ({ ...option, id: crypto.randomUUID(), group_id: groupId, created_at: now, updated_at: now })) };
     });
-    setRows((current) => [{ ...row, optionGroups, item: { ...row.item, id, name: `${row.item.name} (bản sao)`, slug: `${row.item.slug}-${id.slice(0, 8)}`, created_at: now, updated_at: now } }, ...current]);
-    setNotice("Đã nhân bản món trong bản demo.");
+    const newRow: SellerMenuRow = {
+      ...row,
+      optionGroups,
+      item: {
+        ...row.item,
+        id,
+        restaurant_id: restaurantId ?? row.item.restaurant_id,
+        name: `${row.item.name} (bản sao)`,
+        slug: `${row.item.slug}-${id.slice(0, 8)}`,
+        created_at: now,
+        updated_at: now,
+      },
+    };
+    void saveMenuItem(newRow, false);
+    setNotice("Đã nhân bản món.");
   }
   return <div className={styles.page}>
     <StudentHeader variant="seller" />
     <div className={styles.workspace}>
-      <SellerSidebar active="menu" name={draft?.name || demoSellerRestaurant.name} />
+      <SellerSidebar active="menu" name={shopName} />
       <main className={styles.main}>
         <header className={styles.heading}><h1>Menu</h1><p>Quản lý món ăn, giá bán và trạng thái hiển thị của cửa hàng bạn.</p></header>
         <div className={styles.columns}>
@@ -87,9 +114,8 @@ export default function SellerMenuView() {
                 <label className={styles.status}>Tình trạng bán<select aria-label={`Tình trạng bán ${item.name}`} data-tone={item.is_available ? "green" : "red"} value={String(item.is_available)} onChange={(e) => update(item.id, { is_available: e.target.value === "true" })}><option value="true">● Đang bán</option><option value="false">● Tạm hết</option></select></label>
                 <div className={styles.actions}><Link href={`/seller/menu/${item.id}/edit`}><Pencil size={16} />Chỉnh sửa</Link><button onClick={() => duplicate(row)}><Copy size={16} />Nhân bản</button><button className={styles.delete} onClick={() => setDeleting(row)}><Trash2 size={16} />Xóa</button></div>
               </article>;
-            })}{!visible.length && <div className={styles.empty}><CookingPot size={36} /><h3>Không tìm thấy món ăn</h3><p>Thử đổi từ khóa, danh mục hoặc trạng thái.</p><button onClick={() => { setQuery(""); setCategory(""); setTab("all"); }}>Xóa bộ lọc</button></div>}</div>
+            })}{!visible.length && <div className={styles.empty}><CookingPot size={36} /><h3>Không tìm thấy món ăn</h3><p>{rows.length === 0 ? "Cửa hàng của bạn chưa có món ăn nào. Hãy bấm “Thêm món mới” để bắt đầu." : "Thử đổi từ khóa, danh mục hoặc trạng thái."}</p>{rows.length > 0 && <button onClick={() => { setQuery(""); setCategory(""); setTab("all"); }}>Xóa bộ lọc</button>}</div>}</div>
             {visible.length > 0 && <nav className={styles.pagination} aria-label="Phân trang món ăn"><span>Hiển thị {(page - 1) * 5 + 1}–{Math.min(page * 5, visible.length)} / {visible.length} món</span><div><button disabled={page === 1} onClick={() => goToPage(page - 1)} aria-label="Trang trước">‹</button>{Array.from({ length: pageCount }, (_, index) => index + 1).map((number) => <button key={number} aria-label={`Trang ${number}`} aria-current={number === page ? "page" : undefined} onClick={() => goToPage(number)}>{number}</button>)}<button disabled={page === pageCount} onClick={() => goToPage(page + 1)} aria-label="Trang sau">›</button></div></nav>}
-            <p className={styles.demo}>Bản xem thử · Thay đổi chưa được lưu sau khi tải lại trang.</p>
             <p className={styles.notice} role="status">{notice}</p>
           </div>
           <aside className={styles.right}>
@@ -99,11 +125,11 @@ export default function SellerMenuView() {
               ["Thiết lập tùy chọn thêm", "Cho phép khách chọn size, topping để tăng doanh thu."],
               ["Kiểm tra trạng thái món", "Đảm bảo các món luôn hiển thị đúng trạng thái."],
             ].map(([title, text]) => <label className={styles.tip} key={title}><input type="checkbox" /><span><strong>{title}</strong><small>{text}</small></span></label>)}</section>
-            <section className={styles.card}><div className={styles.cardHeading}><span><Lightbulb /></span><h2>Cần hỗ trợ?</h2></div><p className={styles.support}>Nếu bạn có thắc mắc trong quá trình quản lý menu, hãy xem hướng dẫn hoặc liên hệ đội ngũ StudentFood.</p><button className={styles.outline} onClick={() => setNotice("Hướng dẫn: Thêm món, nhập tên/giá/danh mục, rồi dùng hai bộ chọn để đổi hiển thị và tình trạng bán.")}>Xem hướng dẫn <ArrowRight size={18} /></button><button className={styles.contact} onClick={() => setNotice("Kênh hỗ trợ chưa được cấu hình trong bản demo.")}><Headphones size={20} />Liên hệ hỗ trợ</button></section>
+            <section className={styles.card}><div className={styles.cardHeading}><span><Lightbulb /></span><h2>Cần hỗ trợ?</h2></div><p className={styles.support}>Nếu bạn có thắc mắc trong quá trình quản lý menu, hãy xem hướng dẫn hoặc liên hệ đội ngũ StudentFood.</p><button className={styles.outline} onClick={() => setNotice("Hướng dẫn: Thêm món, nhập tên/giá/danh mục, rồi dùng hai bộ chọn để đổi hiển thị và tình trạng bán.")}>Xem hướng dẫn <ArrowRight size={18} /></button><button className={styles.contact} onClick={() => setNotice("Kênh hỗ trợ chưa được cấu hình.")}><Headphones size={20} />Liên hệ hỗ trợ</button></section>
           </aside>
         </div>
       </main>
     </div>
-    {deleting && <dialog ref={deleteDialog} className={styles.dialog} onClose={() => setDeleting(null)} aria-labelledby="delete-menu-title"><h2 id="delete-menu-title">Xóa món ăn?</h2><p>Bạn có muốn xóa “{deleting.item.name}” khỏi bản demo?</p><footer><button onClick={() => setDeleting(null)}>Hủy</button><button className={styles.primary} onClick={() => { setRows((current) => current.filter((row) => row.item.id !== deleting.item.id)); setDeleting(null); setNotice("Đã xóa món trong bản demo."); }}>Xóa món</button></footer></dialog>}
+    {deleting && <dialog ref={deleteDialog} className={styles.dialog} onClose={() => setDeleting(null)} aria-labelledby="delete-menu-title"><h2 id="delete-menu-title">Xóa món ăn?</h2><p>Bạn có muốn xóa “{deleting.item.name}” khỏi menu cửa hàng?</p><footer><button onClick={() => setDeleting(null)}>Hủy</button><button className={styles.primary} onClick={() => { void deleteMenuItem(deleting.item.id); setDeleting(null); setNotice("Đã xóa món ăn."); }}>Xóa món</button></footer></dialog>}
   </div>;
 }

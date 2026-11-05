@@ -7,6 +7,7 @@ import { Check, ClipboardList, Eye, ImagePlus, Lightbulb, Pencil, Plus, Save, Se
 import StudentHeader from "@/components/layout/StudentHeader";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
 import SellerSidebar from "./SellerSidebar";
+import { useSellerAccess } from "./SellerAccessProvider";
 import { useSellerPreview } from "@/store/useSellerPreviewStore";
 import { useSellerMenuStore } from "@/store/useSellerMenuStore";
 import { demoSellerRestaurant } from "@/lib/mocks/seller-orders.mock";
@@ -56,23 +57,46 @@ function OptionEditor({ editor, onClose, onSave }: {
 }
 
 export default function SellerMenuCreateView({ itemId }: { itemId?: string }) {
+  const { data } = useSellerAccess();
+  const restaurantId = data?.restaurant?.id;
+  const shopName = data?.restaurant?.name ?? "";
+  const loading = useSellerMenuStore((state) => state.loading);
+  const loadRestaurantMenu = useSellerMenuStore((state) => state.loadRestaurantMenu);
   const row = useSellerMenuStore((state) => state.rows.find((entry) => entry.item.id === itemId));
   const router = useRouter();
-  if (itemId && !row) return <div className={shell.page}><StudentHeader variant="seller" /><main className={shell.workspace}>
-    <SellerSidebar active="menu" name={demoSellerRestaurant.name} /><section className={styles.card}>
-      <h1>Không tìm thấy món ăn</h1><p>Món có thể đã bị xóa hoặc dữ liệu demo đã mất khi tải lại trang.</p>
-      <button className={styles.outline} onClick={() => router.push("/seller/menu")}>Quay lại Menu</button>
-    </section>
-  </main></div>;
+
+  useEffect(() => {
+    if (restaurantId && itemId && !row) {
+      void loadRestaurantMenu(restaurantId);
+    }
+  }, [restaurantId, itemId, row, loadRestaurantMenu]);
+
+  if (itemId && !row) {
+    if (loading) {
+      return <div className={shell.page}><StudentHeader variant="seller" /><main className={shell.workspace}>
+        <SellerSidebar active="menu" name={shopName} /><section className={styles.card}>
+          <p role="status">Đang tải thông tin món ăn…</p>
+        </section>
+      </main></div>;
+    }
+    return <div className={shell.page}><StudentHeader variant="seller" /><main className={shell.workspace}>
+      <SellerSidebar active="menu" name={shopName} /><section className={styles.card}>
+        <h1>Không tìm thấy món ăn</h1><p>Món có thể đã bị xóa hoặc không tồn tại trong menu cửa hàng.</p>
+        <button className={styles.outline} onClick={() => router.push("/seller/menu")}>Quay lại Menu</button>
+      </section>
+    </main></div>;
+  }
   return <SellerMenuForm key={itemId ?? "new"} original={itemId ? row : undefined} />;
 }
 
 function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
   const router = useRouter();
+  const { data } = useSellerAccess();
   const seller = useSellerPreview();
   const rows = useSellerMenuStore((state) => state.rows);
-  const setRows = useSellerMenuStore((state) => state.setRows);
-  const shopName = seller?.name || demoSellerRestaurant.name;
+  const saveMenuItem = useSellerMenuStore((state) => state.saveMenuItem);
+  const restaurantId = data?.restaurant?.id ?? original?.item.restaurant_id ?? demoSellerRestaurant.id;
+  const shopName = data?.restaurant?.name || seller?.name || "";
   const categories = [...new Set([...menuCategories, ...rows.map(({ item }) => item.category).filter((value): value is string => Boolean(value))])];
   const [name, setName] = useState(original?.item.name ?? "");
   const [category, setCategory] = useState(original?.item.category ?? "Đồ uống");
@@ -156,7 +180,7 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
       is_multiple: multiple, is_required: !multiple, options: names.map((option_name, index) => ({ id: crypto.randomUUID(), option_name, additional_price: prices[index] })) })));
   }
 
-  function save(event: FormEvent<HTMLFormElement>) {
+  async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
     if (original && !useSellerMenuStore.getState().rows.some((row) => row.item.id === original.item.id)) {
@@ -178,16 +202,22 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
             created_at: previousOption?.created_at ?? now, updated_at: now };
         }) };
     });
-    // Data URLs and featuredPreview are demo-only. Production uploads must provide a storage URL.
-    const updated: SellerMenuRow = { item: { id, restaurant_id: original?.item.restaurant_id ?? demoSellerRestaurant.id, name: name.trim(), category,
+    const updated: SellerMenuRow = { item: { id, restaurant_id: restaurantId, name: name.trim(), category,
       price: basePrice, description: description.trim() || null, image_url: image,
       slug: original?.item.slug ?? `${normalizeSearchText(name.trim()).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "mon"}-${id.slice(0, 8)}`,
       is_active: active, is_available: !outOfStock, created_at: original?.item.created_at ?? now, updated_at: now },
       optionGroups: original && !original.optionGroups && !groupsChanged ? undefined : optionGroups,
       optionCount: original && !original.optionGroups && !groupsChanged ? original.optionCount : groups.reduce((count, group) => count + group.options.length, 0),
       featuredPreview: featured };
-    setRows((current) => original ? current.map((row) => row.item.id === id ? updated : row) : [updated, ...current]);
-    router.push("/seller/menu");
+
+    try {
+      await saveMenuItem(updated, Boolean(original));
+      router.push("/seller/menu");
+    } catch (err) {
+      submitted.current = false;
+      setSaving(false);
+      setError(err instanceof Error ? err.message : "Không thể lưu món ăn vào cơ sở dữ liệu.");
+    }
   }
 
   function cancel() {
@@ -245,7 +275,7 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
             <div className={styles.previewImage}>{image ? <Image src={image} width={120} height={150} alt={name || "Ảnh món"} unoptimized /> : <FoodThumbnail kind={category === "Đồ uống" ? "drink" : "food"} />}</div>
             <div className={styles.previewCopy}><div><h3>{name.trim() || "Tên món của bạn"}</h3><strong className={styles.money}>{formatMoney(basePrice)}</strong></div>
               <p><Settings2 size={16} />{groups.length ? "Có tùy chọn thêm" : "Không có tùy chọn"}</p><p><Store size={16} />{shopName}</p>
-              <footer><span className={styles.badge} data-selling={active && !outOfStock}>● {status}</span><button type="button" className={styles.outline} onClick={() => setError("Đây là thẻ xem trước. Món demo chưa được nối vào trang chi tiết của sinh viên.")}>Xem món</button></footer>
+              <footer><span className={styles.badge} data-selling={active && !outOfStock}>● {status}</span><button type="button" className={styles.outline} onClick={() => setError("Đây là thẻ xem trước trên màn tạo/chỉnh sửa món.")}>Xem món</button></footer>
             </div></div>{description && <p className={styles.previewDescription}>{description}</p>}
           </section>
           <section className={styles.card}><h2>Tóm tắt</h2><dl className={styles.summary}>
@@ -259,7 +289,6 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
             { label: "Kiểm tra giá bán", text: "Đảm bảo giá phù hợp và chính xác.", done: price.trim() !== "" && Number.isSafeInteger(basePrice) && basePrice >= 0 && basePrice <= 10000000 },
           ].map((tip) => <div className={styles.tip} key={tip.label}><span data-done={tip.done}>{tip.done && <Check size={16} />}</span><div><strong>{tip.label}</strong><small>{tip.text}</small></div></div>)}</section>
           <div className={styles.bottomActions}><button type="button" className={styles.outline} onClick={cancel}>Hủy</button>{saveButton}</div>
-          <p className={styles.demo}>Demo frontend · Chưa ghi DB. Các thay đổi mất khi tải lại trang.</p>
         </aside></div>
       </form>
     </main>
