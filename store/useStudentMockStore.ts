@@ -16,12 +16,17 @@ import type {
   OrderDetail,
   OrderItem,
 } from "@/types/order.types";
+import type { MenuItemDetail } from "@/types/restaurant.types";
 
 import { projectCart } from "@/lib/cart/view-model";
 import { getCartItemUnitPrice } from "@/lib/cart/calculations";
 import { createClient } from "@/lib/supabase/client";
 import { CartServices, type AddToCartInput } from "@/services/cart.service";
 import { OrderServices } from "@/services/order.service";
+import {
+  CartUtilities,
+  type SelectedGroup,
+} from "@/utilities/cart_order.utility";
 
 import { mockRestaurants, mockMenuItemDetails } from "@/lib/mocks/catalog.mock";
 
@@ -93,6 +98,7 @@ type StudentMockState = {
 
   addCatalogItem: (input: AddCartItemInput) => ActionResult;
   reorderOrder: (orderId: string) => ActionResult;
+  reorderDatabaseOrder: (orderId: string) => Promise<ActionResult>;
 
   updateCartItemQuantity: (id: string, quantity: number) => ActionResult;
   removeCartItem: (id: string) => ActionResult;
@@ -564,6 +570,133 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
         });
         // Preserve current address/payment/notes for review at checkout.
         commitCart(rows);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: errorMessage(error) };
+      }
+    },
+
+    reorderDatabaseOrder: async (orderId) => {
+      try {
+        const state = get();
+        if (!state.serverCart) {
+          return state.reorderOrder(orderId);
+        }
+        const order = state.orderRecords[orderId];
+        if (!order) throw new Error("Không tìm thấy đơn hàng.");
+        if (!order.order_items.length) {
+          throw new Error("Đơn hàng không có món để đặt lại.");
+        }
+
+        const supabase = createClient();
+        const itemIds = [
+          ...new Set(
+            order.order_items
+              .map((it) => it.menu_item_id)
+              .filter((id): id is string => Boolean(id)),
+          ),
+        ];
+        if (
+          itemIds.length === 0 ||
+          order.order_items.some((it) => !it.menu_item_id)
+        ) {
+          throw new Error("Một số món trong đơn không còn trong thực đơn.");
+        }
+
+        const [
+          { data: restaurant, error: restErr },
+          { data: menuRows, error: menuErr },
+        ] = await Promise.all([
+          supabase
+            .from("restaurants")
+            .select("id, status, operating_status")
+            .eq("id", order.restaurant_id)
+            .maybeSingle(),
+          supabase
+            .from("menu_items")
+            .select(`
+              *,
+              option_groups:menu_item_option_groups (
+                *,
+                options:menu_item_options (*)
+              )
+            `)
+            .eq("restaurant_id", order.restaurant_id)
+            .in("id", itemIds),
+        ]);
+
+        if (restErr || menuErr) {
+          throw new Error("Không thể kiểm tra thực đơn hiện tại của quán.");
+        }
+        if (
+          !restaurant ||
+          restaurant.status !== "active" ||
+          restaurant.operating_status !== "open"
+        ) {
+          throw new Error("Quán hiện không nhận đơn.");
+        }
+
+        const menuById = new Map<string, MenuItemDetail>();
+        for (const row of (menuRows ?? []) as MenuItemDetail[]) {
+          menuById.set(row.id, row);
+        }
+
+        const payloads: AddToCartInput[] = [];
+        for (const orderItem of order.order_items) {
+          const menuItem = orderItem.menu_item_id
+            ? menuById.get(orderItem.menu_item_id)
+            : undefined;
+          if (!menuItem || !menuItem.is_active || !menuItem.is_available) {
+            throw new Error(
+              `Món "${orderItem.item_name_snapshot}" hiện không còn khả dụng.`,
+            );
+          }
+
+          const pickedIds = new Set(
+            orderItem.selected_options.map((o) => o.option_id),
+          );
+          const activeGroups = (menuItem.option_groups ?? []).filter(
+            (g) => g.is_active,
+          );
+          const selectedGroups: SelectedGroup[] = activeGroups
+            .map((group) => ({
+              group_id: group.id,
+              group_name: group.name,
+              options: (group.options ?? [])
+                .filter((opt) => opt.is_active && pickedIds.has(opt.id))
+                .map((opt) => ({
+                  id: opt.id,
+                  name: opt.option_name,
+                  additional_price: opt.additional_price,
+                })),
+            }))
+            .filter((group) => group.options.length > 0);
+
+          const matchedCount = selectedGroups.reduce(
+            (sum, g) => sum + g.options.length,
+            0,
+          );
+          if (matchedCount !== pickedIds.size) {
+            throw new Error(
+              `Tùy chọn của món "${menuItem.name}" đã thay đổi. Vui lòng chọn lại trên trang món.`,
+            );
+          }
+
+          const optionHash =
+            CartUtilities.generateHash(selectedGroups) || "NONE";
+          payloads.push({
+            menuItemId: menuItem.id,
+            restaurantId: order.restaurant_id,
+            optionHash,
+            quantity: orderItem.quantity,
+            selectedOptions: selectedGroups,
+          });
+        }
+
+        for (const payload of payloads) {
+          await CartServices.addToCart(payload);
+        }
+        await get().syncFromDatabase();
         return { ok: true };
       } catch (error) {
         return { ok: false, message: errorMessage(error) };

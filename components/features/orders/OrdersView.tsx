@@ -230,6 +230,9 @@ export default function OrdersView({
   initialSummaryCounts = defaultOrderSummaryCounts,
 }: Props = {}) {
   const { orders: storeRecords } = useOrders();
+  const isServerSynced = useStudentMockStore(
+    (state) => state.serverCart !== null,
+  );
   const { reorder, addedIds, notice, setNotice } = useReorder();
 
   const [demoOrders, setDemoOrders] = useState<OrderCardViewModel[]>(
@@ -251,7 +254,8 @@ export default function OrdersView({
     initialOrderFilters.dateFilter,
   );
 
-  const hasStoreOrders = !initialOrders && storeRecords.length > 0;
+  const hasStoreOrders =
+    !initialOrders && (isServerSynced || storeRecords.length > 0);
 
   const activeOrders = useMemo(() => {
     if (hasStoreOrders) {
@@ -303,7 +307,7 @@ export default function OrdersView({
   function handleReorder(orderId: string) {
     const storeOrder = useStudentMockStore.getState().orderRecords[orderId];
     if (storeOrder) {
-      reorder(orderId);
+      void reorder(orderId);
       return;
     }
 

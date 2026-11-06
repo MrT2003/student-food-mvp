@@ -448,10 +448,6 @@ export default function OrderTrackingView({ orderId }: { orderId: string }) {
           </div>
         </aside>
       </div>
-
-      <p className={styles.demoNote}>
-        Bản xem trước giao diện — dữ liệu mẫu, chưa cập nhật thời gian thực.
-      </p>
     </div>
   );
 }

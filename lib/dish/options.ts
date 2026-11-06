@@ -430,23 +430,13 @@ export function buildDrinkOptionGroups(
 export function resolveDishOptionGroups(
   item: MenuItemDetail,
 ): MenuOptionGroupDetail[] {
-  const activeDbGroups = item.option_groups
+  return item.option_groups
     .filter((group) => group.is_active)
     .map((group) => ({
       ...group,
       options: group.options.filter((option) => option.is_active),
     }))
     .filter((group) => group.options.length > 0);
-
-  if (activeDbGroups.length > 0) {
-    return activeDbGroups;
-  }
-
-  if (isDrinkDish(item)) {
-    return buildDrinkOptionGroups(item.id);
-  }
-
-  return [buildFoodExtraOptionGroup(item.id)];
 }
 
 export function getDefaultSelectedOptions(
@@ -503,6 +493,9 @@ export function getDishInfoBannerText(
   item: Pick<MenuItemDetail, "category" | "name" | "slug">,
   groups: readonly MenuOptionGroupDetail[],
 ): string {
+  if (groups.length === 0) {
+    return "Hãy chọn số lượng trước khi thêm vào giỏ hàng nhé!";
+  }
   if (isDrinkDish(item)) {
     return "Hãy chọn topping, mức đường, mức đá và số lượng trước khi thêm vào giỏ hàng nhé!";
   }
