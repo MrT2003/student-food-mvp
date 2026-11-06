@@ -24,6 +24,10 @@
     font-family: var(--font-display);
   }
 
+  .navigation[data-staff="true"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .link {
     position: relative;
     display: flex;

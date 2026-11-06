@@ -1,10 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ClipboardList, Home, Store, Utensils, Wallet } from "lucide-react";
+import { ArrowLeft, Wallet } from "lucide-react";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
 import Image from "next/image";
 import { useSellerAccess } from "./SellerAccessProvider";
+import {
+  SellerHomeActiveIcon,
+  SellerHomeInactiveIcon,
+  SellerMenuActiveIcon,
+  SellerMenuInactiveIcon,
+  SellerOrderActiveIcon,
+  SellerOrderInactiveIcon,
+  SellerStoreActiveIcon,
+  SellerStoreInactiveIcon,
+} from "@/components/ui/SellerBottomNavIcons";
+import SellerBottomNavigation from "./SellerBottomNavigation";
 import styles from "@/styles/seller-orders.module.css";
 
 export default function SellerSidebar({
@@ -24,113 +35,36 @@ export default function SellerSidebar({
     <>
       <aside className={styles.sidebar} aria-label="Quản lý cửa hàng">
         <div className={styles.shop}>
-          {shop?.avatar_url ? (
-            <Image
-              src={shop.avatar_url}
-              alt="Ảnh cửa hàng"
-              width={60}
-              height={60}
-              unoptimized
-              className={styles.shopImage}
-              style={{ objectFit: "cover" }}
-            />
-          ) : (
-            <FoodThumbnail kind="food" className={styles.shopImage} />
-          )}
-          <div>
-            <strong>{shop?.name || "Đang tải cửa hàng…"}</strong>
-            <span>{isStaff ? "Nhân viên (Staff)" : "Seller"}</span>
-          </div>
+          {shop?.avatar_url ? <Image src={shop.avatar_url} alt="Ảnh cửa hàng" width={60} height={60} unoptimized className={styles.shopImage} style={{ objectFit: "cover" }} /> : <FoodThumbnail kind="food" className={styles.shopImage} />}
+          <div><strong>{shop?.name || "Đang tải cửa hàng…"}</strong><span>{isStaff ? "Nhân viên (Staff)" : "Seller"}</span></div>
         </div>
         <nav>
-          <Link
-            href="/seller"
-            aria-current={active === "overview" ? "page" : undefined}
-          >
-            <Home />
+          <Link href="/seller" aria-current={active === "overview" ? "page" : undefined}>
+            {active === "overview" ? <SellerHomeActiveIcon aria-hidden="true" /> : <SellerHomeInactiveIcon aria-hidden="true" />}
             Tổng quan
           </Link>
-          <Link
-            href="/seller/orders"
-            aria-current={active === "orders" ? "page" : undefined}
-          >
-            <ClipboardList />
+          <Link href="/seller/orders" aria-current={active === "orders" ? "page" : undefined}>
+            {active === "orders" ? <SellerOrderActiveIcon aria-hidden="true" /> : <SellerOrderInactiveIcon aria-hidden="true" />}
             Đơn hàng
           </Link>
-          {!isStaff && (
-            <Link
-              href="/seller/menu"
-              aria-current={active === "menu" ? "page" : undefined}
-            >
-              <Utensils />
-              Menu
-            </Link>
-          )}
-          <Link
-            href="/seller/shop"
-            aria-current={active === "shop" ? "page" : undefined}
-          >
-            <Store />
+          {!isStaff && <Link href="/seller/menu" aria-current={active === "menu" ? "page" : undefined}>
+            {active === "menu" ? <SellerMenuActiveIcon aria-hidden="true" /> : <SellerMenuInactiveIcon aria-hidden="true" />}
+            Menu
+          </Link>}
+          <Link href="/seller/shop" aria-current={active === "shop" ? "page" : undefined}>
+            {active === "shop" ? <SellerStoreActiveIcon aria-hidden="true" /> : <SellerStoreInactiveIcon aria-hidden="true" />}
             Cửa hàng
           </Link>
-          {!isStaff && (
-            <Link
-              href="/seller/payments"
-              aria-current={active === "payments" ? "page" : undefined}
-            >
-              <Wallet />
-              Thanh toán
-            </Link>
-          )}
+          {!isStaff && <Link href="/seller/payments" aria-current={active === "payments" ? "page" : undefined}><Wallet />Thanh toán</Link>}
         </nav>
-        <Link className={styles.back} href="/">
-          <ArrowLeft size={18} />
-          Quay lại StudentFood
-        </Link>
+        <Link className={styles.back} href="/"><ArrowLeft size={18} />Quay lại StudentFood</Link>
       </aside>
-      <nav
-        className={styles.mobileBottomNav}
-        aria-label="Điều hướng quản lý cửa hàng trên điện thoại"
-      >
-        <Link
-          href="/seller"
-          aria-current={active === "overview" ? "page" : undefined}
-        >
-          <Home size={20} aria-hidden="true" />
-          <span>Tổng quan</span>
-        </Link>
-        <Link
-          href="/seller/orders"
-          aria-current={active === "orders" ? "page" : undefined}
-        >
-          <ClipboardList size={20} aria-hidden="true" />
-          {typeof pendingOrderCount === "number" && pendingOrderCount > 0 && (
-            <span
-              data-testid="seller-orders-nav-badge"
-              aria-label={`${pendingOrderCount} đơn chờ xác nhận`}
-            >
-              {pendingOrderCount > 99 ? "99+" : pendingOrderCount}
-            </span>
-          )}
-          <span>Đơn hàng</span>
-        </Link>
-        {!isStaff && (
-          <Link
-            href="/seller/menu"
-            aria-current={active === "menu" ? "page" : undefined}
-          >
-            <Utensils size={20} aria-hidden="true" />
-            <span>{menuLabel || (active === "orders" ? "Thực đơn" : "Menu")}</span>
-          </Link>
-        )}
-        <Link
-          href="/seller/shop"
-          aria-current={active === "shop" ? "page" : undefined}
-        >
-          <Store size={20} aria-hidden="true" />
-          <span>Cửa hàng</span>
-        </Link>
-      </nav>
+      <SellerBottomNavigation
+        active={active}
+        isStaff={isStaff}
+        pendingOrderCount={pendingOrderCount}
+        menuLabel={menuLabel}
+      />
     </>
   );
 }

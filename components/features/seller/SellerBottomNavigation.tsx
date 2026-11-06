@@ -70,19 +70,22 @@ export default function SellerBottomNavigation({
   active,
   pendingOrderCount,
   menuLabel,
+  isStaff = false,
 }: {
   active?: SellerNavKey;
   pendingOrderCount?: number;
   menuLabel?: string;
+  isStaff?: boolean;
 }) {
   const pathname = usePathname();
 
   return (
     <nav
       className={styles.navigation}
+      data-staff={isStaff ? "true" : undefined}
       aria-label="Điều hướng quản lý cửa hàng trên điện thoại"
     >
-      {sellerNavDestinations.map(
+      {sellerNavDestinations.filter((destination) => !isStaff || destination.key !== "menu").map(
         ({
           key,
           href,
@@ -95,9 +98,7 @@ export default function SellerBottomNavigation({
             key === "orders"
               ? typeof pendingOrderCount === "number"
                 ? pendingOrderCount
-                : isCurrent
-                  ? 3
-                  : 0
+                : 0
               : 0;
           const displayLabel =
             key === "menu" && (menuLabel || active === "orders")
