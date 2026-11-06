@@ -39,16 +39,18 @@ export function useSellerOrders(actor: string, restaurantId: string) {
   const reload = () => controller.current?.refresh(true) ?? Promise.resolve(null);
   const state = read.identity === identity && current() ? read : initialOrderReadState();
 
-  async function decide(orderId: string, action: "accept" | "reject") {
+  async function decide(orderId: string, action: "accept" | "reject" | "complete") {
     const refresh = controller.current;
-    if (!refresh || state.loading || state.blocked || !current() || busy.current.has(orderId) || !state.orders?.some(row => row.id === orderId && row.order_status === "pending")) return;
+    const expectedCurrentStatus = action === "complete" ? "accepted" : "pending";
+    if (!refresh || state.loading || state.blocked || !current() || busy.current.has(orderId) || !state.orders?.some(row => row.id === orderId && row.order_status === expectedCurrentStatus)) return;
     const alive = () => controller.current === refresh && current();
     busy.current.add(orderId); setBusyIds([...busy.current]); setNotice(""); setActionError("");
     // A late GET started before this write must never restore a stale pending state.
     refresh.beginMutation();
     try {
       const result = await decideSellerOrder(actor, restaurantId, orderId, action);
-      if (alive()) setNotice(`${result.recovered ? "Đã đọc lại và xác nhận" : "Backend đã xác nhận"}: đơn ${action === "accept" ? "được chấp nhận" : "bị từ chối"}.`);
+      const label = action === "accept" ? "được chấp nhận" : action === "reject" ? "bị từ chối" : "đã hoàn thành";
+      if (alive()) setNotice(`${result.recovered ? "Đã đọc lại và xác nhận" : "Backend đã xác nhận"}: đơn ${label}.`);
     } catch (reason) {
       if (alive()) setActionError(reason instanceof Error ? reason.message : "Chưa xác định kết quả. Hãy tải lại trạng thái.");
     } finally {

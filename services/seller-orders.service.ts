@@ -21,8 +21,24 @@ async function authorizedQuery(client: SupabaseClient, actor: string, restaurant
   if (!isOrderUuid(restaurantId)) throw new SellerOrdersError("VALIDATION_ERROR");
   const auth = await client.auth.getUser();
   if (auth.error || auth.data.user?.id !== actor) throw new SellerOrdersError("UNAUTHORIZED");
-  const profile = await client.from("users").select("role,status").eq("id", actor).maybeSingle();
+  const profile = await client.from("users").select("role,status,work_for_restaurant_id").eq("id", actor).maybeSingle();
   check(profile.error);
+  if (profile.data?.role === "staff" && profile.data.status === "active") {
+    if (!profile.data.work_for_restaurant_id || profile.data.work_for_restaurant_id !== restaurantId) {
+      throw new SellerOrdersError("ORDER_FORBIDDEN");
+    }
+    const shop = await client.from("restaurants").select("id").eq("id", restaurantId).maybeSingle();
+    check(shop.error);
+    if (!shop.data) throw new SellerOrdersError("RESTAURANT_NOT_FOUND");
+    return {
+      query: client
+        .from("orders")
+        .select(fields)
+        .eq("restaurant_id", restaurantId)
+        .eq("restaurant.owner.role", "seller")
+        .eq("restaurant.owner.status", "active"),
+    };
+  }
   if (profile.data?.role !== "seller" || profile.data.status !== "active") throw new SellerOrdersError("ORDER_FORBIDDEN");
   const owned = await client.from("restaurants").select("id").eq("id", restaurantId).eq("owner_id", actor).maybeSingle();
   check(owned.error);

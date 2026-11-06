@@ -22,7 +22,10 @@ export function SellerAccessProvider({ children }: {
     const user = useAuthStore(s => s.user), status = useAuthStore(s => s.status), path = usePathname();
     const owner = user?.id, role = user?.role, accountStatus = user?.status, work = user?.work_for_restaurant_id;
     const key = JSON.stringify([status, owner, role, accountStatus, work]);
-    const eligible = status === "ready" && user?.status === "active" && ["student", "seller"].includes(user.role) && user.work_for_restaurant_id === null;
+    const eligible = status === "ready" && user?.status === "active" && (
+        (["student", "seller"].includes(user.role) && user.work_for_restaurant_id === null) ||
+        (user.role === "staff" && Boolean(user.work_for_restaurant_id))
+    );
     const [state, setState] = useState<State>({ key: "", data: null, error: "", loading: true });
     const generation = useRef(0);
     const cancel = useCallback(() => { generation.current++; }, []);

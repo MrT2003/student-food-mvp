@@ -16,7 +16,7 @@ const errors = {
 function failure(code: string, message: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status, headers: { "Cache-Control": "no-store" } });
 }
-export async function approveOrder(request: Request, params: Promise<{ orderId: string }>, action: "accept" | "reject") {
+export async function approveOrder(request: Request, params: Promise<{ orderId: string }>, action: "accept" | "reject" | "complete") {
   if (!isSameOrigin(request)) return failure("FORBIDDEN", "Yêu cầu không hợp lệ.", 403);
   try {
     const client = await createClient();
@@ -26,7 +26,8 @@ export async function approveOrder(request: Request, params: Promise<{ orderId: 
     try { input = await request.json(); }
     catch { return failure("INVALID_JSON", "Nội dung JSON không hợp lệ.", 400); }
     const { orderId } = await params;
-    const result = await OrderApprovalServices[action === "accept" ? "acceptOrder" : "rejectOrder"](client, data.user.id, orderId, input);
+    const method = action === "accept" ? "acceptOrder" : action === "reject" ? "rejectOrder" : "completeOrder";
+    const result = await OrderApprovalServices[method](client, data.user.id, orderId, input);
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const code = error instanceof OrderApprovalError ? error.code : "ORDER_APPROVAL_FAILED";

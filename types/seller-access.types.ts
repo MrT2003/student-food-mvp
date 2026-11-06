@@ -1,7 +1,7 @@
 export type SellerAccess = {
     user: {
         id: string;
-        role: "student" | "seller";
+        role: "student" | "seller" | "staff";
         status: "active";
         work_for_restaurant_id: string | null;
     };

@@ -134,7 +134,7 @@ export function SellerOrdersContent({ actorId, restaurant }: { actorId: string; 
     setSelectedId(null);
     opener.current?.focus();
   }
-  function changeStatus(order: SellerManagedOrder, action: "accept" | "reject") {
+  function changeStatus(order: SellerManagedOrder, action: "accept" | "reject" | "complete") {
     if (action === "reject" && !window.confirm(`Từ chối đơn #${order.order_code ?? "chưa có mã"}?`)) return;
     void decide(order.id, action);
   }
@@ -333,8 +333,8 @@ export function SellerOrdersContent({ actorId, restaurant }: { actorId: string; 
                       {order.order_status === "accepted" && (
                         <button
                           className={styles.primary}
-                          disabled
-                          title="Hoàn thành đơn chưa thuộc luồng được nối backend"
+                          disabled={loading || busyIds.includes(order.id)}
+                          onClick={() => changeStatus(order, "complete")}
                         >
                           Hoàn thành
                         </button>
@@ -359,7 +359,7 @@ export function SellerOrdersContent({ actorId, restaurant }: { actorId: string; 
             </div>
             {!loading && !error && pageCount > 1 && <nav className={styles.pagination} aria-label="Phân trang đơn hàng"><span>{visible.length} đơn · Trang {page}/{pageCount}</span><div><button disabled={page === 1} onClick={() => goToPage(page - 1)}>Trước</button><button disabled={page === pageCount} onClick={() => goToPage(page + 1)}>Sau</button></div></nav>}
           </section>
-          <p className={styles.demo}>Số lượng tab theo toàn bộ đơn của quán đã tải, cùng từ khóa/ngày đang chọn. Ngày tính theo giờ Việt Nam. Chức năng hoàn thành đơn chưa được nối tại đây.</p>
+          <p className={styles.demo}>Số lượng tab theo toàn bộ đơn của quán đã tải, cùng từ khóa/ngày đang chọn. Ngày tính theo giờ Việt Nam.</p>
         </section>
 
         {selected ? (

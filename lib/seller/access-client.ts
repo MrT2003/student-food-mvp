@@ -14,7 +14,7 @@ export async function readSellerAccess(): Promise<SellerAccess> {
     const response = await fetch("/api/seller/access", { credentials: "same-origin", cache: "no-store" });
     const data = await response.json().catch(() => null);
     if (!response.ok) throw new SellerAccessClientError(response.status, data?.error?.code ?? "ACCESS_READ_FAILED");
-    if (!data?.user || !["student", "seller"].includes(data.user.role) || data.user.status !== "active" || (data.user.role === "seller" && !data.restaurant))
+    if (!data?.user || !["student", "seller", "staff"].includes(data.user.role) || data.user.status !== "active" || ((data.user.role === "seller" || data.user.role === "staff") && !data.restaurant))
         throw new SellerAccessClientError(503, "ACCESS_READ_FAILED");
     return data;
 }
