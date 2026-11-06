@@ -7,16 +7,12 @@ import { OrderServices } from "@/services/order.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createClient } from "@/lib/supabase/client";
 import type { OrderedSummary } from "@/types/order.types";
-import type { PreviewRestaurant } from "@/lib/home/mock-data";
 import { formatMoney } from "@/lib/format";
 import FoodPlaceholder from "./FoodPlaceholder";
 import styles from "@/styles/home.module.css";
 import Link from "next/link";
 
-// Giữ tương thích props của HomeView; danh sách này chỉ lấy dữ liệu thật.
-type Props = { restaurants?: PreviewRestaurant[]; onSelect?: (restaurant: PreviewRestaurant) => void };
-
-export default function ReorderSection(_props: Props) {
+export default function ReorderSection() {
   const router = useRouter();
   const userId = useAuthStore((state) => state.user?.id);
   const authStatus = useAuthStore((state) => state.status);

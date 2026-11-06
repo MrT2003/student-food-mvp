@@ -85,7 +85,7 @@ function DetailRow({
 export default function OrderDetailView({ orderId }: { orderId: string }) {
   const router = useRouter();
   const order = useOrderDetail(orderId);
-  const reorder = useStudentMockStore((state) => state.reorderOrder);
+  const reorder = useStudentMockStore((state) => state.reorderDatabaseOrder);
 
   if (!order) {
     return (
@@ -109,13 +109,13 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
   const total = order.total;
   const canTrack = order.status === "pending" || order.status === "accepted";
 
-  function handleReorder() {
+  async function handleReorder() {
     if (!order) return;
     const storeOrder = useStudentMockStore.getState().orderRecords[order.id];
     if (storeOrder) {
-      reorder(order.id);
+      await reorder(order.id);
     }
-    router.push("/checkout");
+    router.push("/cart");
   }
 
   return (
@@ -347,7 +347,7 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
             <button
               type="button"
               className={styles.outlineButton}
-              onClick={handleReorder}
+              onClick={() => void handleReorder()}
             >
               <RotateCw size={18} strokeWidth={2.2} aria-hidden="true" />
               Đặt lại
