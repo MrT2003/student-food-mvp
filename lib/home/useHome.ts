@@ -51,7 +51,6 @@ export function useHome(
 ) {
   const [input, setInput] = useState("");
   const [filters, setFilters] = useState<HomeFilters>(initialHomeFilters);
-  const [selected, setSelected] = useState<PreviewRestaurant | null>(null);
   const restaurants = useMemo(
     () => filterHomeRestaurants(initialRestaurants, filters),
     [initialRestaurants, filters],
@@ -66,10 +65,7 @@ export function useHome(
     filters,
     setFilters,
     restaurants,
-    recentRestaurants: initialRestaurants,
     isAllSelected: isAllHomeFilters(filters),
-    selected,
-    setSelected,
     reset,
     search: () => setFilters((current) => ({ ...current, query: input })),
   };

@@ -53,6 +53,14 @@ function isActive(pathname: string, href: string): boolean {
 export default function StudentBottomNavigation() {
   const pathname = usePathname();
 
+  if (
+    pathname === "/cart" ||
+    pathname === "/cart/confirm" ||
+    pathname === "/seller/register"
+  ) {
+    return null;
+  }
+
   return (
     <nav className={styles.navigation} aria-label="Điều hướng chính trên điện thoại">
       {destinations.map(({ href, label, activeIcon: ActiveIcon, inactiveIcon: InactiveIcon }) => {
