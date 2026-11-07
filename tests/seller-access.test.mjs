@@ -52,6 +52,12 @@ test('actual dashboard and sidebar read shared DB context and never use preview 
  const data={...accessFor('A'),restaurant:{...accessFor('A').restaurant,avatar_url:'https://example.com/shop.png',slug:'real',status:'active',operating_status:'closed'}};const jsx=(type,props)=>({type,props});
  const mocks={'next/link':{default:'a'},'next/image':{default:'img'},'lucide-react':{},'react/jsx-runtime':{jsx,jsxs:jsx},'@/components/layout/StudentHeader':{default:'header'},'./SellerSidebar':{default:'sidebar'},'./SellerAccessProvider':{useSellerAccess:()=>({data,loading:false})},'./SellerAccessProblem':{default:'problem'},'@/styles/seller-overview.module.css':{default:{}},'@/styles/seller-orders.module.css':{default:{}},'@/components/ui/FoodThumbnail':{default:'placeholder'},react:{useState:value=>[value,()=>{}]}};
  mocks.react.useRef=value=>({current:value});mocks.react.useEffect=()=>{};
+ // Sidebar added SVG artwork; load the real presentation module while retaining
+ // the existing context/identity assertions and forbidding network writes.
+ mocks['@/components/ui/SellerBottomNavIcons']=load('../components/ui/SellerBottomNavIcons.tsx',{'react/jsx-runtime':{jsx,jsxs:jsx}});
+ mocks['./SellerBottomNavigation']=load('../components/features/seller/SellerBottomNavigation.tsx',{
+  ...mocks,'next/navigation':{usePathname:()=>'/seller'},'@/styles/seller-mobile-navigation.module.css':{default:{}},
+ });
  mocks['@/lib/seller/open-client']={openSellerRestaurant:async()=>{throw Error('Unexpected write in readonly rendering test');}};
  mocks['@/store/useAuthStore']={useAuthStore:{getState:()=>({user:{id:actor}})}};
  const Overview=load('../components/features/seller/SellerOverviewView.tsx',mocks).default;const Sidebar=load('../components/features/seller/SellerSidebar.tsx',mocks).default;

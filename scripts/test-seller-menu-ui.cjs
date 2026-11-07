@@ -41,6 +41,8 @@ function createCssModuleProxy(filePath) {
 }
 
 Module._load = function patchedLoad(request, parent, isMain) {
+  if (request === "server-only") return {};
+  if (request.endsWith("SellerAccessProvider")) return {useSellerAccess:()=>({data:{user:{id:"test-owner",role:"seller"},restaurant:{id:"test-shop",name:"TEST SHOP"}}})};
   if (request === "next/link") {
     return function MockNextLink({ href, children, ...props }) {
       const resolvedHref =
@@ -176,7 +178,6 @@ const {
   path.join(projectRoot, "components/features/seller/SellerMenuView.tsx"),
 );
 const {
-  createSellerMenuFixtures,
   menuStatus,
 } = require(path.join(projectRoot, "lib/seller/menu.ts"));
 const {
@@ -188,6 +189,16 @@ const {
 const {
   useSellerMenuStore,
 } = require(path.join(projectRoot, "store/useSellerMenuStore.ts"));
+
+// Synthetic fixtures live only in this test. Production no longer supplies showcase data.
+function createSellerMenuFixtures(restaurantId) {
+ const names=["Cơm gà chiên","Cơm sườn nướng","Trà đào cam sả","Bánh tráng trộn"];
+ const images=["/seller-menu-com-ga-chien.png","/seller-menu-com-suon-nuong.png","/seller-menu-tra-dao-cam-sa.png","/seller-menu-banh-trang-tron.png"];
+ return Array.from({length:12},(_,i)=>({item:{id:`test-${i}`,restaurant_id:restaurantId,name:names[i]??`TEST ${i}`,slug:`test-${i}`,
+ price:[30000,32000,25000,20000][i]??10000,category:i===2||i>=8&&i<=10?"Đồ uống":i===3?"Ăn vặt":"Cơm",
+ image_url:images[i]??null,is_active:![3,11].includes(i),is_available:![1,7].includes(i),
+ created_at:new Date(2026,0,12-i).toISOString(),updated_at:new Date(2026,0,12-i).toISOString()},optionCount:[3,2,1,0][i]??0}));
+}
 
 function testViewportAndResponsiveMenuStyles() {
   assert.equal(sellerLayout.viewport.width, "device-width");
@@ -258,8 +269,10 @@ function testMobileMenuCountsFilterSortAndStatusHelpers() {
     sort: "updated",
   });
   assert.equal(mobileRows.length, 12);
+  assert.equal(getSellerMobileMenuItemImage({...mobileRows[0].item,image_url:null}),null);
+  assert.equal(getSellerMobileMenuItemImage({...mobileRows[0].item,image_url:"https://example.invalid/real.png"}),"https://example.invalid/real.png");
 
-  // Top 4 showcase dishes match the mockup 100%
+  // Newest timestamps determine order; image_url is authoritative.
   assert.deepEqual(
     mobileRows.slice(0, 4).map((r) => r.item.name),
     ["Cơm gà chiên", "Cơm sườn nướng", "Trà đào cam sả", "Bánh tráng trộn"],
@@ -350,16 +363,13 @@ function testMobileMenuCountsFilterSortAndStatusHelpers() {
 
   // Status transition helper
   assert.deepEqual(applySellerMobileMenuStatusChange("selling"), {
-    is_active: true,
     is_available: true,
   });
   assert.deepEqual(applySellerMobileMenuStatusChange("unavailable"), {
-    is_active: true,
     is_available: false,
   });
   assert.deepEqual(applySellerMobileMenuStatusChange("hidden"), {
     is_active: false,
-    is_available: true,
   });
 }
 
@@ -385,9 +395,12 @@ function testSellerMenuViewMarkupAndDesktopPreservation() {
   useSellerPreviewStore.setState({ draft: null });
   useSellerPreviewStore.getInitialState().draft = null;
   useSellerMenuStore.setState({
-    rows: createSellerMenuFixtures(demoSellerRestaurant.id),
+    rows: createSellerMenuFixtures("test-shop"),
+    restaurantId: "test-shop",
   });
 
+  useSellerMenuStore.getInitialState().rows = useSellerMenuStore.getState().rows;
+  useSellerMenuStore.getInitialState().restaurantId = "test-shop";
   const html = renderToStaticMarkup(React.createElement(SellerMenuView));
 
   // Both Desktop & Mobile containers must be rendered so Desktop UI is 100% preserved
