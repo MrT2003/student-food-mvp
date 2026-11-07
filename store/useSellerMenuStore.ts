@@ -1,7 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { useAuthStore } from "@/store/useAuthStore";
-import { validateMenu } from "@/lib/seller/menu-contract";
+import { validateMenu, MenuError, parseMenuIssue } from "@/lib/seller/menu-contract";
 import type { MenuItem } from "@/types/restaurant.types";
 import type { SellerMenuRow } from "@/lib/seller/menu";
 const messages: Record<string,string> = {
@@ -39,10 +39,14 @@ async function request(id:string,item:string|undefined,method:string,payload?:un
       ...(payload?{headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}:{})});
     const data=await response.json().catch(()=>null);
     if(owner()!==actor)throw new MenuClientError('UNAUTHORIZED');
-    if(!response.ok)throw new MenuClientError(data?.error?.code??'MENU_RESULT_UNKNOWN');
+    if(!response.ok) {
+      const issue = data?.error?.code === 'VALIDATION_ERROR' ? parseMenuIssue(data?.error?.issue) : undefined;
+      if (issue) throw new MenuError('VALIDATION_ERROR', response.status, issue);
+      throw new MenuClientError(data?.error?.code??'MENU_RESULT_UNKNOWN');
+    }
     if(method==='GET'?!Array.isArray(data?.items):!data?.item?.id)throw new MenuClientError('MENU_RESULT_UNKNOWN');
     return data;
-  } catch(e) { if(e instanceof MenuClientError)throw e; throw new MenuClientError('MENU_RESULT_UNKNOWN'); }
+  } catch(e) { if(e instanceof MenuClientError || e instanceof MenuError)throw e; throw new MenuClientError('MENU_RESULT_UNKNOWN'); }
   finally {clearTimeout(timer);signal?.removeEventListener('abort',cancel);}
 }
 export const useSellerMenuStore=create<State>((set,get)=>({

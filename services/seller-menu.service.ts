@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MenuError, menuUuid, validateMenu } from "@/lib/seller/menu-contract";
+import { MenuError, menuUuid, validateMenu, parseMenuIssue } from "@/lib/seller/menu-contract";
 const fields = "id,restaurant_id,name,slug,description,price,image_url,category,is_active,is_available,created_at,updated_at,option_groups:menu_item_option_groups(id,menu_item_id,name,is_multiple,is_required,is_active,created_at,updated_at,options:menu_item_options(id,group_id,option_name,additional_price,is_active,created_at,updated_at))";
 function menuResult(value: Record<string, unknown>): Record<string, unknown> {
   const pick = (row: Record<string, unknown>, keys: string[]) => Object.fromEntries(keys.map(key => [key, row[key]]));
@@ -61,7 +61,7 @@ export const SellerMenuServices = {
       if (code === "MENU_FORBIDDEN" || response.error.code === "42501") throw new MenuError("MENU_FORBIDDEN", 403);
       if (code === "UNAUTHORIZED") throw new MenuError(code, 401);
       if (code === "MENU_NOT_FOUND") throw new MenuError(code, 404);
-      if (code === "VALIDATION_ERROR") throw new MenuError(code);
+      if (code === "VALIDATION_ERROR") throw new MenuError(code, 400, parseMenuIssue(response.error.details));
       throw new MenuError("MENU_RESULT_UNKNOWN", 503);
     }
     const row = response.data?.item;

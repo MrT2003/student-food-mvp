@@ -9,6 +9,7 @@ import FoodThumbnail from "@/components/ui/FoodThumbnail";
 import SellerSidebar from "./SellerSidebar";
 import { useSellerAccess } from "./SellerAccessProvider";
 
+import { MenuError } from "@/lib/seller/menu-contract";
 import { useSellerMenuStore } from "@/store/useSellerMenuStore";
 
 import { menuCategories, type SellerMenuRow } from "@/lib/seller/menu";
@@ -120,6 +121,7 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
   const [featured, setFeatured] = useState(original?.featuredPreview ?? false);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [error, setError] = useState("");
+  const [invalidField, setInvalidField] = useState("");
   const [saving, setSaving] = useState(false);
   const submitted = useRef(false);
   const uploadRequestId = useRef(0);
@@ -191,13 +193,21 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
+    setInvalidField("");
+    setError("");
     if (original && !useSellerMenuStore.getState().rows.some((row) => row.item.id === original.item.id)) {
       setError("Món này đã bị xóa. Hãy quay lại Menu."); return;
     }
-    if (readingImage || (!image && (!original || Boolean(original.item.image_url))) || !name.trim() || !category || !price.trim() || !(Number.isFinite(basePrice) && Number(basePrice.toFixed(2)) === basePrice) || basePrice < 0 || basePrice > 10000000) {
-      setError("Vui lòng chọn ảnh hợp lệ, nhập tên, danh mục và giá tối đa hai chữ số thập phân từ 0 đến 10.000.000đ."); return;
+    const fail = (field: string, message: string) => { setInvalidField(field); setError(message); };
+    if (readingImage) { fail("image_url", "Vui lòng đợi ảnh tải xong."); return; }
+    if (!image && (!original || Boolean(original.item.image_url))) { fail("image_url", "Vui lòng chọn ảnh món ăn."); return; }
+    if (!name.trim()) { fail("name", "Vui lòng nhập tên món."); return; }
+    if (!category) { fail("category", "Vui lòng chọn danh mục."); return; }
+    if (!price.trim() || !Number.isFinite(basePrice) || Number(basePrice.toFixed(2)) !== basePrice || basePrice < 0 || basePrice > 10000000) {
+      fail("price", "Giá bán phải từ 0 đến 10.000.000đ, tối đa hai chữ số thập phân."); return;
     }
-    if (groups.some((group) => !group.options.length)) { setError("Mỗi nhóm cần ít nhất một lựa chọn, hoặc hãy xóa nhóm trống."); return; }
+    const emptyGroup = groups.findIndex(group => !group.options.length);
+    if (emptyGroup >= 0) { fail(`groups[${emptyGroup}].options`, `Nhóm ${emptyGroup + 1} cần ít nhất một lựa chọn, hoặc hãy xóa nhóm trống.`); return; }
     submitted.current = true; setSaving(true);
     const id = original?.item.id ?? crypto.randomUUID(), now = new Date().toISOString();
     const optionGroups: MenuOptionGroupDetail[] = groups.map((group) => {
@@ -224,6 +234,7 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
     } catch (err) {
       if (!(err instanceof Error) || !err.message.includes("Chưa xác định kết quả")) submitted.current = false;
       setSaving(false);
+      setInvalidField(err instanceof MenuError ? err.issue?.field ?? "" : "");
       setError(err instanceof Error ? err.message : "Không thể lưu món ăn vào cơ sở dữ liệu.");
     }
   }
@@ -241,21 +252,21 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
         <header className={styles.heading}><div><h1>{original ? "Chỉnh sửa món" : "Thêm món mới"}</h1><p>{original ? "Cập nhật thông tin món ăn trên menu cửa hàng của bạn." : "Tạo món mới để hiển thị trên menu cửa hàng của bạn."}</p></div><div className={styles.buttons}>
           <button type="button" className={styles.outline} onClick={() => preview.current?.scrollIntoView({ behavior: "smooth", block: "center" })}><Eye size={20} />Xem trước</button>{saveButton}
         </div></header>
-        {error && <p className={styles.error} role="alert">{error}</p>}
+        {error && <p className={styles.error} id="menu-save-error" role="alert">{error}</p>}
         <div className={styles.columns}><div className={styles.left}>
           <section className={styles.card}><h2>Thông tin cơ bản</h2><div className={styles.basic}>
             <div className={styles.uploadField}><span>Ảnh món {(!original || original.item.image_url) && <b>*</b>}</span>
-              <button type="button" className={styles.upload} onClick={() => upload.current?.click()} aria-label="Tải hoặc thay ảnh món ăn">
+              <button type="button" className={styles.upload} aria-invalid={invalidField === "image_url"} aria-describedby={invalidField === "image_url" ? "menu-save-error" : undefined} onClick={() => upload.current?.click()} aria-label="Tải hoặc thay ảnh món ăn">
                 {image ? <Image src={image} alt="Ảnh món đã chọn" width={300} height={220} unoptimized /> : <><ImagePlus size={42} /><strong>{readingImage ? "Đang tải ảnh lên Cloudinary…" : "Tải ảnh món ăn"}</strong><small>JPG, PNG, WEBP tối đa 5MB</small></>}
               </button>
               <input ref={upload} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => { void readImage(event.target.files?.[0]); event.target.value = ""; }} />
               {image && <button type="button" className={styles.textButton} onClick={() => { uploadRequestId.current++; setReadingImage(false); setImage(null); }}>Xóa ảnh</button>}
             </div>
             <div className={styles.fields}>
-              <label>Tên món <b>*</b><input required maxLength={120} placeholder="Ví dụ: Trà sữa truyền thống" value={name} onChange={(event) => setName(event.target.value)} /></label>
-              <label>Danh mục <b>*</b><select required value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((value) => <option key={value}>{value}</option>)}</select></label>
-              <label>Giá bán <b>*</b><div className={styles.priceInput}><input required type="number" min={0} max={10000000} step={0.01} placeholder="Nhập giá bán" value={price} onChange={(event) => setPrice(event.target.value)} /><span>đ</span></div></label>
-              <label>Mô tả ngắn<div className={styles.description}><textarea maxLength={160} placeholder="Giới thiệu ngắn về món ăn của bạn…" value={description} onChange={(event) => setDescription(event.target.value)} /><small>{description.length}/160</small></div></label>
+              <label>Tên món <b>*</b><input aria-invalid={invalidField === "name"} aria-describedby={invalidField === "name" ? "menu-save-error" : undefined} required maxLength={120} placeholder="Ví dụ: Trà sữa truyền thống" value={name} onChange={(event) => setName(event.target.value)} /></label>
+              <label>Danh mục <b>*</b><select aria-invalid={invalidField === "category"} aria-describedby={invalidField === "category" ? "menu-save-error" : undefined} required value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((value) => <option key={value}>{value}</option>)}</select></label>
+              <label>Giá bán <b>*</b><div className={styles.priceInput}><input aria-invalid={invalidField === "price"} aria-describedby={invalidField === "price" ? "menu-save-error" : undefined} required type="number" min={0} max={10000000} step={0.01} placeholder="Nhập giá bán" value={price} onChange={(event) => setPrice(event.target.value)} /><span>đ</span></div></label>
+              <label>Mô tả ngắn<div className={styles.description}><textarea aria-invalid={invalidField === "description"} aria-describedby={invalidField === "description" ? "menu-save-error" : undefined} maxLength={160} placeholder="Giới thiệu ngắn về món ăn của bạn…" value={description} onChange={(event) => setDescription(event.target.value)} /><small>{description.length}/160</small></div></label>
             </div>
           </div></section>
           <section className={styles.card}><div className={styles.sectionHeading}><h2>Tùy chọn món</h2><p>Tạo các nhóm topping, mức đường, mức đá hoặc món thêm.</p></div>
@@ -265,7 +276,7 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
               if (groups.length >= 20) { setError("Tối đa 20 nhóm."); return; }
               setGroupsChanged(true); setGroups(current => [...current, {id:g.id,name:g.name,is_multiple:g.is_multiple,is_required:g.is_required,options:g.options.filter(o=>o.is_active).map(o=>({id:o.id,option_name:o.option_name,additional_price:o.additional_price}))}]);
             }}>Khôi phục nhóm: {g.name}</button>)}
-            <div className={styles.groups}>{groups.map((group) => <article key={group.id} className={styles.group}>
+            <div className={styles.groups}>{groups.map((group, groupIndex) => <article key={group.id} className={styles.group} data-invalid={invalidField.startsWith(`groups[${groupIndex}]`) || undefined}>
               <header><strong>{group.name}</strong><span>{group.is_multiple ? "Chọn nhiều" : "Chọn một"}{group.is_required ? " · Bắt buộc" : ""}</span><div className={styles.groupActions}>
                 <button type="button" aria-label={`Sửa nhóm ${group.name}`} onClick={() => setEditor({ type: "group", group })}><Pencil size={17} /></button>
                 <button type="button" aria-label={`Xóa nhóm ${group.name}`} onClick={() => { if (window.confirm(`Xóa nhóm “${group.name}” và các lựa chọn?`)) { setGroupsChanged(true); setGroups((current) => current.filter((entry) => entry.id !== group.id)); } }}><Trash2 size={17} /></button>

@@ -28,6 +28,6 @@ export async function menuRequest(request: Request, params: Promise<{ restaurant
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const failure = error instanceof MenuError ? error : new MenuError("MENU_READ_FAILED", 503);
-    return NextResponse.json({ error: { code: failure.code } }, { status: failure.status, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ error: { code: failure.code, ...(failure.issue ? { issue: failure.issue } : {}) } }, { status: failure.status, headers: { "Cache-Control": "no-store" } });
   }
 }
