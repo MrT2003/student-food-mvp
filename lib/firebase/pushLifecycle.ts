@@ -30,10 +30,10 @@ export async function assertPushOwner(userId: string) {
   if (data.user?.id !== userId) throw new PushOwnerChangedError("Tài khoản đã thay đổi. Vui lòng tải lại trang.");
 }
 
-export function withPushLock<T>(action: () => Promise<T>): Promise<T> {
+export async function withPushLock<T>(action: () => Promise<T>): Promise<T> {
   // Cùng origin: các tab phải đợi nhau khi bật/tắt/đăng xuất, tránh xóa token đang được tạo.
   if (!navigator.locks) return Promise.reject(new Error("Trình duyệt chưa hỗ trợ đồng bộ thông báo giữa các tab."));
-  return navigator.locks.request("student-food:push-lifecycle", action);
+  return await navigator.locks.request("student-food:push-lifecycle", action);
 }
 
 // Chỉ gọi khi người dùng đã cho phép, hoặc đã bật trước đó; không tự mở permission prompt.

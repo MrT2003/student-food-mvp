@@ -7,13 +7,12 @@ import { useSignIn, useSignOut } from "@/lib/auth/useAuthFlow";
 import { useAuthStore } from "@/store/useAuthStore";
 import styles from "@/styles/auth-fit.module.css";
 
-
 type Props = {
   mode?: "register" | "login";
 };
 
 export default function RegisterView({ mode = "register" }: Props) {
-  const { pending, error, continueWithGoogle, continueWithZalo } = useSignIn();
+  const { pendingProvider, error, continueWithGoogle, continueWithZalo } = useSignIn();
   const logoutStatus = useAuthStore((state) => state.logoutStatus);
   const { logout, signOutError } = useSignOut();
   const finishingLogout = logoutStatus === "pending" || logoutStatus === "failed";
@@ -59,8 +58,9 @@ export default function RegisterView({ mode = "register" }: Props) {
               <button type="button" onClick={() => void logout()}>Thử lại đăng xuất</button>
             </div>}
             <SocialAuthButtons
-              mode={mode}
-              pending={pending || finishingLogout}
+              // Provider quyết định nút nào hiện loading; khóa cả hai khi chưa hoàn tất logout.
+              pendingProvider={pendingProvider}
+              disabled={finishingLogout}
               error={error}
               onGoogle={() => void continueWithGoogle()}
               onZalo={() => void continueWithZalo()}

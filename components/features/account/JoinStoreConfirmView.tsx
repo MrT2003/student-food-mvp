@@ -1,8 +1,9 @@
 "use client";
 
+import { joinScannedStaff, takeStaffToken } from "@/lib/seller/staff-client";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -131,23 +132,16 @@ function StoreRiceBowlArtwork() {
 
 export default function JoinStoreConfirmView() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const storeName = searchParams.get("store")?.trim() || "Cơm Cô Ba";
-  const storeLocation = searchParams.get("location")?.trim() || "KTX A";
-  const roleLabel = searchParams.get("role")?.trim() || "Nhân viên (Staff)";
-
-  const [submitting, setSubmitting] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-
-  function handleSubmitRequest() {
-    if (submitting || showSuccessModal) return;
-    setSubmitting(true);
-
-    window.setTimeout(() => {
-      setSubmitting(false);
-      setShowSuccessModal(true);
-    }, 350);
+  const [token,setToken]=useState<string|null>(null),[error,setError]=useState("");
+  const [submitting,setSubmitting]=useState(false),[showSuccessModal,setShowSuccessModal]=useState(false);
+  const locked=useRef(false);
+  useEffect(()=>{let mounted=true;Promise.resolve().then(()=>{if(mounted){const value=takeStaffToken();if(value)setToken(value);}});return()=>{mounted=false;};},[]);
+  const storeName="Cửa hàng trong lời mời",storeLocation="Thông tin được kiểm tra khi gia nhập",roleLabel="Nhân viên (Staff)";
+  async function handleSubmitRequest(){
+    if(locked.current||!token)return;locked.current=true;setSubmitting(true);setError("");
+    try{await joinScannedStaff(token);setShowSuccessModal(true);router.refresh();}
+    catch(e){setError(e instanceof Error?e.message:"Không thể gia nhập. Hãy kiểm tra lại hồ sơ.");}
+    finally{setSubmitting(false);setToken(null);}
   }
 
   function handleReturnToProfile() {
@@ -170,7 +164,7 @@ export default function JoinStoreConfirmView() {
             <h1>
               Xác nhận <span>gia nhập</span>
             </h1>
-            <p>Kiểm tra thông tin cửa hàng trước khi gửi yêu cầu.</p>
+            <p>Xác nhận gia nhập bằng mã đã quét.</p>
           </div>
         </header>
 
@@ -184,7 +178,7 @@ export default function JoinStoreConfirmView() {
             </span>
 
             <h2 id="qr-success-heading">Quét QR thành công!</h2>
-            <p>Đã xác thực mã QR của cửa hàng StudentFood.</p>
+            <p>Mã đã được đọc. Máy chủ sẽ kiểm tra lời mời khi bạn xác nhận.</p>
           </div>
 
           <div className={styles.storeProfileRow}>
@@ -202,7 +196,7 @@ export default function JoinStoreConfirmView() {
 
               <span className={styles.validQrPill}>
                 <CircleCheck size={16} strokeWidth={2.3} aria-hidden="true" />
-                QR hợp lệ
+                Mã đã quét
               </span>
             </div>
           </div>
@@ -232,21 +226,21 @@ export default function JoinStoreConfirmView() {
               aria-hidden="true"
             />
             <span>
-              Yêu cầu của bạn sẽ được gửi đến chủ quán. Bạn chỉ có quyền nhân
-              viên sau khi được chấp nhận.
+              Gia nhập thành công sẽ cập nhật quyền nhân viên cho tài khoản của bạn.
             </span>
           </div>
         </section>
 
+        {error&&<p role="alert">{error}</p>}{!token&&!showSuccessModal&&<p role="status">Hãy kiểm tra hồ sơ hoặc quét lại mã trước khi tiếp tục.</p>}
         <div className={styles.confirmActions}>
           <button
             type="button"
             className={styles.submitJoinBtn}
-            disabled={submitting}
-            onClick={handleSubmitRequest}
+            disabled={submitting||!token}
+            onClick={()=>void handleSubmitRequest()}
           >
             <span>
-              {submitting ? "Đang gửi yêu cầu..." : "Gửi yêu cầu gia nhập"}
+              {submitting ? "Đang gia nhập..." : "Gia nhập cửa hàng"}
             </span>
             <ArrowRight size={20} strokeWidth={2.3} aria-hidden="true" />
           </button>
@@ -296,17 +290,16 @@ export default function JoinStoreConfirmView() {
             </div>
 
             <h2 id="sent-request-title" className={styles.sentModalTitle}>
-              Đã gửi yêu cầu!
+              Đã gia nhập!
             </h2>
 
             <p className={styles.sentModalDesc}>
-              Yêu cầu xin làm nhân viên tại {storeName} đã được gửi đến chủ
-              quán.
+              Tài khoản của bạn đã trở thành nhân viên.
             </p>
 
             <span className={styles.pendingApprovalPill}>
               <Clock3 size={16} strokeWidth={2.2} aria-hidden="true" />
-              Đang chờ phê duyệt
+              Đã cập nhật hồ sơ
             </span>
 
             <div className={styles.sentModalInfoBox} role="note">
@@ -317,8 +310,7 @@ export default function JoinStoreConfirmView() {
                 aria-hidden="true"
               />
               <span>
-                Bạn sẽ nhận được thông báo khi chủ quán chấp nhận hoặc từ chối
-                yêu cầu.
+                Bạn có thể quay lại tài khoản để xem quyền mới.
               </span>
             </div>
 

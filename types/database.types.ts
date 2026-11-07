@@ -640,6 +640,8 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      // Proposed migration 202610310001; declaration does not imply live deployment.
+      join_staff_qr: { Args: { p_token: string }; Returns: Json };
       accept_order: { Args: { p_order_id: string }; Returns: Json };
       add_staff_by_phone: { Args: { p_staff_phone: string }; Returns: Json };
       add_to_cart: {

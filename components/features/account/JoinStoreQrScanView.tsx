@@ -1,5 +1,8 @@
 "use client";
 
+import jsQR from "jsqr";
+import { holdStaffToken, parseStaffQr } from "@/lib/seller/staff-client";
+import { getCurrentProfile } from "@/services/auth.service";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -19,65 +22,11 @@ import {
 } from "lucide-react";
 import styles from "@/styles/account-join-store-qr.module.css";
 
-function SampleStandeeQr() {
-  return (
-    <div className={styles.standeeCard} aria-hidden="true">
-      <svg
-        viewBox="0 0 120 120"
-        className={styles.standeeQrSvg}
-        fill="#0b1536"
-      >
-        {/* Top-left finder */}
-        <path d="M6 6h34v34H6V6zm6 6v22h22V12H12zm5 5h12v12H17V17z" />
-        {/* Top-right finder */}
-        <path d="M80 6h34v34H80V6zm6 6v22h22V12H86zm5 5h12v12H91V17z" />
-        {/* Bottom-left finder */}
-        <path d="M6 80h34v34H6V80zm6 6v22h22V86H12zm5 5h12v12H17V91z" />
-        {/* Data modules */}
-        <rect x="46" y="6" width="6" height="6" />
-        <rect x="58" y="6" width="6" height="12" />
-        <rect x="70" y="12" width="6" height="6" />
-        <rect x="46" y="18" width="12" height="6" />
-        <rect x="64" y="24" width="10" height="6" />
-        <rect x="46" y="30" width="6" height="10" />
-        <rect x="58" y="34" width="6" height="6" />
-        <rect x="6" y="46" width="12" height="6" />
-        <rect x="24" y="46" width="6" height="12" />
-        <rect x="36" y="52" width="12" height="6" />
-        <rect x="54" y="46" width="12" height="12" />
-        <rect x="72" y="46" width="6" height="6" />
-        <rect x="84" y="46" width="12" height="6" />
-        <rect x="102" y="46" width="12" height="12" />
-        <rect x="12" y="58" width="6" height="12" />
-        <rect x="30" y="64" width="12" height="6" />
-        <rect x="48" y="62" width="6" height="12" />
-        <rect x="60" y="64" width="12" height="6" />
-        <rect x="78" y="58" width="6" height="12" />
-        <rect x="90" y="58" width="12" height="6" />
-        <rect x="108" y="64" width="6" height="12" />
-        <rect x="46" y="80" width="12" height="6" />
-        <rect x="64" y="76" width="6" height="12" />
-        <rect x="76" y="80" width="12" height="6" />
-        <rect x="94" y="76" width="12" height="12" />
-        <rect x="46" y="92" width="6" height="12" />
-        <rect x="58" y="92" width="12" height="6" />
-        <rect x="76" y="92" width="6" height="12" />
-        <rect x="88" y="94" width="12" height="6" />
-        <rect x="106" y="90" width="8" height="12" />
-        <rect x="54" y="106" width="12" height="8" />
-        <rect x="72" y="108" width="12" height="6" />
-        <rect x="92" y="106" width="10" height="8" />
-        <rect x="108" y="108" width="6" height="6" />
-      </svg>
-      <div className={styles.standeeBrand}>
-        Student<span>Food</span>
-      </div>
-    </div>
-  );
-}
-
 export default function JoinStoreQrScanView() {
   const router = useRouter();
+  const detected = useRef(false);
+  const alive = useRef(true);
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,22 +35,36 @@ export default function JoinStoreQrScanView() {
   );
   const [torchOn, setTorchOn] = useState(false);
   const [hasLiveCamera, setHasLiveCamera] = useState(false);
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
 
   useEffect(() => {
     let activeStream: MediaStream | null = null;
     let cancelled = false;
+    let frame = 0;
+    detected.current=false;
+    const canvas=document.createElement("canvas"), context=canvas.getContext("2d",{willReadFrequently:true});
+    function scan(){
+      if(cancelled)return;
+      if(detected.current){frame=requestAnimationFrame(scan);return;}
+      const video=videoRef.current;
+      if(video&&video.readyState>=2&&video.videoWidth&&context){
+        canvas.width=video.videoWidth;canvas.height=video.videoHeight;context.drawImage(video,0,0);
+        const pixels=context.getImageData(0,0,canvas.width,canvas.height);const qr=jsQR(pixels.data,pixels.width,pixels.height);
+        if(qr){try{const token=parseStaffQr(qr.data);detected.current=true;activeStream?.getTracks().forEach(t=>t.stop());holdStaffToken(token);router.push("/account/join-store/confirm");return;}catch{setStatusMessage("Mã QR không được hỗ trợ.");}}
+      }
+      frame=requestAnimationFrame(scan);
+    }
 
     async function startCamera() {
       if (
         typeof navigator === "undefined" ||
         !navigator.mediaDevices?.getUserMedia
       ) {
-        return;
+        setStatusMessage("Thiết bị chưa hỗ trợ camera. Bạn có thể chọn ảnh QR.");return;
       }
 
       try {
+        const profile=await getCurrentProfile();if(cancelled)return;if(!profile){setStatusMessage("Vui lòng đăng nhập để quét QR.");return;}
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode },
           audio: false,
@@ -116,8 +79,11 @@ export default function JoinStoreQrScanView() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           setHasLiveCamera(true);
+          frame=requestAnimationFrame(scan);
         }
       } catch {
+        if(cancelled)return;
+        setStatusMessage("Không mở được camera. Kiểm tra quyền camera hoặc chọn ảnh QR.");
         setHasLiveCamera(false);
       }
     }
@@ -126,19 +92,12 @@ export default function JoinStoreQrScanView() {
 
     return () => {
       cancelled = true;
+      cancelAnimationFrame(frame);
       if (activeStream) {
         activeStream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [facingMode]);
-
-  useEffect(() => {
-    return () => {
-      if (previewImageUrl) {
-        URL.revokeObjectURL(previewImageUrl);
-      }
-    };
-  }, [previewImageUrl]);
+  }, [facingMode,router]);
 
   async function handleToggleTorch() {
     const nextTorch = !torchOn;
@@ -161,26 +120,16 @@ export default function JoinStoreQrScanView() {
     setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
   }
 
-  function goToConfirmScreen() {
-    router.push("/account/join-store/confirm");
-  }
-
-  function handleSelectQrImage(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    if (previewImageUrl) {
-      URL.revokeObjectURL(previewImageUrl);
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewImageUrl(objectUrl);
-    setStatusMessage("Đã nhận diện mã QR hợp lệ! Đang chuyển sang xác nhận...");
-
-    window.setTimeout(() => {
-      router.push("/account/join-store/confirm");
-    }, 650);
+  async function handleSelectQrImage(event: ChangeEvent<HTMLInputElement>) {
+    const file=event.target.files?.[0];event.target.value="";if(!file||detected.current)return;
+    if(!file.type.startsWith("image/")||file.size>10*1024*1024){setStatusMessage("Hãy chọn ảnh QR dưới 10 MB.");return;}
+    detected.current=true;let bitmap:ImageBitmap|null=null;
+    try{bitmap=await createImageBitmap(file);if(!alive.current)return;
+      const canvas=document.createElement("canvas");const scale=Math.min(1,2048/Math.max(bitmap.width,bitmap.height));canvas.width=Math.max(1,Math.floor(bitmap.width*scale));canvas.height=Math.max(1,Math.floor(bitmap.height*scale));const context=canvas.getContext("2d");if(!context)throw Error();context.drawImage(bitmap,0,0,canvas.width,canvas.height);
+      const pixels=context.getImageData(0,0,canvas.width,canvas.height);const qr=jsQR(pixels.data,pixels.width,pixels.height);if(!qr)throw Error();
+      const token=parseStaffQr(qr.data);(videoRef.current?.srcObject as MediaStream|null)?.getTracks().forEach(t=>t.stop());holdStaffToken(token);router.push("/account/join-store/confirm");
+    }catch{if(alive.current){setStatusMessage("Không đọc được mã tuyển nhân viên trong ảnh.");detected.current=false;}}
+    finally{bitmap?.close();}
   }
 
   return (
@@ -212,7 +161,7 @@ export default function JoinStoreQrScanView() {
               aria-label="Hướng dẫn quét mã QR xin việc"
               onClick={() =>
                 setStatusMessage(
-                  "Mẹo test nhanh: Nhấn vào khung QR giữa màn hình hoặc chọn bất kỳ ảnh nào để sang trang Xác nhận gia nhập.",
+                  "Mở quyền camera và đưa mã tuyển nhân viên vào khung, hoặc chọn ảnh QR.",
                 )
               }
             >
@@ -227,7 +176,7 @@ export default function JoinStoreQrScanView() {
 
             <div className={styles.headerCopy}>
               <h1>Quét QR xin việc</h1>
-              <p>Quét mã QR từ chủ quán để gửi yêu cầu xin làm nhân viên.</p>
+              <p>Quét mã QR từ chủ quán để gia nhập cửa hàng.</p>
             </div>
           </div>
         </div>
@@ -257,18 +206,7 @@ export default function JoinStoreQrScanView() {
           </div>
 
           <div
-            role="button"
-            tabIndex={0}
-            aria-label="Mô phỏng quét mã QR thành công"
-            title="Nhấn để mô phỏng quét mã QR thành công"
-            className={`${styles.viewfinderFrame} ${styles.viewfinderInteractive}`}
-            onClick={goToConfirmScreen}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                goToConfirmScreen();
-              }
-            }}
+            className={styles.viewfinderFrame}
           >
             <span
               className={`${styles.corner} ${styles.cornerTopLeft}`}
@@ -287,14 +225,8 @@ export default function JoinStoreQrScanView() {
               aria-hidden="true"
             />
 
-            {previewImageUrl ? (
-              <img
-                src={previewImageUrl}
-                alt="Ảnh mã QR đã chọn"
-                className={styles.uploadedPreviewImg}
-              />
-            ) : !hasLiveCamera ? (
-              <SampleStandeeQr />
+            {!hasLiveCamera ? (
+              <Camera size={64} aria-hidden="true" />
             ) : null}
           </div>
 
@@ -320,7 +252,7 @@ export default function JoinStoreQrScanView() {
             type="file"
             accept="image/*"
             hidden
-            onChange={handleSelectQrImage}
+            onChange={event=>void handleSelectQrImage(event)}
           />
 
           <button

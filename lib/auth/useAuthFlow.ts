@@ -30,7 +30,7 @@ export function useSignIn() {
   }
 
   async function continueWithZalo() {
-    if (pending) return;
+    if (pending || ["pending", "failed"].includes(useAuthStore.getState().logoutStatus)) return;
     setPendingProvider("zalo");
     setError(null);
 

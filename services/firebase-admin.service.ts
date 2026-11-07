@@ -74,7 +74,7 @@ async function sendToUser(input: UserPushMessage): Promise<PushSendResult> {
     recipientUserId: input.userId, // Frontend kiểm tra owner trước khi hiển thị message đến trễ.
     ...(input.orderId ? { orderId: input.orderId } : {}) };
   if (Buffer.byteLength(JSON.stringify(data), "utf8") > 3500) throw new Error("PUSH_MESSAGE_TOO_LARGE");
-  // Create supabase admin client 
+  // Create supabase admin client
   const admin = createAdminClient();
   const { data: user, error: userError } = await admin.from("users").select("status").eq("id", input.userId).maybeSingle();
   if (userError) throw new Error("PUSH_USER_LOOKUP_FAILED");
@@ -90,7 +90,7 @@ async function sendToUser(input: UserPushMessage): Promise<PushSendResult> {
     const { data: rows, error } = await query;
     // Không throw sau khi đã gửi một phần: caller cần biết kết quả để tránh gửi lại các token thành công.
     if (error) { result.lookupFailed = true; break; }
-    if (!rows?.length) break; 
+    if (!rows?.length) break;
     const messaging = messagingClient();
     result.attempted += rows.length;
     let responses;
@@ -129,4 +129,43 @@ async function sendToUser(input: UserPushMessage): Promise<PushSendResult> {
   return result;
 }
 
-export const FirebaseAdminService = { sendToUser };
+export type ClaimedPushDelivery = {
+  id: string; userId: string; token: string; notificationId: string;
+  orderId: string; title: string; body: string; ttl: number;
+  destination?: "seller_orders" | "student_order";
+};
+export type PushDeliveryOutcome = { id: string; outcome: "accepted" | "retry" | "failed"; code: string };
+
+// Worker đã claim đúng thiết bị trong DB. Không gọi sendToUser ở đây vì sẽ gửi lại thiết bị đã thành công.
+async function sendClaimedDeliveries(jobs: ClaimedPushDelivery[]): Promise<PushDeliveryOutcome[]> {
+  if (!jobs.length) return [];
+  if (jobs.length > 20) throw new Error("PUSH_BATCH_TOO_LARGE");
+  const classify = (id: string, error: unknown): PushDeliveryOutcome => {
+    const code = safeErrorCode(error);
+    const transient = new Set(["messaging/server-unavailable", "messaging/internal-error",
+      "messaging/unknown-error", "messaging/quota-exceeded", "messaging/message-rate-exceeded",
+      "messaging/device-message-rate-exceeded", "app/network-error", "app/network-timeout"]);
+    return { id, outcome: transient.has(code) ? "retry" : "failed", code };
+  };
+  try {
+    const result = await messagingClient().sendEach(jobs.map((job) => ({
+      token: job.token,
+      data: { title: job.title, body: job.body, recipientUserId: job.userId,
+        // RPC quyết định người nhận và đích; mặc định giữ tương thích batch quán cũ.
+        notificationId: job.notificationId, orderId: job.orderId, destination: job.destination === "student_order" ? "student_order" : "seller_orders" },
+      // Thông báo đơn mới nhanh hết hạn; không để FCM giữ popup cũ cả tiếng khi quán đã duyệt.
+      webpush: { headers: { TTL: String(Math.max(1, Math.min(job.ttl, 60))), Urgency: "high" } },
+    })));
+    return result.responses.map((response, index) => response.success
+      ? { id: jobs[index].id, outcome: "accepted", code: "FCM_ACCEPTED" }
+      : classify(jobs[index].id, response.error));
+  } catch (error) {
+    // Cấu hình sai phải được sửa; lỗi toàn batch không phải lý do xóa token.
+    if (error instanceof Error && error.message.startsWith("FIREBASE_ADMIN_")) {
+      return jobs.map((job) => ({ id: job.id, outcome: "failed", code: error.message }));
+    }
+    return jobs.map((job) => classify(job.id, error));
+  }
+}
+
+export const FirebaseAdminService = { sendToUser, sendClaimedDeliveries };

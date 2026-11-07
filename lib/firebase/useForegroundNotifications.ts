@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { MessagePayload } from "firebase/messaging";
 import { FirebaseService } from "@/services/firebase.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PUSH_CHANGED, PUSH_STORAGE_KEY, readPushRegistration } from "./pushLifecycle";
@@ -16,6 +17,8 @@ export function useForegroundNotifications(userId: string) {
   useEffect(() => {
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
+    let starting = false;
+    let generation = 0;
     // Giữ tối đa 200 ID trong vòng đời listener, kể cả toast đã đóng; tránh tăng bộ nhớ vô hạn.
     const seen = new Set<string>();
     const canReceive = () => {
@@ -26,22 +29,38 @@ export function useForegroundNotifications(userId: string) {
         return saved?.userId === userId && saved.enabled && Boolean(saved.token);
       } catch { return false; }
     };
-    const clearIfDisabled = () => { if (!canReceive()) setNotifications([]); };
+    const clearIfDisabled = () => {
+      if (!canReceive()) { setNotifications([]); setError(null); }
+      syncSubscription();
+    };
     const onStorage = (event: StorageEvent) => {
       if (event.key === PUSH_STORAGE_KEY || event.key === null) clearIfDisabled();
     };
     window.addEventListener(PUSH_CHANGED, clearIfDisabled);
     window.addEventListener("storage", onStorage);
 
-    void (async () => {
-      if (!await FirebaseService.isBrowserSupported() || disposed) return;
-      const stop = await FirebaseService.onForegroundMessage((payload) => {
-        if (disposed || document.visibilityState !== "visible" || !canReceive()) return;
+    // FCM is optional: a logged-in seller who never enabled push must not
+    // initialize Firebase (or see config errors) just by opening the dashboard.
+    function syncSubscription() {
+      if (disposed) return;
+      if (!canReceive()) {
+        generation++; starting = false;
+        unsubscribe?.(); unsubscribe = undefined;
+        return;
+      }
+      if (starting || unsubscribe) return;
+      const run = ++generation;
+      starting = true;
+      void (async () => {
+      if (!await FirebaseService.isBrowserSupported() || disposed || run !== generation || !canReceive()) return;
+      const receive = (payload: MessagePayload) => {
+        if (disposed || document.visibilityState !== "visible" || !canReceive()) return false;
         const data = payload.data;
         // Message đang trên đường tới khi đổi account phải bị bỏ qua, không hiện dữ liệu user cũ.
-        if (!data || data.recipientUserId !== userId) return;
+        if (!data || data.recipientUserId !== userId) return false;
         const id = data.notificationId || payload.messageId;
-        if (!id || id.length > 256 || seen.has(id)) return;
+        if (!id || id.length > 256) return false;
+        if (seen.has(id)) return true;
         seen.add(id);
         if (seen.size > 200) seen.delete(seen.values().next().value!);
         const notification: ForegroundNotification = {
@@ -49,18 +68,35 @@ export function useForegroundNotifications(userId: string) {
           title: (data.title?.trim() || payload.notification?.title || "StudentFood").slice(0, 120),
           body: (data.body || payload.notification?.body || "Bạn có thông báo mới.").slice(0, 500),
           // Chỉ tạo đường dẫn nội bộ từ UUID, không điều hướng tới URL tùy ý trong payload.
-          href: data.orderId && UUID.test(data.orderId) ? `/orders/${data.orderId}` : "/orders",
+          href: data.destination === "seller_orders" ? "/seller/orders"
+            : data.orderId && UUID.test(data.orderId) ? `/orders/${data.orderId}` : "/orders",
         };
         setNotifications((current) => [...current, notification].slice(-3));
-      });
+        return true;
+      };
+      const stopFirebase = await FirebaseService.onForegroundMessage(receive);
+      // Cùng đường xử lý/dedupe cho FCM foreground và tin worker chuyển vào cửa sổ visible.
+      const onWorkerMessage = (event: MessageEvent) => {
+        if (event.data?.type !== "STUDENT_FOOD_PUSH") return;
+        const payload = event.data.payload;
+        const accepted = Boolean(payload && typeof payload === "object" && receive(payload));
+        event.ports[0]?.postMessage(accepted);
+      };
+      navigator.serviceWorker.addEventListener("message", onWorkerMessage);
+      const stop = () => {
+        stopFirebase();
+        navigator.serviceWorker.removeEventListener("message", onWorkerMessage);
+      };
       // SDK import bất đồng bộ có thể hoàn tất sau unmount/Strict Mode cleanup.
-      if (disposed) stop(); else unsubscribe = stop;
-    })().catch(() => {
-      if (!disposed) setError("Chưa thể nhận thông báo trong trang. Vui lòng tải lại để thử lại.");
-    });
+      if (disposed || run !== generation || !canReceive()) stop(); else unsubscribe = stop;
+      })().catch(() => {
+        if (!disposed && run === generation && canReceive()) setError("Chưa thể nhận thông báo trong trang. Vui lòng tải lại để thử lại.");
+      }).finally(() => { if (run === generation) starting = false; });
+    }
+    syncSubscription();
 
     return () => {
-      disposed = true;
+      disposed = true; generation++;
       unsubscribe?.();
       window.removeEventListener(PUSH_CHANGED, clearIfDisabled);
       window.removeEventListener("storage", onStorage);

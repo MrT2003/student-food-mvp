@@ -19,8 +19,11 @@ export async function GET(request: Request) {
   const linking = url.searchParams.get("mode") === "link";
   // Helper trả redirect về ứng dụng.
   const redirect = (path: string) => {
-    // Dựng URL đích từ đường dẫn và origin hiện tại.
-    const response = NextResponse.redirect(new URL(path, url.origin));
+    // Location tương đối giữ nguyên domain trình duyệt (ngrok/localhost/production).
+    // Không dùng request.url.origin vì reverse proxy có thể đưa URL nội bộ localhost vào đây.
+    // Chỉ cho phép đường dẫn nội bộ, tránh redirect sang website khác.
+    const destination = path.startsWith("/") && !path.startsWith("//") && !/[\\\x00-\x1f\x7f]/.test(path) ? path : "/";
+    const response = new NextResponse(null, { status: 307, headers: { Location: destination } });
     // Không cho cache kết quả xác thực.
     response.headers.set("Cache-Control", "no-store");
     // Trả redirect đã cấu hình.

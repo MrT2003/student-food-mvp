@@ -24,9 +24,13 @@
 .status { display: grid; grid-template-columns: 82px minmax(0, 1fr) 225px; gap: 16px; align-items: center; margin-top: 8px; }
 .storeIcon { display: grid; place-items: center; width: 82px; height: 82px; background: #ffede7; color: #ff5826; border-radius: 50%; }
 .closed { display: inline-block; padding: 6px 16px; background: #ffebeb; color: #f33e35; border-radius: 24px; font-weight: 600; }
+.closed[data-open=true] { background:#eaf9f0; color:#18733b; }
 .status p { font-size: 13px; }
 .openAction { border-left: 1px solid #edf0f5; padding-left: 20px; text-align: center; }
 .openAction button { width: 100%; border: 0; border-radius: 8px; padding: 12px; color: white; background: #aeb6c5; margin-bottom: 6px; }
+.openAction button:not(:disabled) { background:linear-gradient(110deg,#ff8523,#ff391b); }
+.status ~ .openError { color:#b43527; }
+.status ~ .openMessage { color:#18733b; }
 .sectionTitle { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 10px; font-family: var(--font-display); }
 .sectionTitle > svg { color: #ff561c; width: 28px; height: 28px; flex-shrink: 0; }
 .sectionTitle a { margin-left: auto; color: #ff4b1a; display: inline-flex; gap: 8px; align-items: center; text-decoration: none; }
@@ -61,6 +65,7 @@
 .task:last-child { border-bottom: 0; }
 .task > svg { color: #8196b5; margin-left: auto; flex-shrink: 0; }
 .checkbox { width: 21px; height: 21px; border: 2px solid #afbdd0; border-radius: 4px; flex-shrink: 0; }
+.checkbox[data-done=true] { display:grid; place-items:center; color:#18733b; border-color:#18733b; }
 .rail .card > p { margin: 10px 0 18px; }
 .support { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 14px; background: transparent; border: 0; color: #315b91; }
 .guide { padding-left: 20px; color: #627fa8; margin-top: 14px; list-style: decimal; }

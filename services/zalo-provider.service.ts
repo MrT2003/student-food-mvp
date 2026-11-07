@@ -1,6 +1,6 @@
-import {AuthUtilities} from "@/utilities/auth.utility";
-import { isRecord } from "@/utilities/system.utility";
 import { ZaloProfileResponse } from "@/types/auth.types";
+import { AuthUtilities } from "@/utilities/auth.utility";
+import { isRecord } from "@/utilities/system.utility";
 import * as crypto from "crypto";
 import "server-only";
 
@@ -129,7 +129,7 @@ async function sendRequestToZalo(
   } catch (error) {
     // Preserve already-classified failures instead of logging them again as network errors.
     if (error instanceof ZaloProviderError) throw error;
-    if (error instanceof SyntaxError) {
+    if (error instanceof SyntaxError || (isRecord(error) && error.name === "SyntaxError")) {
       return generateFailureReponse(stage, "invalid_json", {
         httpStatus: response?.status,
       });
@@ -174,6 +174,12 @@ export const ZaloProviderService = {
   // Generate Authorization URL
   getAuthorizationUrl(codeChallenge: string, state: string): string {
     const appID = process.env.ZALO_APP_ID?.trim();
+    const origin = window.location.origin;
+    const devCallback = origin.concat("/api/auth/zalo/callback");
+    console.log(devCallback)
+    // npm run dev vẫn dùng callback DEV khi truy cập qua ngrok.
+    // URL cấu hình phải cùng origin với trang bắt đầu login để callback nhận cookie sf_zalo_flow.
+    // Giữ URL do server cấu hình, không lấy tùy ý từ Host header của request.
     const callbackVariable =
       process.env.NODE_ENV === "production"
         ? "ZALO_CALLBACK_URL_PRODUCT"
@@ -315,7 +321,14 @@ export const ZaloProviderService = {
       isRecord(response.picture) && isRecord(response.picture.data)
         ? response.picture.data
         : null;
-    const imgUrl = typeof imgData?.url === "string" ? imgData.url.trim() : "";
+    let imgUrl = typeof imgData?.url === "string" ? imgData.url.trim() : "";
+    // Provider data is persisted as an avatar URL; accept only safe web URLs.
+    if (imgUrl) {
+      try {
+        const url = new URL(imgUrl);
+        if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) imgUrl = "";
+      } catch { imgUrl = ""; }
+    }
 
     return { id: response.id, name: response.name, img_url: imgUrl };
   },

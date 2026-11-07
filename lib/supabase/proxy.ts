@@ -61,25 +61,29 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/api')
 
   // In case user not yet login then immediately redirect them to the login page
- if(!user && !isPublicRoute) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
+  if (!user && !isPublicRoute) {
+    // Location tương đối giữ origin của browser, không dùng hostname nội bộ Next.
+    // Tự hoạt động trên localhost, tunnel và production, không cần allowlist hardcode.
+    const response = new NextResponse(null, {
+      status: 307,
+      headers: { Location: '/auth/login' },
+    });
+    supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
+    return response;
   }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-  // creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object to fit your needs, but avoid changing
-  //    the cookies!
-  // 4. Finally:
-  //    return myNewResponse
-  // If this is not done, you may be causing the browser and server to go out
-  // of sync and terminate the user's session prematurely!
+// IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
+// creating a new response object with NextResponse.next() make sure to:
+// 1. Pass the request in it, like so:
+//    const myNewResponse = NextResponse.next({ request })
+// 2. Copy over the cookies, like so:
+//    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+// 3. Change the myNewResponse object to fit your needs, but avoid changing
+//    the cookies!
+// 4. Finally:
+//    return myNewResponse
+// If this is not done, you may be causing the browser and server to go out
+// of sync and terminate the user's session prematurely!
 
-  return supabaseResponse
+return supabaseResponse
 }
