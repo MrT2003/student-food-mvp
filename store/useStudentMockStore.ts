@@ -99,6 +99,8 @@ type StudentMockState = {
   addCatalogItem: (input: AddCartItemInput) => ActionResult;
   reorderOrder: (orderId: string) => ActionResult;
   reorderDatabaseOrder: (orderId: string) => Promise<ActionResult>;
+  cancelOrderRecord: (orderId: string) => ActionResult;
+  cancelDatabaseOrder: (orderId: string) => Promise<ActionResult>;
 
   updateCartItemQuantity: (id: string, quantity: number) => ActionResult;
   removeCartItem: (id: string) => ActionResult;
@@ -696,6 +698,65 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
         for (const payload of payloads) {
           await CartServices.addToCart(payload);
         }
+        await get().syncFromDatabase();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: errorMessage(error) };
+      }
+    },
+
+    cancelOrderRecord: (orderId) => {
+      try {
+        const state = get();
+        const order = state.orderRecords[orderId];
+        if (!order) {
+          throw new Error("Không tìm thấy đơn hàng.");
+        }
+        if (order.order_status !== "pending") {
+          throw new Error("Chỉ có thể hủy đơn hàng khi đang chờ xác nhận.");
+        }
+        set({
+          orderRecords: {
+            ...state.orderRecords,
+            [orderId]: {
+              ...order,
+              order_status: "cancelled",
+            },
+          },
+        });
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: errorMessage(error) };
+      }
+    },
+
+    cancelDatabaseOrder: async (orderId) => {
+      try {
+        const state = get();
+        if (!state.serverCart) {
+          return state.cancelOrderRecord(orderId);
+        }
+        const order = state.orderRecords[orderId];
+        if (!order) {
+          throw new Error("Không tìm thấy đơn hàng.");
+        }
+        if (order.order_status !== "pending") {
+          throw new Error("Chỉ có thể hủy đơn hàng khi đang chờ xác nhận.");
+        }
+        await OrderServices.cancelOrder(orderId);
+        set((current) => {
+          const target = current.orderRecords[orderId];
+          if (!target) return current;
+          return {
+            orderRecords: {
+              ...current.orderRecords,
+              [orderId]: {
+                ...target,
+                order_status: "cancelled",
+              },
+            },
+          };
+        });
         await get().syncFromDatabase();
         return { ok: true };
       } catch (error) {

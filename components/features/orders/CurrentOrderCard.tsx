@@ -8,6 +8,7 @@ import {
   CreditCard,
   MapPin,
   Utensils,
+  X,
 } from "lucide-react";
 import { formatMoney } from "@/lib/format";
 import OrderFoodMedia from "./OrderFoodMedia";
@@ -21,6 +22,7 @@ import styles from "@/styles/orders.module.css";
 type Props = {
   order: OrderCardViewModel;
   onCancel?: (orderId: string) => void;
+  cancelling?: boolean;
   onContact?: (order: OrderCardViewModel) => void;
 };
 
@@ -40,7 +42,13 @@ function CurrentStatusBadge({ status }: { status: OrderStatus }) {
   );
 }
 
-export default function CurrentOrderCard({ order }: Props) {
+export default function CurrentOrderCard({
+  order,
+  onCancel,
+  cancelling = false,
+}: Props) {
+  const canCancel = order.status === "pending";
+
   return (
     <article
       className={styles.mobileCurrentCard}
@@ -116,7 +124,14 @@ export default function CurrentOrderCard({ order }: Props) {
         </div>
       </div>
 
-      <div className={styles.currentActions}>
+      <div
+        className={[
+          styles.currentActions,
+          canCancel ? styles.currentActionsWithCancel : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <Link
           href={`/orders/${encodeURIComponent(order.id)}/tracking`}
           className={styles.primaryButton}
@@ -132,6 +147,18 @@ export default function CurrentOrderCard({ order }: Props) {
           Xem chi tiết
           <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
         </Link>
+
+        {canCancel && (
+          <button
+            type="button"
+            className={styles.cancelButton}
+            disabled={cancelling}
+            onClick={() => onCancel?.(order.id)}
+          >
+            <X size={15} strokeWidth={2.4} aria-hidden="true" />
+            {cancelling ? "Đang hủy..." : "Hủy đơn"}
+          </button>
+        )}
       </div>
     </article>
   );

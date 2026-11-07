@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowRight,
   CalendarDays,
   CircleCheck,
@@ -15,6 +16,7 @@ import {
   MapPin,
   Milk,
   Utensils,
+  X,
 } from "lucide-react";
 import { useOrders } from "@/lib/orders/useOrders";
 import { useReorder } from "@/lib/orders/useReorder";
@@ -24,6 +26,7 @@ import OrdersHero from "./OrdersHero";
 import OrdersFilterBar from "./OrdersFilterBar";
 import CurrentOrderCard from "./CurrentOrderCard";
 import HistoryOrderCard from "./HistoryOrderCard";
+import OrderFoodMedia from "./OrderFoodMedia";
 import {
   cancelPendingOrder,
   computeSummaryCounts,
@@ -88,10 +91,18 @@ function FoodPlaceholder({
 type DesktopOrderCardProps = {
   order: OrderCardViewModel;
   onAction: (orderId: string) => void;
+  onCancel?: (orderId: string) => void;
+  cancelling?: boolean;
   added?: boolean;
 };
 
-function DesktopCurrentOrderCard({ order }: DesktopOrderCardProps) {
+function DesktopCurrentOrderCard({
+  order,
+  onCancel,
+  cancelling = false,
+}: DesktopOrderCardProps) {
+  const canCancel = order.status === "pending";
+
   return (
     <article className={styles.currentCard} aria-label={`Đơn hàng ${order.id}`}>
       <FoodPlaceholder kind={order.kind} />
@@ -151,13 +162,35 @@ function DesktopCurrentOrderCard({ order }: DesktopOrderCardProps) {
           Theo dõi đơn
         </Link>
 
-        <Link
-          href={`/orders/${encodeURIComponent(order.id)}`}
-          className={styles.outlineButton}
-        >
-          Xem chi tiết
-          <ArrowRight size={19} aria-hidden="true" />
-        </Link>
+        {canCancel ? (
+          <div className={styles.secondaryActionsRow}>
+            <Link
+              href={`/orders/${encodeURIComponent(order.id)}`}
+              className={styles.outlineButton}
+            >
+              Xem chi tiết
+              <ArrowRight size={19} aria-hidden="true" />
+            </Link>
+
+            <button
+              type="button"
+              className={styles.cancelButton}
+              disabled={cancelling}
+              onClick={() => onCancel?.(order.id)}
+            >
+              <X size={18} strokeWidth={2.4} aria-hidden="true" />
+              {cancelling ? "Đang hủy..." : "Hủy đơn"}
+            </button>
+          </div>
+        ) : (
+          <Link
+            href={`/orders/${encodeURIComponent(order.id)}`}
+            className={styles.outlineButton}
+          >
+            Xem chi tiết
+            <ArrowRight size={19} aria-hidden="true" />
+          </Link>
+        )}
       </div>
     </article>
   );
@@ -233,6 +266,9 @@ export default function OrdersView({
   const isServerSynced = useStudentMockStore(
     (state) => state.serverCart !== null,
   );
+  const cancelDatabaseOrder = useStudentMockStore(
+    (state) => state.cancelDatabaseOrder,
+  );
   const { reorder, addedIds, notice, setNotice } = useReorder();
 
   const [demoOrders, setDemoOrders] = useState<OrderCardViewModel[]>(
@@ -244,6 +280,12 @@ export default function OrdersView({
   const [demoAddedIds, setDemoAddedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
+  const [cancellingIds, setCancellingIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [confirmCancelOrderId, setConfirmCancelOrderId] = useState<
+    string | null
+  >(null);
 
   // State bộ lọc dùng chung cho cả Desktop và Mobile
   const [status, setStatus] = useState<OrderStatusFilter>(
@@ -289,8 +331,69 @@ export default function OrdersView({
     setNotice("");
   }
 
-  function handleCancelOrder(orderId: string) {
+  const confirmCancelOrder = useMemo(() => {
+    if (!confirmCancelOrderId) return null;
+    return (
+      activeOrders.find(
+        (entry) =>
+          entry.id === confirmCancelOrderId && entry.status === "pending",
+      ) ?? null
+    );
+  }, [activeOrders, confirmCancelOrderId]);
+
+  useEffect(() => {
+    if (!confirmCancelOrder) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (
+        event.key === "Escape" &&
+        !cancellingIds.has(confirmCancelOrder!.id)
+      ) {
+        setConfirmCancelOrderId(null);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [confirmCancelOrder, cancellingIds]);
+
+  function handleRequestCancelOrder(orderId: string) {
+    const target = activeOrders.find((entry) => entry.id === orderId);
+    if (!target || target.status !== "pending") return;
+    if (cancellingIds.has(orderId)) return;
+    setConfirmCancelOrderId(orderId);
+  }
+
+  async function handleConfirmCancelOrder() {
+    if (!confirmCancelOrder) return;
+    const orderId = confirmCancelOrder.id;
+    if (cancellingIds.has(orderId)) return;
+
+    const storeOrder = useStudentMockStore.getState().orderRecords[orderId];
+    if (storeOrder) {
+      setCancellingIds((prev) => {
+        const next = new Set(prev);
+        next.add(orderId);
+        return next;
+      });
+      try {
+        const res = await cancelDatabaseOrder(orderId);
+        setConfirmCancelOrderId(null);
+        if (res.ok) {
+          setNotice(`Đã hủy đơn hàng #${confirmCancelOrder.orderCode}.`);
+        } else {
+          setNotice(res.message);
+        }
+      } finally {
+        setCancellingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(orderId);
+          return next;
+        });
+      }
+      return;
+    }
+
     const result = cancelPendingOrder(demoOrders, demoCounts, orderId);
+    setConfirmCancelOrderId(null);
     if (result.cancelledOrder) {
       setDemoOrders(result.orders);
       setDemoCounts(result.counts);
@@ -380,6 +483,8 @@ export default function OrdersView({
                   key={order.id}
                   order={order}
                   onAction={handleReorder}
+                  onCancel={handleRequestCancelOrder}
+                  cancelling={cancellingIds.has(order.id)}
                 />
               ))}
             </div>
@@ -489,7 +594,8 @@ export default function OrdersView({
                   <CurrentOrderCard
                     key={order.id}
                     order={order}
-                    onCancel={handleCancelOrder}
+                    onCancel={handleRequestCancelOrder}
+                    cancelling={cancellingIds.has(order.id)}
                     onContact={handleContactRestaurant}
                   />
                 ))}
@@ -561,6 +667,91 @@ export default function OrdersView({
           </section>
         )}
       </div>
+
+      {confirmCancelOrder && (
+        <div
+          className={styles.cancelModalBackdrop}
+          role="presentation"
+          onClick={() => {
+            if (!cancellingIds.has(confirmCancelOrder.id)) {
+              setConfirmCancelOrderId(null);
+            }
+          }}
+        >
+          <div
+            className={styles.cancelModalDialog}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-order-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={styles.cancelModalHeader}>
+              <div className={styles.cancelModalTitleRow}>
+                <AlertTriangle
+                  size={24}
+                  strokeWidth={2.2}
+                  className={styles.cancelModalWarnIcon}
+                  aria-hidden="true"
+                />
+                <h2 id="cancel-order-modal-title">Xác nhận hủy đơn hàng</h2>
+              </div>
+
+              <button
+                type="button"
+                className={styles.cancelModalCloseBtn}
+                aria-label="Đóng hộp thoại xác nhận hủy đơn"
+                disabled={cancellingIds.has(confirmCancelOrder.id)}
+                onClick={() => setConfirmCancelOrderId(null)}
+              >
+                <X size={21} strokeWidth={2} aria-hidden="true" />
+              </button>
+            </div>
+
+            <p className={styles.cancelModalDescription}>
+              Bạn có chắc chắn muốn hủy đơn hàng này không?
+            </p>
+
+            <div className={styles.cancelModalOrderBox}>
+              <OrderFoodMedia
+                artwork={confirmCancelOrder.artwork}
+                kind={confirmCancelOrder.kind}
+                imageUrl={confirmCancelOrder.imageUrl}
+                className={styles.cancelModalThumb}
+              />
+
+              <div className={styles.cancelModalOrderInfo}>
+                <strong>{confirmCancelOrder.restaurantName}</strong>
+                <span>Đơn hàng #{confirmCancelOrder.orderCode}</span>
+                <em className={styles.cancelModalTotal}>
+                  {formatMoney(confirmCancelOrder.total)}
+                </em>
+              </div>
+            </div>
+
+            <div className={styles.cancelModalActions}>
+              <button
+                type="button"
+                className={styles.cancelModalBackBtn}
+                disabled={cancellingIds.has(confirmCancelOrder.id)}
+                onClick={() => setConfirmCancelOrderId(null)}
+              >
+                Không, quay lại
+              </button>
+
+              <button
+                type="button"
+                className={styles.cancelModalConfirmBtn}
+                disabled={cancellingIds.has(confirmCancelOrder.id)}
+                onClick={() => void handleConfirmCancelOrder()}
+              >
+                {cancellingIds.has(confirmCancelOrder.id)
+                  ? "Đang hủy..."
+                  : "Xác nhận hủy"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
