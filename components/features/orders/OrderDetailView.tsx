@@ -11,6 +11,7 @@ import {
   CreditCard,
   Info,
   MapPin,
+  MessageSquareWarning,
   Milk,
   RotateCw,
   Utensils,
@@ -108,6 +109,7 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
   const subtotal = order.subtotal;
   const total = order.total;
   const canTrack = order.status === "pending" || order.status === "accepted";
+  const canReport = order.status === "completed";
 
   async function handleReorder() {
     if (!order) return;
@@ -264,6 +266,16 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
               Quay lại
             </Link>
 
+            {canReport && (
+              <Link
+                href={`/orders/${encodeURIComponent(order.id)}/report`}
+                className={styles.outlineButton}
+              >
+                <MessageSquareWarning size={22} aria-hidden="true" />
+                Góp ý đơn hàng
+              </Link>
+            )}
+
             {canTrack && (
               <Link
                 href={`/orders/${encodeURIComponent(order.id)}/tracking`}
@@ -344,6 +356,16 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
           </section>
 
           <div className={`${styles.actions} ${styles.mobileBottomActions}`}>
+            {canReport && (
+              <Link
+                href={`/orders/${encodeURIComponent(order.id)}/report`}
+                className={styles.outlineButton}
+              >
+                <MessageSquareWarning size={18} strokeWidth={2.2} aria-hidden="true" />
+                Góp ý đơn hàng
+              </Link>
+            )}
+
             <button
               type="button"
               className={styles.outlineButton}
