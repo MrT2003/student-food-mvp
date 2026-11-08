@@ -27,8 +27,8 @@ import {
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
+import { useSellerAccess } from "./SellerAccessProvider";
 import { useSellerPreview } from "@/store/useSellerPreviewStore";
-import { demoSellerRestaurant } from "@/lib/mocks/seller-orders.mock";
 import {
   filterSellerMenu,
   menuCategories,
@@ -166,9 +166,27 @@ export function applySellerMobileMenuStatusChange(
 }
 
 export default function SellerMenuView() {
+  const { data } = useSellerAccess();
   const draft = useSellerPreview();
+  const restaurantId = data?.restaurant?.id;
+  const shopName = data?.restaurant?.name || draft?.name || "";
+
   const rows = useSellerMenuStore((state) => state.rows);
-  const setRows = useSellerMenuStore((state) => state.setRows);
+  const loadRestaurantMenu = useSellerMenuStore(
+    (state) => state.loadRestaurantMenu,
+  );
+  const saveMenuItem = useSellerMenuStore((state) => state.saveMenuItem);
+  const updateMenuItemFields = useSellerMenuStore(
+    (state) => state.updateMenuItemFields,
+  );
+  const deleteMenuItem = useSellerMenuStore((state) => state.deleteMenuItem);
+
+  useEffect(() => {
+    if (restaurantId) {
+      void loadRestaurantMenu(restaurantId);
+    }
+  }, [restaurantId, loadRestaurantMenu]);
+
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [tab, setTab] = useState<MenuTab>("all");
@@ -229,21 +247,8 @@ export default function SellerMenuView() {
     },
   ];
   function update(id: string, fields: Partial<SellerMenuRow["item"]>) {
-    setRows((current) =>
-      current.map((row) =>
-        row.item.id === id
-          ? {
-              ...row,
-              item: {
-                ...row.item,
-                ...fields,
-                updated_at: new Date().toISOString(),
-              },
-            }
-          : row,
-      ),
-    );
-    setNotice("Đã cập nhật trạng thái món trong bản demo.");
+    void updateMenuItemFields(id, fields);
+    setNotice("Đã cập nhật trạng thái món.");
   }
   function duplicate(row: SellerMenuRow) {
     const id = crypto.randomUUID(),
@@ -265,22 +270,21 @@ export default function SellerMenuView() {
         })),
       };
     });
-    setRows((current) => [
-      {
-        ...row,
-        optionGroups,
-        item: {
-          ...row.item,
-          id,
-          name: `${row.item.name} (bản sao)`,
-          slug: `${row.item.slug}-${id.slice(0, 8)}`,
-          created_at: now,
-          updated_at: now,
-        },
+    const newRow: SellerMenuRow = {
+      ...row,
+      optionGroups,
+      item: {
+        ...row.item,
+        id,
+        restaurant_id: restaurantId ?? row.item.restaurant_id,
+        name: `${row.item.name} (bản sao)`,
+        slug: `${row.item.slug}-${id.slice(0, 8)}`,
+        created_at: now,
+        updated_at: now,
       },
-      ...current,
-    ]);
-    setNotice("Đã nhân bản món trong bản demo.");
+    };
+    void saveMenuItem(newRow, false);
+    setNotice("Đã nhân bản món.");
   }
 
   const mobileTabCounts = getSellerMobileMenuTabCounts(rows, query, category);
@@ -297,7 +301,7 @@ export default function SellerMenuView() {
       <div className={styles.workspace}>
         <SellerSidebar
           active="menu"
-          name={draft?.name || demoSellerRestaurant.name}
+          name={shopName}
           menuLabel="Thực đơn"
         />
         <main className={styles.main}>
@@ -480,16 +484,22 @@ export default function SellerMenuView() {
                     <div className={styles.empty}>
                       <CookingPot size={36} />
                       <h3>Không tìm thấy món ăn</h3>
-                      <p>Thử đổi từ khóa, danh mục hoặc trạng thái.</p>
-                      <button
-                        onClick={() => {
-                          setQuery("");
-                          setCategory("");
-                          setTab("all");
-                        }}
-                      >
-                        Xóa bộ lọc
-                      </button>
+                      <p>
+                        {rows.length === 0
+                          ? "Cửa hàng của bạn chưa có món ăn nào. Hãy bấm “Thêm món mới” để bắt đầu."
+                          : "Thử đổi từ khóa, danh mục hoặc trạng thái."}
+                      </p>
+                      {rows.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setQuery("");
+                            setCategory("");
+                            setTab("all");
+                          }}
+                        >
+                          Xóa bộ lọc
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -534,9 +544,6 @@ export default function SellerMenuView() {
                     </div>
                   </nav>
                 )}
-                <p className={styles.demo}>
-                  Bản xem thử · Thay đổi chưa được lưu sau khi tải lại trang.
-                </p>
                 <p className={styles.notice} role="status">
                   {notice}
                 </p>
@@ -627,9 +634,7 @@ export default function SellerMenuView() {
                   <button
                     className={styles.contact}
                     onClick={() =>
-                      setNotice(
-                        "Kênh hỗ trợ chưa được cấu hình trong bản demo.",
-                      )
+                      setNotice("Kênh hỗ trợ chưa được cấu hình.")
                     }
                   >
                     <Headphones size={20} />
@@ -976,17 +981,23 @@ export default function SellerMenuView() {
                 <div className={styles.mobileEmpty}>
                   <CookingPot size={34} />
                   <h3>Không tìm thấy món ăn</h3>
-                  <p>Thử đổi từ khóa, danh mục hoặc trạng thái.</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQuery("");
-                      setCategory("");
-                      setTab("all");
-                    }}
-                  >
-                    Xóa bộ lọc
-                  </button>
+                  <p>
+                    {rows.length === 0
+                      ? "Cửa hàng của bạn chưa có món ăn nào. Hãy bấm “Thêm món” để bắt đầu."
+                      : "Thử đổi từ khóa, danh mục hoặc trạng thái."}
+                  </p>
+                  {rows.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuery("");
+                        setCategory("");
+                        setTab("all");
+                      }}
+                    >
+                      Xóa bộ lọc
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1001,17 +1012,15 @@ export default function SellerMenuView() {
           aria-labelledby="delete-menu-title"
         >
           <h2 id="delete-menu-title">Xóa món ăn?</h2>
-          <p>Bạn có muốn xóa “{deleting.item.name}” khỏi bản demo?</p>
+          <p>Bạn có muốn xóa “{deleting.item.name}” khỏi menu cửa hàng?</p>
           <footer>
             <button onClick={() => setDeleting(null)}>Hủy</button>
             <button
               className={styles.primary}
               onClick={() => {
-                setRows((current) =>
-                  current.filter((row) => row.item.id !== deleting.item.id),
-                );
+                void deleteMenuItem(deleting.item.id);
                 setDeleting(null);
-                setNotice("Đã xóa món trong bản demo.");
+                setNotice("Đã xóa món ăn.");
               }}
             >
               Xóa món

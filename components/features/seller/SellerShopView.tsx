@@ -1,5 +1,6 @@
 "use client";
 
+import StaffRecruitment from "./StaffRecruitment";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -8,46 +9,46 @@ import {
   ArrowUpRight,
   Camera,
   ChevronRight,
-  CircleAlert,
   CirclePause,
   Clock3,
   Copy,
-  Download,
   ExternalLink,
   MapPin,
   Pencil,
-  Phone,
-  QrCode,
   Settings,
   Store,
   TriangleAlert,
   Truck,
-  Users,
   Wallet,
   X,
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
+import { useSellerAccess } from "./SellerAccessProvider";
+import { useAuthStore } from "@/store/useAuthStore";
+import { updateSellerRestaurant } from "@/lib/seller/management-client";
 import {
-  useSellerPreviewStore,
-  type SellerPreview,
-} from "@/store/useSellerPreviewStore";
-import {
-  useSellerShopStore,
-  type SellerShopPreview,
-  type ShopDay,
-} from "@/store/useSellerShopStore";
-import {
-  useSellerPaymentStore,
-  type SellerPaymentPreview,
-} from "@/store/useSellerPaymentStore";
-import { useSellerMenuStore } from "@/store/useSellerMenuStore";
-import { demoSellerRestaurant } from "@/lib/mocks/seller-orders.mock";
+  readShopSchedule,
+  shopDays,
+  shopSchedulePayload,
+  type EditableShopDay,
+} from "@/lib/seller/schedule-client";
+import type { SellerPreview } from "@/store/useSellerPreviewStore";
+import type { SellerShopPreview, ShopDay } from "@/store/useSellerShopStore";
+import type { SellerPaymentPreview } from "@/store/useSellerPaymentStore";
+import type { SellerAccess } from "@/types/seller-access.types";
+import type { SellerRestaurantPatch } from "@/types/seller.types";
 import { CloudinaryService } from "@/services/cloudinary.service";
 import shell from "@/styles/seller-menu.module.css";
 import styles from "@/styles/seller-shop.module.css";
 
 export const DEFAULT_SELLER_MOBILE_SHOP_IMAGE = "/seller-shop-com-co-ba.png";
+
+const DEMO_SHOP_NAME = "Cơm Cô Ba";
+const DEMO_SHOP_SLUG = "com-co-ba";
+const DEMO_SHOP_DESCRIPTION =
+  "Cơm nhà làm nóng hổi mỗi trưa, đóng hộp sạch sẽ, nhận đơn theo khung giờ.";
+const DEMO_SHOP_LOCATION = "KTX A";
 
 export type SellerMobileSetupItem = {
   id: "store-info" | "operating-hours" | "payments";
@@ -80,9 +81,9 @@ export function createInitialSellerShopPreview(
 ): SellerShopPreview {
   const hours = draft?.hours.match(/(\d{2}:\d{2})\s*[-–]\s*(\d{2}:\d{2})/);
   return {
-    name: draft?.name || demoSellerRestaurant.name,
-    description: draft?.description || demoSellerRestaurant.description || "",
-    location: draft?.location || demoSellerRestaurant.location || "KTX A",
+    name: draft?.name || DEMO_SHOP_NAME,
+    description: draft?.description || DEMO_SHOP_DESCRIPTION,
+    location: draft?.location || DEMO_SHOP_LOCATION,
     avatar_url: draft?.avatar_url ?? null,
     contactPhonePreview: "0901 234 567",
     openPreview: false,
@@ -151,8 +152,12 @@ export function formatSellerMobilePaymentSummary(
   payment?: SellerPaymentPreview | null,
   draft?: SellerPreview | null,
 ): string {
-  const cashEnabled = payment ? payment.cashEnabledPreview : (draft?.cash ?? true);
-  const bankEnabled = payment ? payment.bankEnabledPreview : (draft?.bank ?? true);
+  const cashEnabled = payment
+    ? payment.cashEnabledPreview
+    : (draft?.cash ?? true);
+  const bankEnabled = payment
+    ? payment.bankEnabledPreview
+    : (draft?.bank ?? true);
   const bankConfigured = payment
     ? Boolean(
         payment.bank_name &&
@@ -173,25 +178,80 @@ export function formatSellerMobilePaymentSummary(
   return "Chưa thiết lập thanh toán";
 }
 
-export default function SellerShopView() {
-  const shop = useSellerShopStore((state) => state.shop);
-  const draft = useSellerPreviewStore((state) => state.draft);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let mounted = true;
-    Promise.resolve(useSellerPreviewStore.persist.rehydrate()).then(() => {
-      if (!mounted) return;
-      const currentDraft = useSellerPreviewStore.getState().draft;
-      useSellerShopStore.getState().initialize(currentDraft);
-      useSellerPaymentStore.getState().initialize(currentDraft);
-      setReady(true);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+type ShopFormInput = NonNullable<SellerAccess["restaurant"]> | SellerShopPreview;
 
-  const effectiveShop = shop ?? createInitialSellerShopPreview(draft);
+function isBackendRestaurant(
+  initial: ShopFormInput,
+): initial is NonNullable<SellerAccess["restaurant"]> {
+  return "id" in initial && "slug" in initial;
+}
+
+function toEditableSchedule(initial: ShopFormInput): {
+  days: EditableShopDay[];
+  mode: "same" | "daily" | "later";
+  recognized: boolean;
+} {
+  if (isBackendRestaurant(initial)) {
+    return readShopSchedule(initial.operating_hours);
+  }
+  const days: EditableShopDay[] = shopDays.map((id, index) => {
+    const preview = initial.daysPreview[index];
+    return {
+      id,
+      label: preview?.label ?? ["T2", "T3", "T4", "T5", "T6", "T7", "CN"][index],
+      enabled: preview?.enabled ?? id !== "sun",
+      opens: preview?.opens ?? "10:00",
+      closes: preview?.closes ?? "14:00",
+    };
+  });
+  return {
+    days,
+    mode: initial.scheduleModePreview,
+    recognized: true,
+  };
+}
+
+export default function SellerShopView() {
+  const { data, error, retry } = useSellerAccess();
+
+  if (data?.restaurant) {
+    const isStaff = data.user.role === "staff";
+    return (
+      <div className={`${shell.page} ${styles.page}`}>
+        <StudentHeader variant="seller" />
+        <div className={styles.workspace}>
+          <SellerSidebar
+            active="shop"
+            name={data.restaurant.name}
+            menuLabel="Thực đơn"
+          />
+          <ShopForm
+            key={`${data.user.id}:${data.restaurant.id}`}
+            initial={data.restaurant}
+            actorId={data.user.id}
+            isStaff={isStaff}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`${shell.page} ${styles.page}`}>
+        <StudentHeader variant="seller" />
+        <div className={styles.workspace}>
+          <SellerSidebar active="shop" name="" menuLabel="Thực đơn" />
+          <main className={styles.card}>
+            {error}
+            <button onClick={retry}>Thử lại</button>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  const effectiveShop = createInitialSellerShopPreview(null);
 
   return (
     <div className={`${shell.page} ${styles.page}`}>
@@ -199,35 +259,64 @@ export default function SellerShopView() {
       <div className={styles.workspace}>
         <SellerSidebar
           active="shop"
-          name={effectiveShop.name || demoSellerRestaurant.name}
+          name={effectiveShop.name}
           menuLabel="Thực đơn"
         />
-        <ShopForm
-          key={ready ? "ready" : "initial"}
-          initial={effectiveShop}
-        />
+        <ShopForm key="preview" initial={effectiveShop} />
       </div>
     </div>
   );
 }
 
-function ShopForm({ initial }: { initial: SellerShopPreview }) {
-  const shop = useSellerShopStore((state) => state.shop) ?? initial;
-  const draft = useSellerPreviewStore((state) => state.draft);
-  const payment = useSellerPaymentStore((state) => state.saved);
-  const update = useSellerShopStore((state) => state.update);
-  const rows = useSellerMenuStore((state) => state.rows);
+export function ShopForm({
+  initial,
+  actorId,
+  isStaff = false,
+}: {
+  initial: ShopFormInput;
+  actorId?: string;
+  isStaff?: boolean;
+}) {
+  const hasBackend = isBackendRestaurant(initial) && Boolean(actorId);
+  const parsedSchedule = toEditableSchedule(initial);
+
+  const baseline = useRef({
+    name: initial.name,
+    description: initial.description ?? "",
+    location: initial.location ?? "",
+  });
+  const pending = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const [saving, setSaving] = useState(false);
   const [name, setName] = useState(initial.name);
-  const [description, setDescription] = useState(initial.description);
-  const [location, setLocation] = useState(initial.location);
-  const [phone, setPhone] = useState(initial.contactPhonePreview);
+  const [description, setDescription] = useState(initial.description ?? "");
+  const [location, setLocation] = useState(initial.location ?? "");
   const [avatar, setAvatar] = useState(initial.avatar_url);
-  const [days, setDays] = useState(initial.daysPreview);
-  const [mode, setMode] = useState(initial.scheduleModePreview);
-  const [opens, setOpens] = useState(initial.daysPreview[0].opens);
-  const [closes, setCloses] = useState(initial.daysPreview[0].closes);
-  const [open, setOpen] = useState(initial.openPreview);
-  const [mobileOpen, setMobileOpen] = useState(true);
+  const [days, setDays] = useState<EditableShopDay[]>(parsedSchedule.days);
+  const [mode, setMode] = useState<"same" | "daily" | "later">(
+    parsedSchedule.mode,
+  );
+  const [opens, setOpens] = useState(
+    parsedSchedule.days.find((day) => day.enabled)?.opens ?? "10:00",
+  );
+  const [closes, setCloses] = useState(
+    parsedSchedule.days.find((day) => day.enabled)?.closes ?? "14:00",
+  );
+  const [openState, setOpenState] = useState(
+    isBackendRestaurant(initial)
+      ? initial.operating_status === "open"
+      : initial.openPreview,
+  );
+  const [mobileOpen, setMobileOpen] = useState(
+    isBackendRestaurant(initial) ? initial.operating_status === "open" : true,
+  );
   const [mobileSheet, setMobileSheet] = useState<"info" | "schedule" | null>(
     null,
   );
@@ -235,33 +324,21 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
   const [error, setError] = useState("");
   const [reading, setReading] = useState(false);
   const [manage, setManage] = useState(false);
-  const [showStaffQrModal, setShowStaffQrModal] = useState(false);
-  const [showStaffRequestsModal, setShowStaffRequestsModal] = useState(false);
-  const [staffRequests, setStaffRequests] = useState([
-    {
-      id: "req-1",
-      name: "Nguyễn Văn A",
-      initial: "A",
-      phone: "0901 234 567",
-      requestedAt: "Hôm nay, 10:24",
-    },
-    {
-      id: "req-2",
-      name: "Trần Minh Anh",
-      initial: "M",
-      phone: "0987 654 321",
-      requestedAt: "Hôm nay, 09:15",
-    },
-  ]);
   const [demoToken, setDemoToken] = useState("");
   const [tokenUpdated, setTokenUpdated] = useState("");
   const upload = useRef<HTMLInputElement>(null);
   const uploadRequestId = useRef(0);
   const dialog = useRef<HTMLDialogElement>(null);
+
   useEffect(() => {
     if (manage) dialog.current?.showModal();
   }, [manage]);
-  const restaurantPath = `/restaurants/${demoSellerRestaurant.slug}`;
+
+  const open = isBackendRestaurant(initial)
+    ? initial.operating_status === "open"
+    : openState;
+  const slug = isBackendRestaurant(initial) ? initial.slug : DEMO_SHOP_SLUG;
+  const restaurantPath = `/restaurants/${encodeURIComponent(slug)}`;
   const schedule = days.map((day) =>
     mode === "same" ? { ...day, opens, closes } : day,
   );
@@ -286,32 +363,40 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
       closes,
     ]),
   ].sort();
-  const locations = [
-    ...new Set(["KTX A", "KTX B", "KTX C", initial.location].filter(Boolean)),
-  ];
 
-  const mobileStoreName =
-    name.trim() || shop.name || demoSellerRestaurant.name;
-  const mobileStoreLocation = location || shop.location || "KTX A";
-  const mobileAvatarSrc = getSellerMobileShopAvatar(avatar ?? shop.avatar_url);
-  const mobileScheduleSummary = formatSellerMobileScheduleSummary(schedule);
-  const mobilePaymentSummary = formatSellerMobilePaymentSummary(payment, draft);
+  const mobileStoreName = name.trim() || initial.name || DEMO_SHOP_NAME;
+  const mobileStoreLocation =
+    location || initial.location || DEMO_SHOP_LOCATION;
+  const mobileAvatarSrc = getSellerMobileShopAvatar(
+    avatar ?? initial.avatar_url,
+  );
+  const mobileScheduleDays: ShopDay[] =
+    mode === "later" &&
+    isBackendRestaurant(initial) &&
+    initial.operating_hours === null
+      ? createInitialSellerShopPreview(null).daysPreview
+      : schedule;
+  const mobileScheduleSummary =
+    formatSellerMobileScheduleSummary(mobileScheduleDays);
+  const mobilePaymentSummary = formatSellerMobilePaymentSummary(null, null);
   const mobileDeliveryToken = demoToken || "com-co-ba-ktx-a";
 
   function message(value: string) {
     setError("");
     setNotice(value);
   }
+
   async function copy(value: string) {
     try {
       await navigator.clipboard.writeText(value);
-      message("Đã sao chép liên kết demo.");
+      message("Đã sao chép liên kết.");
     } catch {
       setError(
         "Không thể sao chép tự động. Bạn có thể chọn và sao chép đường dẫn đang hiển thị.",
       );
     }
   }
+
   async function readAvatar(file?: File) {
     if (!file) return;
     const requestId = ++uploadRequestId.current;
@@ -321,11 +406,11 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
       const uploaded = await CloudinaryService.uploadImage(file, {
         folder: "student-food/restaurants",
       });
-      if (uploadRequestId.current === requestId) {
+      if (mounted.current && uploadRequestId.current === requestId) {
         setAvatar(uploaded.secureUrl);
       }
     } catch (err) {
-      if (uploadRequestId.current === requestId) {
+      if (mounted.current && uploadRequestId.current === requestId) {
         setError(
           err instanceof Error
             ? err.message
@@ -333,102 +418,116 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
         );
       }
     } finally {
-      if (uploadRequestId.current === requestId) {
+      if (mounted.current && uploadRequestId.current === requestId) {
         setReading(false);
       }
     }
   }
-  function saveInfo(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const cleanedPhone = phone.replace(/[\s.-]/g, "");
-    if (
-      !name.trim() ||
-      !description.trim() ||
-      !/^(0\d{9}|\+84\d{9})$/.test(cleanedPhone)
-    ) {
-      setError(
-        "Nhập tên, mô tả và số điện thoại Việt Nam hợp lệ (10 số hoặc +84). ",
+
+  async function persist(patch: SellerRestaurantPatch) {
+    if (!hasBackend || !isBackendRestaurant(initial) || !actorId) {
+      for (const field of ["name", "description", "location"] as const) {
+        if (patch[field] !== undefined)
+          baseline.current[field] = patch[field].trim();
+      }
+      setMobileSheet(null);
+      message(
+        patch.schedule
+          ? "Đã lưu lịch hoạt động trong bản demo."
+          : "Đã lưu thông tin trong bản demo, chưa ghi database.",
       );
       return;
     }
-    update({
-      name: name.trim(),
-      description: description.trim(),
-      location,
-      contactPhonePreview: cleanedPhone,
-      avatar_url: avatar,
-    });
-    const currentDraft = useSellerPreviewStore.getState().draft;
-    if (currentDraft)
-      useSellerPreviewStore
-        .getState()
-        .registerPreview({
-          ...currentDraft,
-          name: name.trim(),
-          description: description.trim(),
-          location,
-          avatar_url: avatar,
-        });
-    setMobileSheet(null);
-    message("Đã lưu thông tin trong bản demo, chưa ghi database.");
+    if (pending.current) return;
+    pending.current = true;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await updateSellerRestaurant(actorId, initial.id, patch);
+      if (!mounted.current || useAuthStore.getState().user?.id !== actorId)
+        return;
+      // Chỉ đánh dấu những giá trị vừa gửi đã lưu; không ghi lại field từ snapshot cũ.
+      for (const field of ["name", "description", "location"] as const) {
+        if (patch[field] !== undefined)
+          baseline.current[field] = patch[field].trim();
+      }
+      if (patch.name !== undefined) setName(patch.name.trim());
+      if (patch.description !== undefined)
+        setDescription(patch.description.trim());
+      if (patch.location !== undefined) setLocation(patch.location.trim());
+      setMobileSheet(null);
+      message(
+        patch.schedule
+          ? "Đã lưu lịch hoạt động vào cửa hàng."
+          : "Đã lưu thông tin cửa hàng. Ảnh xem trước không được lưu cùng thông tin.",
+      );
+    } catch (err) {
+      if (mounted.current && useAuthStore.getState().user?.id === actorId)
+        setError(
+          err instanceof Error ? err.message : "Không thể lưu cửa hàng.",
+        );
+    } finally {
+      pending.current = false;
+      if (mounted.current) setSaving(false);
+    }
   }
-  function saveSchedule(event: FormEvent<HTMLFormElement>) {
+
+  async function saveInfo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!schedule.some((day) => day.enabled)) {
-      setError("Chọn ít nhất một ngày hoạt động.");
+    const patch: SellerRestaurantPatch = {};
+    for (const [field, value, max] of [
+      ["name", name, 100],
+      ["description", description, 300],
+      ["location", location, 200],
+    ] as const) {
+      if (value !== baseline.current[field]) {
+        if (!value.trim() || value.length > max) {
+          setError(
+            `Kiểm tra ${field}: không được trống, tối đa ${max} ký tự.`,
+          );
+          return;
+        }
+        patch[field] = value;
+      }
+    }
+    if (!Object.keys(patch).length) {
+      message(
+        "Không có thay đổi tên, mô tả hoặc địa điểm để lưu. Ảnh chỉ xem trước.",
+      );
       return;
     }
-    if (
-      schedule.some(
-        (day) =>
-          day.enabled && (!day.opens || !day.closes || day.opens >= day.closes),
-      )
-    ) {
-      setError("Giờ đóng phải sau giờ mở. Demo hiện chưa hỗ trợ lịch qua đêm.");
-      return;
-    }
-    update({ daysPreview: schedule, scheduleModePreview: mode });
-    const currentDraft = useSellerPreviewStore.getState().draft;
-    if (currentDraft)
-      useSellerPreviewStore
-        .getState()
-        .registerPreview({
-          ...currentDraft,
-          hours: mode === "same" ? `${opens} - ${closes}` : "Theo từng ngày",
-        });
-    setMobileSheet(null);
-    message("Đã lưu lịch hoạt động trong bản demo.");
+    await persist(patch);
   }
-  function toggleOperatingStatus() {
-    const nextOpen = !open;
-    if (
-      nextOpen &&
-      !rows.some(({ item }) => item.is_active && item.is_available)
-    ) {
-      setError("Cần ít nhất một món đang hiển thị và đang bán để mở nhận đơn.");
-      return;
+
+  async function saveSchedule(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      await persist({
+        schedule: shopSchedulePayload(mode, days, opens, closes),
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Lịch hoạt động không hợp lệ.",
+      );
     }
-    setOpen(nextOpen);
+  }
+
+  function toggleOperatingStatus() {
+    const nextOpen = !openState;
+    setOpenState(nextOpen);
     setMobileOpen(nextOpen);
-    update({ openPreview: nextOpen });
     message(
       nextOpen
         ? "Đã mở nhận đơn trong bản demo."
         : "Đã tạm ngừng nhận đơn trong bản demo.",
     );
   }
+
   function toggleMobileOperatingStatus() {
     const nextOpen = !mobileOpen;
-    if (
-      nextOpen &&
-      !rows.some(({ item }) => item.is_active && item.is_available)
-    ) {
-      setError("Cần ít nhất một món đang hiển thị và đang bán để mở nhận đơn.");
-      return;
-    }
     setMobileOpen(nextOpen);
-    setOpen(nextOpen);
-    update({ openPreview: nextOpen });
+    setOpenState(nextOpen);
     message(
       nextOpen
         ? "Đã mở nhận đơn trong bản demo."
@@ -443,11 +542,15 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
         <header className={styles.heading}>
           <div>
             <h1>Cửa hàng</h1>
-            <p>Quản lý thông tin và trạng thái hoạt động của cửa hàng bạn.</p>
+            <p>
+              {isStaff
+                ? "Xem thông tin và trạng thái hoạt động của cửa hàng."
+                : "Quản lý thông tin và trạng thái hoạt động của cửa hàng bạn."}
+            </p>
           </div>
           <div className={styles.headerActions}>
-            <span className={styles.badge} data-open={shop.openPreview}>
-              ● {shop.openPreview ? "Đang nhận đơn" : "Tạm ngừng nhận đơn"}
+            <span className={styles.badge} data-open={open}>
+              ● {open ? "Đang nhận đơn" : "Tạm ngừng nhận đơn"}
             </span>
             <Link href={restaurantPath} className={styles.neutral}>
               <ExternalLink size={18} />
@@ -464,312 +567,359 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
             </button>
           </div>
         </header>
-        {(error || notice) && (
+        {(error || notice || isStaff) && (
           <p
             className={error ? styles.error : styles.notice}
             role={error ? "alert" : "status"}
           >
-            {error || notice}
+            {error ||
+              notice ||
+              "Bạn đang xem thông tin cửa hàng với quyền Nhân viên (Chỉ đọc)."}
           </p>
         )}
         <section className={styles.card}>
           <h2>Thông tin cửa hàng</h2>
           <form onSubmit={saveInfo} className={styles.info}>
-            <div className={styles.avatarField}>
-              <button
-                type="button"
-                className={styles.avatar}
-                aria-label="Thay ảnh đại diện cửa hàng"
-                onClick={() => upload.current?.click()}
-              >
-                {avatar ? (
-                  <Image
-                    src={avatar}
-                    alt="Ảnh đại diện cửa hàng"
-                    width={150}
-                    height={150}
-                    unoptimized
-                  />
-                ) : (
-                  <Image
-                    src="/seller-store-placeholder.svg"
-                    alt="Ảnh minh họa cửa hàng"
-                    width={150}
-                    height={150}
-                  />
-                )}
-                <span>
-                  <Camera size={21} />
-                </span>
-              </button>
-              <strong>Ảnh đại diện</strong>
-              <small>
-                {reading ? "Đang tải lên Cloudinary…" : "Không bắt buộc"}
-              </small>
-              <input
-                ref={upload}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                hidden
-                onChange={(event) => {
-                  void readAvatar(event.target.files?.[0]);
-                  event.target.value = "";
-                }}
-              />
-              {avatar && (
+            <fieldset
+              disabled={saving || isStaff}
+              style={{ display: "contents" }}
+            >
+              <div className={styles.avatarField}>
                 <button
                   type="button"
-                  className={styles.textButton}
-                  onClick={() => {
-                    uploadRequestId.current++;
-                    setReading(false);
-                    setAvatar(null);
-                  }}
+                  className={styles.avatar}
+                  aria-label="Thay ảnh đại diện cửa hàng"
+                  onClick={() => !isStaff && upload.current?.click()}
                 >
-                  Xóa ảnh
-                </button>
-              )}
-            </div>
-            <div className={styles.infoFields}>
-              <div className={styles.infoTop}>
-                <label>
-                  Tên cửa hàng <b>*</b>
-                  <input
-                    required
-                    maxLength={120}
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                  />
-                </label>
-                <label>
-                  Mô tả ngắn <b>*</b>
-                  <input
-                    required
-                    maxLength={200}
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
-                  />
-                </label>
-              </div>
-              <div className={styles.infoBottom}>
-                <label>
-                  Khu vực / địa điểm <b>*</b>
-                  <select
-                    value={location}
-                    onChange={(event) => setLocation(event.target.value)}
-                  >
-                    {locations.map((value) => (
-                      <option key={value}>{value}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Số điện thoại liên hệ <b>*</b>
-                  <input
-                    required
-                    type="tel"
-                    maxLength={20}
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                  />
-                </label>
-                <label>
-                  Đường dẫn quán
-                  <div className={styles.linkBox}>
-                    <input
-                      readOnly
-                      value={restaurantPath}
-                      aria-label="Đường dẫn quán"
+                  {avatar ? (
+                    <Image
+                      src={avatar}
+                      alt="Ảnh đại diện cửa hàng"
+                      width={150}
+                      height={150}
+                      unoptimized
                     />
-                    <button
-                      type="button"
-                      aria-label="Sao chép đường dẫn quán"
-                      onClick={() =>
-                        void copy(`${window.location.origin}${restaurantPath}`)
-                      }
-                    >
-                      <Copy size={18} />
-                    </button>
-                  </div>
-                </label>
-              </div>
-              <footer>
-                <button
-                  type="submit"
-                  className={styles.primary}
-                  disabled={reading}
-                >
-                  Lưu thông tin
+                  ) : (
+                    <Image
+                      src="/seller-store-placeholder.svg"
+                      alt="Ảnh minh họa cửa hàng"
+                      width={150}
+                      height={150}
+                    />
+                  )}
+                  {!isStaff && (
+                    <span>
+                      <Camera size={21} />
+                    </span>
+                  )}
                 </button>
-              </footer>
-            </div>
+                <strong>Ảnh đại diện</strong>
+                <small>
+                  {isStaff
+                    ? "Ảnh đại diện cửa hàng"
+                    : reading
+                      ? "Đang tải lên Cloudinary…"
+                      : avatar !== initial.avatar_url
+                        ? "Ảnh chỉ xem trước; chưa lưu vào quán"
+                        : "Ảnh từ DB; thay ảnh hiện chỉ xem trước"}
+                </small>
+                <input
+                  ref={upload}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  hidden
+                  onChange={(event) => {
+                    void readAvatar(event.target.files?.[0]);
+                    event.target.value = "";
+                  }}
+                />
+                {avatar && !isStaff && (
+                  <button
+                    type="button"
+                    className={styles.textButton}
+                    onClick={() => {
+                      uploadRequestId.current++;
+                      setReading(false);
+                      setAvatar(null);
+                    }}
+                  >
+                    Xóa ảnh
+                  </button>
+                )}
+              </div>
+              <div className={styles.infoFields}>
+                <div className={styles.infoTop}>
+                  <label>
+                    Tên cửa hàng <b>*</b>
+                    <input
+                      required
+                      maxLength={100}
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Mô tả ngắn <b>*</b>
+                    <input
+                      required
+                      maxLength={300}
+                      value={description}
+                      onChange={(event) => setDescription(event.target.value)}
+                    />
+                  </label>
+                </div>
+                <div className={styles.infoBottom}>
+                  <label>
+                    Khu vực / địa điểm <b>*</b>
+                    <input
+                      required
+                      maxLength={200}
+                      value={location}
+                      onChange={(event) => setLocation(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Số điện thoại liên hệ
+                    <input
+                      disabled
+                      value="Chưa hỗ trợ lưu ở màn này"
+                      readOnly
+                    />
+                  </label>
+                  <label>
+                    Đường dẫn quán
+                    <div className={styles.linkBox}>
+                      <input
+                        readOnly
+                        value={restaurantPath}
+                        aria-label="Đường dẫn quán"
+                      />
+                      <button
+                        type="button"
+                        aria-label="Sao chép đường dẫn quán"
+                        onClick={() =>
+                          void copy(`${window.location.origin}${restaurantPath}`)
+                        }
+                      >
+                        <Copy size={18} />
+                      </button>
+                    </div>
+                  </label>
+                </div>
+                {!isStaff && (
+                  <footer>
+                    <button
+                      type="submit"
+                      className={styles.primary}
+                      disabled={reading || saving}
+                    >
+                      Lưu thông tin
+                    </button>
+                  </footer>
+                )}
+              </div>
+            </fieldset>
           </form>
         </section>
         <div className={styles.middle}>
           <section className={styles.card}>
             <h2>Giờ hoạt động</h2>
             <form onSubmit={saveSchedule}>
-              <div className={styles.scheduleColumns}>
-                <div>
-                  <div className={styles.radios}>
-                    <label>
-                      <input
-                        type="radio"
-                        name="schedule-mode"
-                        checked={mode === "same"}
-                        onChange={() => {
-                          setDays(schedule);
-                          setMode("same");
-                        }}
-                      />
-                      Giống nhau mỗi ngày
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="schedule-mode"
-                        checked={mode === "daily"}
-                        onChange={() => {
-                          setDays(schedule);
-                          setMode("daily");
-                        }}
-                      />
-                      Thiết lập theo từng ngày
-                    </label>
-                  </div>
-                  {mode === "same" ? (
-                    <>
-                      <div className={styles.times}>
-                        <label>
-                          Giờ mở cửa
-                          <select
-                            required
-                            value={opens}
-                            onChange={(event) => setOpens(event.target.value)}
-                          >
-                            {timeChoices.map((time) => (
-                              <option key={time}>{time}</option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          Giờ đóng cửa
-                          <select
-                            required
-                            value={closes}
-                            onChange={(event) => setCloses(event.target.value)}
-                          >
-                            {timeChoices.map((time) => (
-                              <option key={time}>{time}</option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                      <strong className={styles.dayTitle}>
-                        Áp dụng cho các ngày
-                      </strong>
-                      <div className={styles.dayChips}>
+              <fieldset
+                disabled={saving || isStaff}
+                style={{ display: "contents" }}
+              >
+                {!parsedSchedule.recognized && (
+                  <p role="status">
+                    Lịch cũ chưa theo quy ước hiện tại. Chỉ thay thế lịch khi bạn
+                    bấm Lưu lịch.
+                  </p>
+                )}
+                <div className={styles.scheduleColumns}>
+                  <div>
+                    <div className={styles.radios}>
+                      <label>
+                        <input
+                          type="radio"
+                          name="schedule-mode"
+                          checked={mode === "same"}
+                          onChange={() => {
+                            setDays(schedule);
+                            setMode("same");
+                          }}
+                        />
+                        Giống nhau mỗi ngày
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="schedule-mode"
+                          checked={mode === "daily"}
+                          onChange={() => {
+                            setDays(schedule);
+                            setMode("daily");
+                          }}
+                        />
+                        Thiết lập theo từng ngày
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="schedule-mode"
+                          checked={mode === "later"}
+                          onChange={() => setMode("later")}
+                        />
+                        Thiết lập sau
+                      </label>
+                    </div>
+                    {mode === "same" ? (
+                      <>
+                        <div className={styles.times}>
+                          <label>
+                            Giờ mở cửa
+                            <select
+                              required
+                              value={opens}
+                              onChange={(event) => setOpens(event.target.value)}
+                            >
+                              {timeChoices.map((time) => (
+                                <option key={time}>{time}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Giờ đóng cửa
+                            <select
+                              required
+                              value={closes}
+                              onChange={(event) => setCloses(event.target.value)}
+                            >
+                              {timeChoices.map((time) => (
+                                <option key={time}>{time}</option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                        <strong className={styles.dayTitle}>
+                          Áp dụng cho các ngày
+                        </strong>
+                        <div className={styles.dayChips}>
+                          {days.map((day, index) => (
+                            <label key={day.label} data-active={day.enabled}>
+                              <input
+                                type="checkbox"
+                                checked={day.enabled}
+                                onChange={(event) =>
+                                  setDays((current) =>
+                                    current.map((entry, i) =>
+                                      i === index
+                                        ? {
+                                            ...entry,
+                                            enabled: event.target.checked,
+                                          }
+                                        : entry,
+                                    ),
+                                  )
+                                }
+                              />
+                              {day.label}
+                            </label>
+                          ))}
+                        </div>
+                      </>
+                    ) : mode === "daily" ? (
+                      <div className={styles.daily}>
                         {days.map((day, index) => (
-                          <label key={day.label} data-active={day.enabled}>
+                          <div key={day.label}>
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={day.enabled}
+                                onChange={(event) =>
+                                  setDays((current) =>
+                                    current.map((entry, i) =>
+                                      i === index
+                                        ? {
+                                            ...entry,
+                                            enabled: event.target.checked,
+                                          }
+                                        : entry,
+                                    ),
+                                  )
+                                }
+                              />
+                              {day.label}
+                            </label>
                             <input
-                              type="checkbox"
-                              checked={day.enabled}
+                              type="time"
+                              disabled={!day.enabled}
+                              aria-label={`Giờ mở ${day.label}`}
+                              value={day.opens}
                               onChange={(event) =>
                                 setDays((current) =>
                                   current.map((entry, i) =>
                                     i === index
-                                      ? {
-                                          ...entry,
-                                          enabled: event.target.checked,
-                                        }
+                                      ? { ...entry, opens: event.target.value }
                                       : entry,
                                   ),
                                 )
                               }
                             />
-                            {day.label}
-                          </label>
+                            <span>–</span>
+                            <input
+                              type="time"
+                              disabled={!day.enabled}
+                              aria-label={`Giờ đóng ${day.label}`}
+                              value={day.closes}
+                              onChange={(event) =>
+                                setDays((current) =>
+                                  current.map((entry, i) =>
+                                    i === index
+                                      ? { ...entry, closes: event.target.value }
+                                      : entry,
+                                  ),
+                                )
+                              }
+                            />
+                          </div>
                         ))}
                       </div>
-                    </>
-                  ) : (
-                    <div className={styles.daily}>
-                      {days.map((day, index) => (
+                    ) : (
+                      <p>Lưu lựa chọn này sẽ xóa lịch hiện tại (SQL NULL).</p>
+                    )}
+                  </div>
+                  <aside className={styles.schedulePreview}>
+                    <strong>
+                      Lịch hoạt động <small>(xem trước)</small>
+                    </strong>
+                    {mode === "later" ? (
+                      <p>Chưa thiết lập lịch</p>
+                    ) : (
+                      previewDays.map((day) => (
                         <div key={day.label}>
-                          <label>
-                            <input
-                              type="checkbox"
-                              checked={day.enabled}
-                              onChange={(event) =>
-                                setDays((current) =>
-                                  current.map((entry, i) =>
-                                    i === index
-                                      ? {
-                                          ...entry,
-                                          enabled: event.target.checked,
-                                        }
-                                      : entry,
-                                  ),
-                                )
-                              }
-                            />
-                            {day.label}
-                          </label>
-                          <input
-                            type="time"
-                            disabled={!day.enabled}
-                            aria-label={`Giờ mở ${day.label}`}
-                            value={day.opens}
-                            onChange={(event) =>
-                              setDays((current) =>
-                                current.map((entry, i) =>
-                                  i === index
-                                    ? { ...entry, opens: event.target.value }
-                                    : entry,
-                                ),
-                              )
-                            }
-                          />
-                          <span>–</span>
-                          <input
-                            type="time"
-                            disabled={!day.enabled}
-                            aria-label={`Giờ đóng ${day.label}`}
-                            value={day.closes}
-                            onChange={(event) =>
-                              setDays((current) =>
-                                current.map((entry, i) =>
-                                  i === index
-                                    ? { ...entry, closes: event.target.value }
-                                    : entry,
-                                ),
-                              )
-                            }
-                          />
+                          <span>{day.label}</span>
+                          <span>
+                            {day.enabled
+                              ? `${day.opens} - ${day.closes}`
+                              : "Nghỉ"}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      ))
+                    )}
+                  </aside>
                 </div>
-                <aside className={styles.schedulePreview}>
-                  <strong>
-                    Lịch hoạt động <small>(xem trước)</small>
-                  </strong>
-                  {previewDays.map((day) => (
-                    <div key={day.label}>
-                      <span>{day.label}</span>
-                      <span>
-                        {day.enabled ? `${day.opens} - ${day.closes}` : "Nghỉ"}
-                      </span>
-                    </div>
-                  ))}
-                </aside>
-              </div>
-              <footer>
-                <button className={styles.outline} type="submit">
-                  Lưu lịch
-                </button>
-              </footer>
+                {!isStaff && (
+                  <footer>
+                    <button
+                      className={styles.outline}
+                      type="submit"
+                      disabled={saving}
+                    >
+                      Lưu lịch
+                    </button>
+                  </footer>
+                )}
+              </fieldset>
             </form>
           </section>
           <div className={styles.rightStack}>
@@ -788,101 +938,83 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                     <p>{open ? "Đang nhận đơn" : "Chưa nhận đơn"}</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className={open ? styles.outline : styles.statusActionBtn}
-                  onClick={toggleOperatingStatus}
-                >
-                  {open ? "Tạm ngừng" : "Mở nhận đơn"}
-                </button>
+                {!isStaff && (
+                  <button
+                    type="button"
+                    className={open ? styles.outline : styles.statusActionBtn}
+                    disabled={hasBackend}
+                    onClick={hasBackend ? undefined : toggleOperatingStatus}
+                    title={
+                      hasBackend
+                        ? "Chưa nối thay đổi trạng thái ở màn này"
+                        : undefined
+                    }
+                  >
+                    {open ? "Tạm ngừng" : "Mở nhận đơn"}
+                  </button>
+                )}
               </div>
             </section>
 
-            <section className={styles.card}>
-              <div className={styles.staffCardHeader}>
-                <h2>Quản lý nhân viên</h2>
-                <span className={styles.qrActivePill}>QR bật</span>
-              </div>
-
-              <div className={styles.staffQrRow}>
-                <div className={styles.staffQrThumb} aria-hidden="true">
-                  <QrCode size={34} strokeWidth={1.9} />
-                </div>
-                <div className={styles.staffQrCopy}>
-                  <strong>QR tuyển nhân viên</strong>
-                  <p>{staffRequests.length} yêu cầu chờ duyệt</p>
-                </div>
-              </div>
-
-              <div className={styles.staffActionsRow}>
-                <button
-                  type="button"
-                  className={styles.staffPrimaryBtn}
-                  onClick={() => setShowStaffQrModal(true)}
-                >
-                  Xem QR
-                </button>
-                <button
-                  type="button"
-                  className={styles.staffOutlineBtn}
-                  onClick={() => setShowStaffRequestsModal(true)}
-                >
-                  Yêu cầu ({staffRequests.length})
-                </button>
-              </div>
-            </section>
+            {!isStaff && <StaffRecruitment />}
           </div>
         </div>
-        <section className={styles.card}>
-          <div className={styles.deliveryHeading}>
-            <h2>Quyền giao hàng</h2>
-            <p>
-              Cho phép shipper xem đơn cần giao qua liên kết riêng khi backend
-              được kết nối.
-            </p>
-          </div>
-          <div className={styles.delivery}>
-            <div className={styles.linkBox}>
-              <input
-                readOnly
-                value={
-                  demoToken
-                    ? `/delivery/demo/${demoToken}`
-                    : "Chưa tạo liên kết giao hàng demo"
-                }
-                aria-label="Liên kết giao hàng demo"
-              />
+        {!isStaff && (
+          <section className={styles.card}>
+            <div className={styles.deliveryHeading}>
+              <h2>Quyền giao hàng</h2>
+              <p>
+                Cho phép shipper xem đơn cần giao qua liên kết riêng khi backend
+                được kết nối.
+              </p>
             </div>
-            <button
-              className={styles.outline}
-              disabled={!demoToken}
-              onClick={() =>
-                void copy(`${window.location.origin}/delivery/demo/${demoToken}`)
-              }
-            >
-              <Copy size={18} />
-              Sao chép liên kết
-            </button>
-            <button className={styles.outline} onClick={() => setManage(true)}>
-              <Settings size={18} />
-              Quản lý liên kết
-            </button>
-            <span className={styles.warning}>
-              <TriangleAlert size={19} />
-              Tạo lại liên kết sẽ thay thế mã demo cũ.
-            </span>
-          </div>
-          <small className={styles.updated}>
-            {tokenUpdated
-              ? `Cập nhật lần cuối: ${tokenUpdated}`
-              : "Chưa có liên kết. Demo này chưa cấp quyền xem đơn giao hàng."}
-          </small>
-        </section>
+            <div className={styles.delivery}>
+              <div className={styles.linkBox}>
+                <input
+                  readOnly
+                  value={
+                    demoToken
+                      ? `/delivery/demo/${demoToken}`
+                      : "Chưa tạo liên kết giao hàng demo"
+                  }
+                  aria-label="Liên kết giao hàng demo"
+                />
+              </div>
+              <button
+                className={styles.outline}
+                disabled={!demoToken}
+                onClick={() =>
+                  void copy(
+                    `${window.location.origin}/delivery/demo/${demoToken}`,
+                  )
+                }
+              >
+                <Copy size={18} />
+                Sao chép liên kết
+              </button>
+              <button
+                className={styles.outline}
+                onClick={() => setManage(true)}
+              >
+                <Settings size={18} />
+                Quản lý liên kết
+              </button>
+              <span className={styles.warning}>
+                <TriangleAlert size={19} />
+                Tạo lại liên kết sẽ thay thế mã demo cũ.
+              </span>
+            </div>
+            <small className={styles.updated}>
+              {tokenUpdated
+                ? `Cập nhật lần cuối: ${tokenUpdated}`
+                : "Chưa có liên kết. Demo này chưa cấp quyền xem đơn giao hàng."}
+            </small>
+          </section>
+        )}
         <p className={styles.demo}>
-          Demo frontend · Chưa ghi DB. Trang quán vẫn dùng dữ liệu mẫu. Liên kết
-          giao hàng demo không hoạt động và không cấp quyền truy cập. Thông tin
-          đăng ký cơ bản giữ trong phiên; các cài đặt mới ở đây mất khi tải lại
-          trang.
+          Thông tin và lịch được lưu qua API. Ảnh tải lên Cloudinary chỉ xem
+          trước, chưa cập nhật avatar_url. Đổi trạng thái và liên kết giao hàng
+          ở màn này chưa nối backend.
         </p>
       </div>
 
@@ -935,14 +1067,16 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                 {mobileStoreLocation}
               </span>
             </div>
-            <button
-              type="button"
-              className={styles.mobileEditIconBtn}
-              aria-label="Chỉnh sửa thông tin cửa hàng"
-              onClick={() => setMobileSheet("info")}
-            >
-              <Pencil size={17} strokeWidth={2} aria-hidden="true" />
-            </button>
+            {!isStaff && (
+              <button
+                type="button"
+                className={styles.mobileEditIconBtn}
+                aria-label="Chỉnh sửa thông tin cửa hàng"
+                onClick={() => setMobileSheet("info")}
+              >
+                <Pencil size={17} strokeWidth={2} aria-hidden="true" />
+              </button>
+            )}
           </div>
 
           <div className={styles.mobileProfileActions}>
@@ -995,9 +1129,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
             onClick={toggleMobileOperatingStatus}
           >
             <CirclePause size={19} strokeWidth={2.1} aria-hidden="true" />
-            <span>
-              {mobileOpen ? "Tạm ngừng nhận đơn" : "Mở nhận đơn"}
-            </span>
+            <span>{mobileOpen ? "Tạm ngừng nhận đơn" : "Mở nhận đơn"}</span>
           </button>
 
           <p className={styles.mobileReceiveCaption}>
@@ -1016,7 +1148,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
             <button
               type="button"
               className={styles.mobileSetupRow}
-              onClick={() => setMobileSheet("info")}
+              onClick={() => !isStaff && setMobileSheet("info")}
             >
               <span className={styles.mobileSetupIcon} aria-hidden="true">
                 <Store size={21} strokeWidth={2} />
@@ -1036,7 +1168,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
             <button
               type="button"
               className={styles.mobileSetupRow}
-              onClick={() => setMobileSheet("schedule")}
+              onClick={() => !isStaff && setMobileSheet("schedule")}
             >
               <span className={styles.mobileSetupIcon} aria-hidden="true">
                 <Clock3 size={21} strokeWidth={2} />
@@ -1056,10 +1188,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
               />
             </button>
 
-            <Link
-              href="/seller/payments"
-              className={styles.mobileSetupRow}
-            >
+            <Link href="/seller/payments" className={styles.mobileSetupRow}>
               <span className={styles.mobileSetupIcon} aria-hidden="true">
                 <Wallet size={21} strokeWidth={2} />
               </span>
@@ -1113,7 +1242,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
             <button
               type="button"
               className={styles.mobileDeliveryBtn}
-              onClick={() => setManage(true)}
+              onClick={() => !isStaff && setManage(true)}
             >
               <span>Quản lý</span>
               <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
@@ -1133,7 +1262,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
       </div>
 
       {/* Mobile Edit Sheets for Thông tin cửa hàng & Giờ hoạt động */}
-      {mobileSheet === "info" && (
+      {mobileSheet === "info" && !isStaff && (
         <div
           className={styles.staffQrBackdrop}
           role="dialog"
@@ -1160,7 +1289,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                 Tên cửa hàng <b>*</b>
                 <input
                   required
-                  maxLength={120}
+                  maxLength={100}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                 />
@@ -1169,31 +1298,23 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                 Mô tả ngắn <b>*</b>
                 <input
                   required
-                  maxLength={200}
+                  maxLength={300}
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                 />
               </label>
               <label>
                 Khu vực / địa điểm <b>*</b>
-                <select
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                >
-                  {locations.map((value) => (
-                    <option key={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Số điện thoại liên hệ <b>*</b>
                 <input
                   required
-                  type="tel"
-                  maxLength={20}
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
+                  maxLength={200}
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
                 />
+              </label>
+              <label>
+                Số điện thoại liên hệ
+                <input disabled value="Chưa hỗ trợ lưu ở màn này" readOnly />
               </label>
               <div className={styles.mobileSheetActions}>
                 <button
@@ -1206,7 +1327,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                 <button
                   type="submit"
                   className={styles.primary}
-                  disabled={reading}
+                  disabled={reading || saving}
                 >
                   Lưu thông tin
                 </button>
@@ -1216,7 +1337,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
         </div>
       )}
 
-      {mobileSheet === "schedule" && (
+      {mobileSheet === "schedule" && !isStaff && (
         <div
           className={styles.staffQrBackdrop}
           role="dialog"
@@ -1245,7 +1366,10 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                   <select
                     required
                     value={opens}
-                    onChange={(event) => setOpens(event.target.value)}
+                    onChange={(event) => {
+                      setMode("same");
+                      setOpens(event.target.value);
+                    }}
                   >
                     {timeChoices.map((time) => (
                       <option key={time}>{time}</option>
@@ -1257,7 +1381,10 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                   <select
                     required
                     value={closes}
-                    onChange={(event) => setCloses(event.target.value)}
+                    onChange={(event) => {
+                      setMode("same");
+                      setCloses(event.target.value);
+                    }}
                   >
                     {timeChoices.map((time) => (
                       <option key={time}>{time}</option>
@@ -1272,7 +1399,8 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                     <input
                       type="checkbox"
                       checked={day.enabled}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        setMode("same");
                         setDays((current) =>
                           current.map((entry, i) =>
                             i === index
@@ -1282,8 +1410,8 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                                 }
                               : entry,
                           ),
-                        )
-                      }
+                        );
+                      }}
                     />
                     {day.label}
                   </label>
@@ -1297,7 +1425,11 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
                 >
                   Hủy
                 </button>
-                <button type="submit" className={styles.primary}>
+                <button
+                  type="submit"
+                  className={styles.primary}
+                  disabled={saving}
+                >
                   Lưu lịch
                 </button>
               </div>
@@ -1306,7 +1438,7 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
         </div>
       )}
 
-      {manage && (
+      {manage && !isStaff && (
         <dialog
           ref={dialog}
           className={styles.dialog}
@@ -1348,262 +1480,6 @@ function ShopForm({ initial }: { initial: SellerShopPreview }) {
             </button>
           </footer>
         </dialog>
-      )}
-      {showStaffQrModal && (
-        <div
-          className={styles.staffQrBackdrop}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="staff-qr-modal-title"
-          onClick={() => setShowStaffQrModal(false)}
-        >
-          <div
-            className={styles.staffQrModal}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              className={styles.staffQrCloseBtn}
-              aria-label="Đóng"
-              onClick={() => setShowStaffQrModal(false)}
-            >
-              <X size={21} strokeWidth={2} />
-            </button>
-
-            <div className={styles.staffQrModalHeader}>
-              <span className={styles.staffQrHeaderIcon} aria-hidden="true">
-                <QrCode size={24} strokeWidth={2} />
-              </span>
-              <div>
-                <h2 id="staff-qr-modal-title">Mã QR tuyển nhân viên</h2>
-                <p>
-                  Sinh viên quét mã để gửi yêu cầu xin làm nhân viên tại cửa
-                  hàng của bạn.
-                </p>
-              </div>
-            </div>
-
-            <div className={styles.staffQrInnerCard}>
-              <h3>{name.trim() || shop.name || demoSellerRestaurant.name}</h3>
-
-              <span className={styles.staffQrLocation}>
-                <MapPin size={15} strokeWidth={2} aria-hidden="true" />
-                {location || shop.location || "KTX A"}
-              </span>
-
-              <span className={styles.staffQrStatusPill}>
-                <span className={styles.staffQrStatusDot} aria-hidden="true" />
-                QR đang hoạt động
-              </span>
-
-              <div className={styles.staffQrCodeFrame} aria-hidden="true">
-                <svg viewBox="0 0 120 120" fill="#000000">
-                  {/* Top-left finder */}
-                  <path d="M6 6h34v34H6V6zm6 6v22h22V12H12zm5 5h12v12H17V17z" />
-                  {/* Top-right finder */}
-                  <path d="M80 6h34v34H80V6zm6 6v22h22V12H86zm5 5h12v12H91V17z" />
-                  {/* Bottom-left finder */}
-                  <path d="M6 80h34v34H6V80zm6 6v22h22V86H12zm5 5h12v12H17V91z" />
-                  {/* QR Modules */}
-                  <rect x="46" y="6" width="6" height="12" />
-                  <rect x="58" y="6" width="6" height="6" />
-                  <rect x="64" y="12" width="10" height="6" />
-                  <rect x="46" y="24" width="12" height="6" />
-                  <rect x="64" y="24" width="6" height="10" />
-                  <rect x="52" y="34" width="6" height="6" />
-                  <rect x="6" y="46" width="12" height="6" />
-                  <rect x="24" y="46" width="6" height="12" />
-                  <rect x="36" y="52" width="12" height="6" />
-                  <rect x="54" y="46" width="12" height="12" />
-                  <rect x="72" y="46" width="6" height="6" />
-                  <rect x="84" y="46" width="12" height="6" />
-                  <rect x="102" y="46" width="12" height="12" />
-                  <rect x="12" y="58" width="6" height="12" />
-                  <rect x="30" y="64" width="12" height="6" />
-                  <rect x="48" y="62" width="6" height="12" />
-                  <rect x="60" y="64" width="12" height="6" />
-                  <rect x="78" y="58" width="6" height="12" />
-                  <rect x="90" y="58" width="12" height="6" />
-                  <rect x="108" y="64" width="6" height="12" />
-                  <rect x="46" y="80" width="12" height="6" />
-                  <rect x="64" y="76" width="6" height="12" />
-                  <rect x="76" y="80" width="12" height="6" />
-                  <rect x="94" y="76" width="12" height="12" />
-                  <rect x="46" y="92" width="6" height="12" />
-                  <rect x="58" y="92" width="12" height="6" />
-                  <rect x="76" y="92" width="6" height="12" />
-                  <rect x="88" y="94" width="12" height="6" />
-                  <rect x="106" y="90" width="8" height="12" />
-                  <rect x="54" y="106" width="12" height="8" />
-                  <rect x="72" y="108" width="12" height="6" />
-                  <rect x="92" y="106" width="10" height="8" />
-                  <rect x="108" y="108" width="6" height="6" />
-                </svg>
-              </div>
-
-              <p className={styles.staffQrCaption}>
-                Mã QR này dùng để sinh viên gửi yêu cầu gia nhập. Yêu cầu sẽ
-                cần bạn phê duyệt trước khi cấp quyền nhân viên.
-              </p>
-            </div>
-
-            <div className={styles.staffQrModalFooter}>
-              <button
-                type="button"
-                className={styles.staffQrDismissBtn}
-                onClick={() => setShowStaffQrModal(false)}
-              >
-                Đóng
-              </button>
-
-              <button
-                type="button"
-                className={styles.staffQrDownloadBtn}
-                onClick={() => {
-                  setShowStaffQrModal(false);
-                  message("Đã tải mã QR tuyển nhân viên về thiết bị.");
-                }}
-              >
-                <Download size={18} strokeWidth={2.2} aria-hidden="true" />
-                <span>Tải mã QR</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showStaffRequestsModal && (
-        <div
-          className={styles.staffQrBackdrop}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="staff-requests-modal-title"
-          onClick={() => setShowStaffRequestsModal(false)}
-        >
-          <div
-            className={styles.staffReqModal}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              className={styles.staffQrCloseBtn}
-              aria-label="Đóng"
-              onClick={() => setShowStaffRequestsModal(false)}
-            >
-              <X size={21} strokeWidth={2} />
-            </button>
-
-            <div className={styles.staffReqHeader}>
-              <h2 id="staff-requests-modal-title">Yêu cầu gia nhập cửa hàng</h2>
-              <p>
-                Xem xét các sinh viên muốn làm nhân viên tại cửa hàng của bạn.
-              </p>
-            </div>
-
-            <div className={styles.staffReqSummaryBar}>
-              <span className={styles.staffReqSummaryIcon} aria-hidden="true">
-                <Users size={21} strokeWidth={2.2} />
-              </span>
-              <strong>Đang chờ duyệt</strong>
-              <span className={styles.staffReqCountPill}>
-                {staffRequests.length} yêu cầu
-              </span>
-            </div>
-
-            {staffRequests.length > 0 ? (
-              <div className={styles.staffReqList}>
-                {staffRequests.map((req) => (
-                  <article key={req.id} className={styles.staffReqCard}>
-                    <div className={styles.staffReqTopRow}>
-                      <div className={styles.staffReqUserLeft}>
-                        <span
-                          className={styles.staffReqAvatar}
-                          aria-hidden="true"
-                        >
-                          {req.initial}
-                        </span>
-
-                        <div className={styles.staffReqUserInfo}>
-                          <h3>{req.name}</h3>
-
-                          <span className={styles.staffReqMetaItem}>
-                            <Phone
-                              size={13.5}
-                              strokeWidth={2}
-                              aria-hidden="true"
-                            />
-                            {req.phone}
-                          </span>
-
-                          <span className={styles.staffReqMetaItem}>
-                            <Clock3
-                              size={13.5}
-                              strokeWidth={2}
-                              aria-hidden="true"
-                            />
-                            {req.requestedAt}
-                          </span>
-                        </div>
-                      </div>
-
-                      <span className={styles.staffReqPendingBadge}>
-                        Chờ duyệt
-                      </span>
-                    </div>
-
-                    <div className={styles.staffReqActionRow}>
-                      <button
-                        type="button"
-                        className={styles.staffReqRejectBtn}
-                        onClick={() => {
-                          setStaffRequests((prev) =>
-                            prev.filter((item) => item.id !== req.id),
-                          );
-                          message(
-                            `Đã từ chối yêu cầu gia nhập của ${req.name}.`,
-                          );
-                        }}
-                      >
-                        Từ chối
-                      </button>
-
-                      <button
-                        type="button"
-                        className={styles.staffReqAcceptBtn}
-                        onClick={() => {
-                          setStaffRequests((prev) =>
-                            prev.filter((item) => item.id !== req.id),
-                          );
-                          message(
-                            `Đã chấp nhận ${req.name} làm nhân viên (Staff) của cửa hàng.`,
-                          );
-                        }}
-                      >
-                        Chấp nhận
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.staffReqEmpty}>
-                Hiện không còn yêu cầu gia nhập nào đang chờ duyệt.
-              </div>
-            )}
-
-            <div className={styles.staffReqNoticeBox} role="note">
-              <CircleAlert
-                size={19}
-                strokeWidth={2.1}
-                className={styles.staffReqNoticeIcon}
-                aria-hidden="true"
-              />
-              <span>
-                Khi chấp nhận, sinh viên sẽ được cấp quyền Staff tại cửa hàng
-                của bạn. Bạn có thể quản lý quyền nhân viên sau này.
-              </span>
-            </div>
-          </div>
-        </div>
       )}
     </main>
   );

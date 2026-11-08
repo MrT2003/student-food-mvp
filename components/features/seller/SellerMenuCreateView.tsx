@@ -25,6 +25,7 @@ import {
 import StudentHeader from "@/components/layout/StudentHeader";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
 import SellerSidebar from "./SellerSidebar";
+import { useSellerAccess } from "./SellerAccessProvider";
 import { useSellerPreview } from "@/store/useSellerPreviewStore";
 import { useSellerMenuStore } from "@/store/useSellerMenuStore";
 import { demoSellerRestaurant } from "@/lib/mocks/seller-orders.mock";
@@ -648,21 +649,44 @@ function OptionEditor({
 }
 
 export default function SellerMenuCreateView({ itemId }: { itemId?: string }) {
+  const { data } = useSellerAccess();
+  const restaurantId = data?.restaurant?.id;
+  const shopName = data?.restaurant?.name || demoSellerRestaurant.name;
+  const loading = useSellerMenuStore((state) => state.loading);
+  const loadRestaurantMenu = useSellerMenuStore((state) => state.loadRestaurantMenu);
   const row = useSellerMenuStore((state) =>
     state.rows.find((entry) => entry.item.id === itemId),
   );
   const router = useRouter();
-  if (itemId && !row)
+
+  useEffect(() => {
+    if (restaurantId && itemId && !row) {
+      void loadRestaurantMenu(restaurantId);
+    }
+  }, [restaurantId, itemId, row, loadRestaurantMenu]);
+
+  if (itemId && !row) {
+    if (loading) {
+      return (
+        <div className={shell.page}>
+          <StudentHeader variant="seller" />
+          <main className={shell.workspace}>
+            <SellerSidebar active="menu" name={shopName} />
+            <section className={styles.card}>
+              <p role="status">Đang tải thông tin món ăn…</p>
+            </section>
+          </main>
+        </div>
+      );
+    }
     return (
       <div className={shell.page}>
         <StudentHeader variant="seller" />
         <main className={shell.workspace}>
-          <SellerSidebar active="menu" name={demoSellerRestaurant.name} />
+          <SellerSidebar active="menu" name={shopName} />
           <section className={styles.card}>
             <h1>Không tìm thấy món ăn</h1>
-            <p>
-              Món có thể đã bị xóa hoặc dữ liệu demo đã mất khi tải lại trang.
-            </p>
+            <p>Món có thể đã bị xóa hoặc không tồn tại trong menu cửa hàng.</p>
             <button
               className={styles.outline}
               onClick={() => router.push("/seller/menu")}
@@ -673,6 +697,7 @@ export default function SellerMenuCreateView({ itemId }: { itemId?: string }) {
         </main>
       </div>
     );
+  }
   return (
     <SellerMenuForm
       key={itemId ?? "new"}
@@ -683,10 +708,16 @@ export default function SellerMenuCreateView({ itemId }: { itemId?: string }) {
 
 function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
   const router = useRouter();
+  const { data } = useSellerAccess();
   const seller = useSellerPreview();
   const rows = useSellerMenuStore((state) => state.rows);
-  const setRows = useSellerMenuStore((state) => state.setRows);
-  const shopName = seller?.name || demoSellerRestaurant.name;
+  const saveMenuItem = useSellerMenuStore((state) => state.saveMenuItem);
+  const restaurantId =
+    data?.restaurant?.id ??
+    original?.item.restaurant_id ??
+    demoSellerRestaurant.id;
+  const shopName =
+    data?.restaurant?.name || seller?.name || demoSellerRestaurant.name;
   const categories = [
     ...new Set([
       ...menuCategories,
@@ -961,7 +992,7 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
     );
   }
 
-  function save(event: FormEvent<HTMLFormElement>) {
+  async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
     if (
@@ -1020,11 +1051,10 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
         }),
       };
     });
-    // Data URLs and featuredPreview are demo-only. Production uploads must provide a storage URL.
     const updated: SellerMenuRow = {
       item: {
         id,
-        restaurant_id: original?.item.restaurant_id ?? demoSellerRestaurant.id,
+        restaurant_id: restaurantId,
         name: name.trim(),
         category,
         price: basePrice,
@@ -1052,15 +1082,22 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
           : groups.reduce((count, group) => count + group.options.length, 0),
       featuredPreview: featured,
     };
-    setRows((current) =>
-      original
-        ? current.map((row) => (row.item.id === id ? updated : row))
-        : [updated, ...current],
-    );
-    router.push("/seller/menu");
+
+    try {
+      await saveMenuItem(updated, Boolean(original));
+      router.push("/seller/menu");
+    } catch (err) {
+      submitted.current = false;
+      setSaving(false);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Không thể lưu món ăn vào cơ sở dữ liệu.",
+      );
+    }
   }
 
-  function saveMobile(event: FormEvent<HTMLFormElement>) {
+  async function saveMobile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
     if (
@@ -1108,7 +1145,7 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
     const updated: SellerMenuRow = {
       item: {
         id,
-        restaurant_id: original?.item.restaurant_id ?? demoSellerRestaurant.id,
+        restaurant_id: restaurantId,
         name: mobileName.trim(),
         category: mobileCategory,
         price: mobileBasePrice,
@@ -1127,15 +1164,25 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
         updated_at: now,
       },
       optionGroups,
-      optionCount: mobileGroups.length,
+      optionCount: mobileGroups.reduce(
+        (count, group) => count + group.options.length,
+        0,
+      ),
       featuredPreview: mobileFeatured,
     };
-    setRows((current) =>
-      original
-        ? current.map((row) => (row.item.id === id ? updated : row))
-        : [updated, ...current],
-    );
-    router.push("/seller/menu");
+
+    try {
+      await saveMenuItem(updated, Boolean(original));
+      router.push("/seller/menu");
+    } catch (err) {
+      submitted.current = false;
+      setSaving(false);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Không thể lưu món ăn vào cơ sở dữ liệu.",
+      );
+    }
   }
 
   function cancel() {

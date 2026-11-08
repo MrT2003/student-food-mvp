@@ -5,6 +5,7 @@ import { CartUtilities, type SelectedGroup, type CompactSelectedGroup } from "@/
 import type { GetCartResult } from "@/types/cart.types";
 import type { CartItem, CartRestaurant } from "@/lib/cart/view-model";
 import { getCartSummary } from "@/lib/cart/calculations";
+import { assertPurchaseAccess } from "@/lib/auth/purchase-access";
 
 export interface AddToCartInput {
   menuItemId: string;
@@ -54,9 +55,7 @@ export const CartServices = {
     // Giới hạn tại đây vì Database hiện chưa khai báo các RPC mà service khác đang dùng.
     const supabaseBrowserClient = createClient() as SupabaseClient<Database>;
     // userId từ UI không phải bằng chứng đăng nhập; RLS vẫn phải bảo vệ dữ liệu ở DB.
-    const { data: { user }, error: authError } = await supabaseBrowserClient.auth.getUser();
-    if (authError) throw new Error(authError.message);
-    if (!user || user.id !== userId) throw new Error("Vui lòng đăng nhập để xem giỏ hàng của bạn.");
+    const authenticatedUserId = await assertPurchaseAccess(supabaseBrowserClient, userId);
 
     // Một truy vấn lồng lấy cả giỏ, món, quán và catalog options, tránh gọi từng món.
     // Không dùng inner join: dữ liệu bị xóa/ẩn bởi RLS phải được phát hiện, không âm thầm mất dòng.
@@ -73,8 +72,8 @@ export const CartServices = {
 					)
 				)
 			)
-		`).eq("student_id", user.id).maybeSingle();
-    if (error) throw new Error(error.message);
+		`).eq("student_id", authenticatedUserId).maybeSingle();
+    if (error) throw new Error("Không thể tải giỏ hàng. Vui lòng thử lại.");
 
     const restaurants = new Map<string, CartRestaurant>();
     // Sắp xếp ổn định để các dòng không nhảy vị trí sau mỗi lần tải lại.
@@ -138,13 +137,7 @@ export const CartServices = {
     const supabase = createClient();
 
     // 1. Verify client session first, if user not yet login --> Throw error
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      throw new Error("Please login to add this stuff to cart !");
-    }
+    await assertPurchaseAccess(supabase);
 
     // 2. Format and order selected_options properly before saving into DB
     const formattedOptions = CartUtilities.formatSortSelectedOptions(
@@ -161,8 +154,8 @@ export const CartServices = {
     });
 
     if (error) {
-      console.error("Add to cart error:", error.message);
-      throw new Error(error.message || "Cannot add product to cart.");
+      // Không log/trả lỗi RPC thô có thể chứa dữ liệu truy vấn.
+      throw new Error("Cannot add product to cart.");
     }
 
     return data as CartItemResponse;
@@ -174,12 +167,13 @@ export const CartServices = {
     quantity: number,
   ): Promise<UpdateQuantityResult> {
     const supabase = createClient();
+    await assertPurchaseAccess(supabase);
     const { data, error } = await supabase.rpc("update_cart_item_quantity", {
       p_cart_item_id: cartItemId,
       p_quantity: quantity,
     });
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error("Không thể cập nhật số lượng trong giỏ hàng.");
     return data as UpdateQuantityResult;
   },
 
@@ -191,6 +185,7 @@ export const CartServices = {
     newQuantity: number,
   ): Promise<UpdateOptionsResult> {
     const supabase = createClient();
+    await assertPurchaseAccess(supabase);
     const formattedOptions =
       CartUtilities.formatSortSelectedOptions(newSelectedOptions);
 
@@ -201,20 +196,20 @@ export const CartServices = {
       p_new_quantity: newQuantity,
     });
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error("Không thể cập nhật tùy chọn trong giỏ hàng.");
     return data as UpdateOptionsResult;
   },
 
   async deleteCartItem(cartItemId: string): Promise<DeleteCartItemResult> {
     const supabase = createClient();
+    await assertPurchaseAccess(supabase);
 
     const { data, error } = await supabase.rpc("delete_cart_item", {
       p_cart_item_id: cartItemId,
     });
 
     if (error) {
-      console.error("Lỗi xóa món khỏi giỏ hàng:", error.message);
-      throw new Error(error.message || "Không thể xóa món khỏi giỏ hàng.");
+      throw new Error("Không thể xóa món khỏi giỏ hàng.");
     }
 
     return data as DeleteCartItemResult;

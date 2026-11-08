@@ -12,7 +12,7 @@ function accountResult(request: NextRequest, result: string) {
   return response;
 }
 
-export async function GET(request: NextRequest) {
+async function handleCallback(request: NextRequest) {
   let linking = false;
   try {
     const jar = await cookies();
@@ -61,7 +61,16 @@ export async function GET(request: NextRequest) {
         ? "conflict" : "failed";
       return accountResult(request, result);
     }
-    console.log("[api/auth/zalo/callback] Cannot login to Zalo: ", error)
+    // Fixed diagnostic only: upstream errors can contain credentials or profile data.
+    console.error("[zalo-callback] Authentication failed.");
     return NextResponse.json({ error: "Không thể hoàn tất đăng nhập Zalo. Vui lòng thử lại." }, { status: 500 });
   }
+}
+
+// Apply response privacy headers to every outcome, including rejected state/errors.
+export async function GET(request: NextRequest) {
+  const response = await handleCallback(request);
+  response.headers.set("Cache-Control", "no-store");
+  response.headers.set("Referrer-Policy", "no-referrer");
+  return response;
 }

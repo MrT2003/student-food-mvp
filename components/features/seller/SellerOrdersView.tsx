@@ -8,6 +8,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Clock3,
   ClipboardList,
@@ -26,29 +27,21 @@ import {
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
-import SellerOrderDetailView, {
-  createDefaultSellerOrderDetailFixture,
-} from "./SellerOrderDetailView";
-import { useSellerPreview } from "@/store/useSellerPreviewStore";
+import { useSellerAccess } from "./SellerAccessProvider";
+import { useSellerOrders } from "@/lib/seller/useSellerOrders";
+import type { SellerManagedOrder } from "@/types/seller-orders.types";
+import type { SellerAccess } from "@/types/seller-access.types";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
-import TransferContent from "@/components/ui/TransferContent";
-import { formatTransferContent } from "@/lib/orders/order-code";
-import {
-  createSellerOrderFixtures,
-  demoSellerRestaurant,
-} from "@/lib/mocks/seller-orders.mock";
 import {
   filterSellerOrders,
   isInSellerTab,
   selectedSellerOrder,
   sellerTabs,
-  transitionSellerOrder,
   vietnamDay,
   type SellerOrder,
   type SellerOrderTab,
 } from "@/lib/seller/orders";
 import { formatMoney } from "@/lib/format";
-import { normalizeSearchText } from "@/lib/format";
 import {
   formatOrderDate,
   formatOrderPayment,
@@ -58,6 +51,7 @@ import type { OrderStatus, PaymentMethod } from "@/types/order.types";
 import styles from "@/styles/seller-orders.module.css";
 
 export const SELLER_MOBILE_REFERENCE_DAY = "2026-10-05";
+const DEFAULT_FIXTURE_RESTAURANT_ID = "10000000-0000-4000-8000-000000000001";
 
 export const sellerMobileOrderTabs: readonly {
   value: SellerOrderTab;
@@ -101,21 +95,29 @@ export function splitMobileDeliveryAddress(address: string | null): {
 }
 
 export function formatMobileOrderItemsSummary(
-  items: SellerOrder["order_items"],
+  items: { quantity: number; item_name_snapshot: string | null }[],
 ): string {
   const preview = items
     .slice(0, 2)
-    .map((item) => `${item.quantity}× ${item.item_name_snapshot}`);
+    .map(
+      (item) =>
+        `${item.quantity}× ${item.item_name_snapshot ?? "Chưa có tên món"}`,
+    );
   if (items.length > 2) {
     preview.push(`+${items.length - 2} món`);
   }
   return preview.join(" · ");
 }
 
-export function getMobileOrderNoteBadge(
-  order: SellerOrder,
-): "Có tùy chọn món" | "Có ghi chú" | null {
-  if (order.order_items.some((item) => item.selected_options.length > 0)) {
+export function getMobileOrderNoteBadge(order: {
+  order_items: { selected_options: unknown[] | null }[];
+  customer_notes: string | null;
+}): "Có tùy chọn món" | "Có ghi chú" | null {
+  if (
+    order.order_items.some(
+      (item) => (item.selected_options?.length ?? 0) > 0,
+    )
+  ) {
     return "Có tùy chọn món";
   }
   if (order.customer_notes && order.customer_notes.trim().length > 0) {
@@ -124,9 +126,9 @@ export function getMobileOrderNoteBadge(
   return null;
 }
 
-export function getSellerMobileTabCounts(
-  orders: SellerOrder[],
-): Record<SellerOrderTab, number> {
+export function getSellerMobileTabCounts<
+  T extends { order_status: OrderStatus },
+>(orders: T[]): Record<SellerOrderTab, number> {
   return {
     pending: orders.filter((o) => isInSellerTab(o.order_status, "pending"))
       .length,
@@ -139,8 +141,16 @@ export function getSellerMobileTabCounts(
   };
 }
 
-export function filterAndSortSellerMobileOrders(
-  orders: SellerOrder[],
+export function filterAndSortSellerMobileOrders<
+  T extends {
+    restaurant_id: string;
+    order_code: string | null;
+    customer: { name: string | null };
+    created_at: string;
+    order_status: OrderStatus;
+  },
+>(
+  orders: T[],
   options: {
     restaurantId?: string;
     tab: SellerOrderTab;
@@ -149,8 +159,8 @@ export function filterAndSortSellerMobileOrders(
     sort: string;
     day?: string | null;
   },
-): SellerOrder[] {
-  const restaurantId = options.restaurantId ?? demoSellerRestaurant.id;
+): T[] {
+  const restaurantId = options.restaurantId ?? DEFAULT_FIXTURE_RESTAURANT_ID;
   const targetDay =
     options.period === "today"
       ? (options.day ?? SELLER_MOBILE_REFERENCE_DAY)
@@ -214,7 +224,7 @@ function buildMobileOrder(params: {
   );
   return {
     id: params.id,
-    restaurant_id: demoSellerRestaurant.id,
+    restaurant_id: DEFAULT_FIXTURE_RESTAURANT_ID,
     student_id: `51000000-0000-4000-8000-${params.id.slice(-12)}`,
     session_checkout_id: `91000000-0000-4000-8000-${params.id.slice(-12)}`,
     order_code: params.orderCode,
@@ -241,13 +251,78 @@ function buildMobileOrder(params: {
 }
 
 export function createSellerMobileOrderFixtures(): SellerOrder[] {
+  const defaultFirstOrder: SellerOrder = {
+    id: "71000000-0000-4000-8000-000000000128",
+    restaurant_id: DEFAULT_FIXTURE_RESTAURANT_ID,
+    student_id: "51000000-0000-4000-8000-000000000128",
+    session_checkout_id: "91000000-0000-4000-8000-000000000128",
+    order_code: "SF0128",
+    order_status: "pending",
+    payment_method: "cash",
+    payment_confirmed_at: null,
+    payment_confirmed_by: null,
+    subtotal: 45000,
+    total: 45000,
+    delivery_address: "KTX A, Cổng B, Phòng 302",
+    customer_notes: "Gọi trước khi giao nhé!",
+    created_at: "2026-10-05T03:24:00.000Z",
+    accepted_at: null,
+    completed_at: null,
+    order_items: [
+      {
+        id: "81000000-0000-4000-8000-000000001281",
+        order_id: "71000000-0000-4000-8000-000000000128",
+        menu_item_id: "20000000-0000-4000-8000-000000000003",
+        item_name_snapshot: "Trà sữa truyền thống",
+        unit_price_snapshot: 25000,
+        quantity: 1,
+        selected_options: [
+          {
+            option_id: "81000000-0000-4000-8000-000000001281-opt-1",
+            group_name: "Topping",
+            option_name: "Trân châu đen",
+            additional_price: 0,
+          },
+          {
+            option_id: "81000000-0000-4000-8000-000000001281-opt-2",
+            group_name: "Mức đá",
+            option_name: "Ít đá",
+            additional_price: 0,
+          },
+        ],
+        image_url: "/seller-order-tra-sua.png",
+      },
+      {
+        id: "81000000-0000-4000-8000-000000001282",
+        order_id: "71000000-0000-4000-8000-000000000128",
+        menu_item_id: "20000000-0000-4000-8000-000000000002",
+        item_name_snapshot: "Bánh tráng trộn",
+        unit_price_snapshot: 20000,
+        quantity: 1,
+        selected_options: [
+          {
+            option_id: "81000000-0000-4000-8000-000000001282-opt-1",
+            group_name: "Topping thêm",
+            option_name: "Thêm trứng cút",
+            additional_price: 0,
+          },
+        ],
+        image_url: "/seller-order-banh-trang-tron.png",
+      },
+    ],
+    customer: {
+      name: "Trần Minh Anh",
+      phone: "0901 234 567",
+    },
+  };
+
   const pendingOrders: SellerOrder[] = [
-    createDefaultSellerOrderDetailFixture(),
+    defaultFirstOrder,
     buildMobileOrder({
       id: "71000000-0000-4000-8000-000000000129",
       orderCode: "SF0129",
       status: "pending",
-      createdAt: "2026-10-05T02:56:00.000Z", // 09:56 ICT
+      createdAt: "2026-10-05T02:56:00.000Z",
       customerName: "Lê Quốc Bảo",
       customerPhone: "0902 345 678",
       deliveryAddress: "KTX C, Tòa C1, Phòng 410",
@@ -267,7 +342,7 @@ export function createSellerMobileOrderFixtures(): SellerOrder[] {
       id: "71000000-0000-4000-8000-000000000130",
       orderCode: "SF0130",
       status: "pending",
-      createdAt: "2026-10-05T02:20:00.000Z", // 09:20 ICT
+      createdAt: "2026-10-05T02:20:00.000Z",
       customerName: "Phạm Thị Mai",
       customerPhone: "0903 456 789",
       deliveryAddress: "KTX B, Tòa B2, Phòng 205",
@@ -432,34 +507,36 @@ function Badge({ status }: { status: OrderStatus }) {
   );
 }
 
-function Item({ item }: { item: SellerOrder["order_items"][number] }) {
+function Item({ item }: { item: SellerManagedOrder["order_items"][number] }) {
   return (
     <div className={styles.item}>
       {item.image_url ? (
         <Image
           src={item.image_url}
-          alt={item.item_name_snapshot}
+          alt={item.item_name_snapshot ?? "Ảnh món đã đặt"}
           width={52}
           height={52}
           unoptimized
           className={styles.thumb}
         />
       ) : (
-        <FoodThumbnail
-          kind={
-            normalizeSearchText(item.item_name_snapshot).includes("tra")
-              ? "drink"
-              : "food"
-          }
-          className={styles.thumb}
-        />
+        <FoodThumbnail kind="food" className={styles.thumb} />
       )}
       <div>
-        <strong>{item.item_name_snapshot}</strong>
-        {item.selected_options.length > 0 && (
-          <small>
-            + {item.selected_options.map((o) => o.option_name).join(", ")}
-          </small>
+        <strong>{item.item_name_snapshot ?? "Chưa có tên món snapshot"}</strong>
+        {item.selected_options === null ? (
+          <small>Chưa có snapshot lựa chọn thêm</small>
+        ) : (
+          item.selected_options.length > 0 && (
+            <small>
+              +{" "}
+              {item.selected_options
+                .map((o) =>
+                  [o.group_name, o.option_name].filter(Boolean).join(": "),
+                )
+                .join(", ")}
+            </small>
+          )
         )}
       </div>
       <span className={styles.quantity}>×{item.quantity}</span>
@@ -467,52 +544,83 @@ function Item({ item }: { item: SellerOrder["order_items"][number] }) {
   );
 }
 
-export default function SellerOrdersView() {
-  const draft = useSellerPreview();
+const money = (value: number | null) =>
+  value === null ? "Chưa có số tiền" : formatMoney(value);
 
-  // Desktop state (giữ nguyên 100%)
-  const [orders, setOrders] = useState<SellerOrder[]>([]);
+export default function SellerOrdersView() {
+  const { data, error, retry } = useSellerAccess();
+  if (!data?.restaurant)
+    return (
+      <div className={styles.page}>
+        <StudentHeader variant="seller" />
+        <div className={styles.workspace}>
+          <SellerSidebar active="orders" name="" />
+          <main className={styles.content}>
+            <p role={error ? "alert" : "status"}>
+              {error || "Đang tải cửa hàng…"}
+            </p>
+            {error && <button onClick={retry}>Thử lại</button>}
+          </main>
+        </div>
+      </div>
+    );
+  // Account/quán đổi: unmount toàn bộ danh sách, bill, request state và bộ lọc cũ.
+  return (
+    <SellerOrdersContent
+      key={`${data.user.id}:${data.restaurant.id}`}
+      actorId={data.user.id}
+      restaurant={data.restaurant}
+    />
+  );
+}
+
+export function SellerOrdersContent({
+  actorId,
+  restaurant,
+}: {
+  actorId: string;
+  restaurant: NonNullable<SellerAccess["restaurant"]>;
+}) {
+  const {
+    orders,
+    loading,
+    refreshError,
+    error,
+    notice,
+    actionError,
+    busyIds,
+    reload,
+    decide,
+    clearNotice,
+  } = useSellerOrders(actorId, restaurant.id);
   const [today, setToday] = useState("");
-  const [ready, setReady] = useState(false);
   const [tab, setTab] = useState<SellerOrderTab>("pending");
   const [query, setQuery] = useState("");
   const [period, setPeriod] = useState("today");
   const [sort, setSort] = useState("newest");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ filter: "", page: 1 });
-  const [notice, setNotice] = useState("");
   const bill = useRef<HTMLElement>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
 
-  // Mobile state (khởi tạo đồng bộ với ảnh mẫu để SSR + Client khớp 100%)
-  const [mobileOrders, setMobileOrders] = useState<SellerOrder[]>(() =>
-    createSellerMobileOrderFixtures(),
-  );
-  const [mobileTab, setMobileTab] = useState<SellerOrderTab>("pending");
-  const [mobileQuery, setMobileQuery] = useState("");
-  const [mobilePeriod, setMobilePeriod] = useState("today");
-  const [mobileSort, setMobileSort] = useState("newest");
-  const [mobileSelectedId, setMobileSelectedId] = useState<string | null>(null);
-  const [mobileNotice, setMobileNotice] = useState("");
-
   useEffect(() => {
-    // Initialize only in the browser to avoid date/time hydration differences.
     let active = true;
-    void Promise.resolve().then(() => {
-      if (!active) return;
-      const now = new Date().toISOString();
-      setOrders(createSellerOrderFixtures(now));
-      setToday(vietnamDay(now));
-      setReady(true);
-    });
+    const refreshDay = () => {
+      if (active) setToday(vietnamDay(new Date().toISOString()));
+    };
+    void Promise.resolve().then(refreshDay);
+    const timer = window.setInterval(refreshDay, 60_000);
+    window.addEventListener("focus", refreshDay);
     return () => {
       active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshDay);
     };
   }, []);
 
   const filtered = filterSellerOrders(
-    draft ? [] : orders,
-    demoSellerRestaurant.id,
+    orders ?? [],
+    restaurant.id,
     query,
     period === "today" ? today : null,
   );
@@ -548,75 +656,27 @@ export default function SellerOrdersView() {
     setSelectedId(null);
     opener.current?.focus();
   }
-
-  function changeStatus(order: SellerOrder, status: OrderStatus) {
+  function changeStatus(
+    order: SellerManagedOrder,
+    action: "accept" | "reject" | "complete",
+  ) {
     if (
-      status === "rejected" &&
-      !window.confirm(`Từ chối đơn #${order.order_code}? (Chỉ dữ liệu demo)`)
+      action === "reject" &&
+      !window.confirm(`Từ chối đơn #${order.order_code ?? "chưa có mã"}?`)
     )
       return;
-    setOrders((current) =>
-      current.map((o) =>
-        o.id === order.id
-          ? transitionSellerOrder(o, status, new Date().toISOString())
-          : o,
-      ),
-    );
-    setSelectedId(null);
-    setNotice(
-      `Đơn #${order.order_code}: ${orderStatusLabels[status]}. Chỉ cập nhật bản demo.`,
-    );
+    void decide(order.id, action);
   }
 
-  // Mobile filtering & status transitions
-  const mobileBaseFiltered = filterSellerOrders(
-    draft ? [] : mobileOrders,
-    demoSellerRestaurant.id,
-    mobileQuery,
-    mobilePeriod === "today" ? SELLER_MOBILE_REFERENCE_DAY : null,
-  );
-  const mobileTabCounts = getSellerMobileTabCounts(mobileBaseFiltered);
-  const mobileVisibleOrders = filterAndSortSellerMobileOrders(
-    draft ? [] : mobileOrders,
-    {
-      restaurantId: demoSellerRestaurant.id,
-      tab: mobileTab,
-      query: mobileQuery,
-      period: mobilePeriod,
-      sort: mobileSort,
-      day: SELLER_MOBILE_REFERENCE_DAY,
-    },
-  );
-  const mobileSelectedOrder = selectedSellerOrder(
-    mobileVisibleOrders,
-    mobileSelectedId,
-  );
-
-  function changeMobileStatus(order: SellerOrder, status: OrderStatus) {
-    if (
-      status === "rejected" &&
-      typeof window !== "undefined" &&
-      typeof window.confirm === "function" &&
-      !window.confirm(`Từ chối đơn #${order.order_code}? (Chỉ dữ liệu demo)`)
-    ) {
-      return;
-    }
-    const nowIso = new Date().toISOString();
-    setMobileOrders((current) =>
-      current.map((o) =>
-        o.id === order.id ? transitionSellerOrder(o, status, nowIso) : o,
-      ),
-    );
-    setMobileSelectedId(null);
-    setMobileNotice(
-      `Đơn #${order.order_code}: ${orderStatusLabels[status]}.`,
-    );
-  }
+  const pendingCount =
+    loading || error || orders === null
+      ? 0
+      : filtered.filter((o) => isInSellerTab(o.order_status, "pending")).length;
 
   return (
     <div
       className={styles.page}
-      data-mobile-detail-open={mobileSelectedOrder ? "true" : "false"}
+      data-mobile-detail-open={selected ? "true" : "false"}
     >
       <StudentHeader variant="seller" />
       <div
@@ -625,8 +685,8 @@ export default function SellerOrdersView() {
       >
         <SellerSidebar
           active="orders"
-          name={draft?.name || demoSellerRestaurant.name}
-          pendingOrderCount={mobileTabCounts.pending}
+          name={restaurant.name}
+          pendingOrderCount={pendingCount}
           menuLabel="Thực đơn"
         />
 
@@ -684,22 +744,22 @@ export default function SellerOrdersView() {
                     <CheckCircle2 />
                   )}
                   {t.label} (
-                  {
-                    filtered.filter((o) =>
-                      isInSellerTab(o.order_status, t.value),
-                    ).length
-                  }
+                  {loading || error || orders === null
+                    ? "—"
+                    : filtered.filter((o) =>
+                        isInSellerTab(o.order_status, t.value),
+                      ).length}
                   )
                 </button>
               ))}
             </div>
-            {notice && (
-              <p role="status" className={styles.notice}>
-                {notice}
-                <button
-                  onClick={() => setNotice("")}
-                  aria-label="Đóng thông báo"
-                >
+            {(notice || actionError) && (
+              <p
+                role={actionError ? "alert" : "status"}
+                className={styles.notice}
+              >
+                {actionError || notice}
+                <button onClick={clearNotice} aria-label="Đóng thông báo">
                   <X size={16} />
                 </button>
               </p>
@@ -735,16 +795,38 @@ export default function SellerOrdersView() {
                   </select>
                 </label>
               </div>
+              {refreshError && (
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className={styles.refreshStatus}
+                >
+                  {refreshError}
+                </p>
+              )}
               <div className={styles.orderList}>
-                {!ready ? (
+                {loading || !today ? (
                   <p role="status" className={styles.empty}>
                     Đang tải đơn hàng…
                   </p>
+                ) : error ? (
+                  <div className={styles.empty} role="alert">
+                    <p>{error}</p>
+                    <button
+                      onClick={() => {
+                        void reload();
+                      }}
+                    >
+                      Thử lại
+                    </button>
+                  </div>
                 ) : visible.length === 0 ? (
                   <div className={styles.empty}>
                     <ClipboardList size={38} />
                     <h3>Không có đơn hàng</h3>
-                    <p>Thử trạng thái, từ khóa hoặc khoảng thời gian khác.</p>
+                    <p>
+                      Thử đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái khác.
+                    </p>
                   </div>
                 ) : (
                   pageOrders.map((order) => (
@@ -753,7 +835,8 @@ export default function SellerOrdersView() {
                       className={`${styles.order} ${selectedId === order.id ? styles.selected : ""}`}
                       onClick={(e) => {
                         if ((e.target as HTMLElement).closest("button")) return;
-                        opener.current = e.currentTarget.querySelector("button");
+                        opener.current =
+                          e.currentTarget.querySelector("button");
                         setSelectedId(order.id);
                       }}
                     >
@@ -763,11 +846,11 @@ export default function SellerOrdersView() {
                             opener.current = e.currentTarget;
                             setSelectedId(order.id);
                           }}
-                          aria-label={`Xem đơn ${order.order_code}`}
+                          aria-label={`Xem đơn ${order.order_code ?? "chưa có mã"}`}
                           aria-expanded={selectedId === order.id}
                           aria-controls="seller-order-bill"
                         >
-                          #{order.order_code}
+                          #{order.order_code ?? "Chưa có mã đơn"}
                         </button>
                         <small>{formatOrderDate(order.created_at)}</small>
                         <Badge status={order.order_status} />
@@ -777,28 +860,21 @@ export default function SellerOrdersView() {
                           <div>
                             <strong>
                               <User size={16} />
-                              {order.customer.name}
+                              {order.customer.name ?? "Chưa có tên khách"}
                             </strong>
                             <span>
                               <Phone size={16} />
-                              {order.customer.phone ?? "Đã ẩn số điện thoại"}
+                              {order.customer.phone ??
+                                (order.order_status === "completed"
+                                  ? "Đã ẩn số điện thoại"
+                                  : "Chưa có số điện thoại")}
                             </span>
                           </div>
                           <span className={styles.address}>
                             <MapPin size={17} />
                             <span>
-                              <strong>
-                                {
-                                  (
-                                    order.delivery_address ?? "Chưa có địa chỉ"
-                                  ).split(",")[0]
-                                }
-                              </strong>
-                              {(order.delivery_address ?? "")
-                                .split(",")
-                                .slice(1)
-                                .join(",")
-                                .trim()}
+                              {order.delivery_address ??
+                                "Chưa có địa chỉ giao nhận"}
                             </span>
                           </span>
                           <span>
@@ -811,9 +887,7 @@ export default function SellerOrdersView() {
                           </span>
                           <span>
                             <CreditCard size={17} />
-                            {order.payment_method === "cash"
-                              ? "Tiền mặt"
-                              : "Chuyển khoản"}
+                            {formatOrderPayment(order.payment_method)}
                           </span>
                         </div>
                         <div className={styles.itemPreview}>
@@ -828,19 +902,21 @@ export default function SellerOrdersView() {
                         </div>
                       </div>
                       <div className={styles.actions}>
-                        <strong>{formatMoney(order.total)}</strong>
+                        <strong>{money(order.total)}</strong>
                         <div>
                           {order.order_status === "pending" && (
                             <>
                               <button
                                 className={styles.primary}
-                                onClick={() => changeStatus(order, "accepted")}
+                                disabled={loading || busyIds.includes(order.id)}
+                                onClick={() => changeStatus(order, "accept")}
                               >
                                 Chấp nhận
                               </button>
                               <button
                                 className={styles.outline}
-                                onClick={() => changeStatus(order, "rejected")}
+                                disabled={loading || busyIds.includes(order.id)}
+                                onClick={() => changeStatus(order, "reject")}
                               >
                                 Từ chối
                               </button>
@@ -849,7 +925,8 @@ export default function SellerOrdersView() {
                           {order.order_status === "accepted" && (
                             <button
                               className={styles.primary}
-                              onClick={() => changeStatus(order, "completed")}
+                              disabled={loading || busyIds.includes(order.id)}
+                              onClick={() => changeStatus(order, "complete")}
                             >
                               Hoàn thành
                             </button>
@@ -872,7 +949,7 @@ export default function SellerOrdersView() {
                   ))
                 )}
               </div>
-              {pageCount > 1 && (
+              {!loading && !error && pageCount > 1 && (
                 <nav
                   className={styles.pagination}
                   aria-label="Phân trang đơn hàng"
@@ -898,8 +975,8 @@ export default function SellerOrdersView() {
               )}
             </section>
             <p className={styles.demo}>
-              Bản demo UI · Không phải đơn thật. Thay đổi trạng thái sẽ mất khi
-              tải lại trang.
+              Số lượng tab theo toàn bộ đơn của quán đã tải, cùng từ khóa/ngày
+              đang chọn. Ngày tính theo giờ Việt Nam.
             </p>
           </section>
 
@@ -909,20 +986,23 @@ export default function SellerOrdersView() {
               ref={bill}
               tabIndex={-1}
               className={styles.bill}
-              aria-label={`Chi tiết đơn ${selected.order_code}`}
+              aria-label={`Chi tiết đơn ${selected.order_code ?? "chưa có mã"}`}
               onKeyDown={(e) => {
                 if (e.key === "Escape") closeBill();
               }}
             >
               <div className={styles.billHeading}>
                 <h2>Chi tiết đơn hàng</h2>
-                <button onClick={closeBill} aria-label="Đóng chi tiết đơn hàng">
+                <button
+                  onClick={closeBill}
+                  aria-label="Đóng chi tiết đơn hàng"
+                >
                   <X />
                 </button>
               </div>
               <section>
                 <div className={styles.billTitle}>
-                  <strong>#{selected.order_code}</strong>
+                  <strong>#{selected.order_code ?? "Chưa có mã đơn"}</strong>
                   <Badge status={selected.order_status} />
                 </div>
                 <p>Đặt lúc: {formatOrderDate(selected.created_at)}</p>
@@ -932,14 +1012,19 @@ export default function SellerOrdersView() {
                   <User />
                   Thông tin khách hàng
                 </h3>
-                <strong>{selected.customer.name}</strong>
+                <strong>
+                  {selected.customer.name ?? "Chưa có tên khách"}
+                </strong>
                 <p>
                   <Phone size={16} />
-                  {selected.customer.phone ?? "Đã ẩn số điện thoại"}
+                  {selected.customer.phone ??
+                    (selected.order_status === "completed"
+                      ? "Đã ẩn số điện thoại"
+                      : "Chưa có số điện thoại")}
                 </p>
                 <p>
                   <MapPin size={16} />
-                  {selected.delivery_address}
+                  {selected.delivery_address ?? "Chưa có địa chỉ giao nhận"}
                 </p>
               </section>
               <section>
@@ -948,14 +1033,6 @@ export default function SellerOrdersView() {
                   Thông tin thanh toán
                 </h3>
                 <p>{formatOrderPayment(selected.payment_method)}</p>
-                {selected.payment_method === "bank_transfer" && (
-                  <TransferContent
-                    value={formatTransferContent(
-                      selected.order_code,
-                      draft?.name || demoSellerRestaurant.name,
-                    )}
-                  />
-                )}
               </section>
               <section>
                 <h3>
@@ -966,7 +1043,9 @@ export default function SellerOrdersView() {
                   <div className={styles.billItem} key={item.id}>
                     <Item item={item} />
                     <strong>
-                      {formatMoney(item.unit_price_snapshot * item.quantity)}
+                      {item.total_price === null
+                        ? `Giá món snapshot: ${money(item.unit_price_snapshot)}; chưa có đơn giá đầy đủ`
+                        : `${money(item.total_price)}/phần`}
                     </strong>
                   </div>
                 ))}
@@ -983,15 +1062,11 @@ export default function SellerOrdersView() {
               <section className={styles.totals}>
                 <p>
                   <span>Tạm tính</span>
-                  <span>{formatMoney(selected.subtotal)}</span>
-                </p>
-                <p>
-                  <span>Phí giao hàng (demo)</span>
-                  <span>{formatMoney(selected.total - selected.subtotal)}</span>
+                  <span>{money(selected.subtotal)}</span>
                 </p>
                 <p>
                   <strong>Tổng cộng</strong>
-                  <strong>{formatMoney(selected.total)}</strong>
+                  <strong>{money(selected.total)}</strong>
                 </p>
               </section>
             </aside>
@@ -1027,85 +1102,52 @@ export default function SellerOrdersView() {
           )}
         </div>
 
-        {/* Phiên bản Mobile trùng khớp 100% với ảnh mẫu */}
+        {/* Phiên bản Mobile dùng cùng state/hook với Desktop */}
         <div className={styles.mobileView}>
           <header className={styles.mobileHeading}>
             <h1>Đơn hàng</h1>
             <p>Theo dõi và xử lý đơn của cửa hàng.</p>
           </header>
 
-          <label className={styles.mobileSearch}>
+          <div className={styles.mobileSearch}>
             <Search size={18} strokeWidth={2} aria-hidden="true" />
-            <input
-              type="search"
-              aria-label="Tìm mã đơn hoặc tên khách"
-              placeholder="Tìm mã đơn hoặc tên khách"
-              value={mobileQuery}
-              onChange={(event) => {
-                setMobileQuery(event.target.value);
-                setMobileSelectedId(null);
-              }}
-            />
-          </label>
+            <span>{query || "Tìm mã đơn hoặc tên khách"}</span>
+          </div>
 
           <div className={styles.mobileFilterRow}>
-            <label className={styles.mobileFilterSelect}>
+            <div className={styles.mobileFilterSelect}>
               <CalendarDays
                 size={17}
                 strokeWidth={2}
                 className={styles.mobileFilterIcon}
                 aria-hidden="true"
               />
-              <select
-                aria-label="Lọc đơn hàng theo ngày"
-                value={mobilePeriod}
-                onChange={(event) => {
-                  setMobilePeriod(event.target.value);
-                  setMobileSelectedId(null);
-                }}
-              >
-                {sellerMobileDateFilterOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <span>{period === "today" ? "Hôm nay" : "Tất cả ngày"}</span>
               <ChevronDown
                 size={16}
                 strokeWidth={2.2}
                 className={styles.mobileFilterChevron}
                 aria-hidden="true"
               />
-            </label>
+            </div>
 
-            <label className={styles.mobileFilterSelect}>
+            <div className={styles.mobileFilterSelect}>
               <ArrowUpDown
                 size={17}
                 strokeWidth={2}
                 className={styles.mobileFilterIcon}
                 aria-hidden="true"
               />
-              <select
-                aria-label="Sắp xếp thứ tự đơn hàng"
-                value={mobileSort}
-                onChange={(event) => {
-                  setMobileSort(event.target.value);
-                  setMobileSelectedId(null);
-                }}
-              >
-                {sellerMobileSortOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <span>
+                {sort === "newest" ? "Mới nhất trước" : "Cũ nhất trước"}
+              </span>
               <ChevronDown
                 size={16}
                 strokeWidth={2.2}
                 className={styles.mobileFilterChevron}
                 aria-hidden="true"
               />
-            </label>
+            </div>
           </div>
 
           <div
@@ -1114,50 +1156,36 @@ export default function SellerOrdersView() {
             aria-label="Phân loại nhanh trạng thái đơn hàng"
           >
             {sellerMobileOrderTabs.map((item) => {
-              const isActive = mobileTab === item.value;
-              const count = mobileTabCounts[item.value];
+              const isActive = tab === item.value;
+              const count =
+                loading || error || orders === null
+                  ? 0
+                  : filtered.filter((o) =>
+                      isInSellerTab(o.order_status, item.value),
+                    ).length;
               return (
-                <button
+                <span
                   key={item.value}
-                  type="button"
                   role="tab"
                   aria-selected={isActive}
-                  aria-pressed={isActive}
                   className={`${styles.mobileTabButton} ${isActive ? styles.mobileTabActive : ""}`}
                   onClick={() => {
-                    setMobileTab(item.value);
-                    setMobileSelectedId(null);
+                    setTab(item.value);
+                    setSelectedId(null);
                   }}
                 >
                   <span>{item.label}</span>{" "}
                   <span className={styles.mobileTabCount}>{count}</span>
-                </button>
+                </span>
               );
             })}
           </div>
 
-          {mobileNotice && (
-            <p role="status" className={styles.mobileNotice}>
-              <span>{mobileNotice}</span>
-              <button
-                type="button"
-                onClick={() => setMobileNotice("")}
-                aria-label="Đóng thông báo"
-              >
-                <X size={15} />
-              </button>
-            </p>
-          )}
-
           <div className={styles.mobileOrderCards}>
-            {mobileVisibleOrders.length === 0 ? (
-              <div className={styles.mobileEmpty}>
-                <ClipboardList size={34} />
-                <h3>Không có đơn hàng</h3>
-                <p>Thử đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái khác.</p>
-              </div>
-            ) : (
-              mobileVisibleOrders.slice(0, 3).map((order) => {
+            {!loading &&
+              !error &&
+              today &&
+              pageOrders.map((order) => {
                 const { area, detail } = splitMobileDeliveryAddress(
                   order.delivery_address,
                 );
@@ -1165,28 +1193,29 @@ export default function SellerOrdersView() {
                   order.order_items,
                 );
                 const noteBadge = getMobileOrderNoteBadge(order);
-                const paymentLabel =
-                  order.payment_method === "cash" ? "Tiền mặt" : "Chuyển khoản";
 
                 return (
-                  <article
+                  <div
                     key={order.id}
                     className={styles.mobileOrderCard}
-                    data-order-code={order.order_code}
+                    data-order-code={order.order_code ?? ""}
+                    onClick={() => setSelectedId(order.id)}
                   >
                     <div className={styles.mobileCardHeader}>
                       <div className={styles.mobileCardCodeWrap}>
                         <strong className={styles.mobileCardCode}>
-                          #{order.order_code}
+                          #{order.order_code ?? "Chưa có mã đơn"}
                         </strong>
                         <p className={styles.mobileCardSub}>
                           <span>{formatMobileOrderTime(order.created_at)}</span>
                           <span aria-hidden="true"> · </span>
-                          <span>{order.customer.name}</span>
+                          <span>
+                            {order.customer.name ?? "Chưa có tên khách"}
+                          </span>
                         </p>
                       </div>
                       <strong className={styles.mobileCardPrice}>
-                        {formatMoney(order.total)}
+                        {money(order.total)}
                       </strong>
                     </div>
 
@@ -1241,71 +1270,38 @@ export default function SellerOrdersView() {
                             strokeWidth={2}
                             aria-hidden="true"
                           />
-                          <span>{paymentLabel}</span>
+                          <span>{formatOrderPayment(order.payment_method)}</span>
                         </span>
                       </div>
 
-                      <button
-                        type="button"
-                        className={styles.mobileDetailLink}
-                        onClick={() => setMobileSelectedId(order.id)}
-                        aria-label={`Xem chi tiết đơn ${order.order_code}`}
-                      >
+                      <span className={styles.mobileDetailLink}>
                         <span>Xem chi tiết</span>
                         <ArrowRight
                           size={14}
                           strokeWidth={2.2}
                           aria-hidden="true"
                         />
-                      </button>
+                      </span>
                     </div>
 
-                    {order.order_status === "pending" && (
-                      <div className={styles.mobileCardActions}>
-                        <button
-                          type="button"
-                          className={styles.mobileRejectButton}
-                          onClick={() => changeMobileStatus(order, "rejected")}
+                    {selectedId === order.id && (
+                      <div className={styles.mobileInlineDetail}>
+                        <span
+                          className={styles.mobileDetailBack}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closeBill();
+                          }}
                         >
-                          Từ chối
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.mobileAcceptButton}
-                          onClick={() => changeMobileStatus(order, "accepted")}
-                        >
-                          Chấp nhận
-                        </button>
+                          <ChevronLeft size={16} aria-hidden="true" />
+                          <span>Thu gọn</span>
+                        </span>
                       </div>
                     )}
-
-                    {order.order_status === "accepted" && (
-                      <div className={styles.mobileCardActionsSingle}>
-                        <button
-                          type="button"
-                          className={styles.mobileAcceptButton}
-                          onClick={() => changeMobileStatus(order, "completed")}
-                        >
-                          Hoàn thành
-                        </button>
-                      </div>
-                    )}
-                  </article>
+                  </div>
                 );
-              })
-            )}
+              })}
           </div>
-
-          {mobileSelectedOrder && (
-            <SellerOrderDetailView
-              order={mobileSelectedOrder}
-              overlay
-              onBack={() => setMobileSelectedId(null)}
-              onAccept={(order) => changeMobileStatus(order, "accepted")}
-              onReject={(order) => changeMobileStatus(order, "rejected")}
-              onComplete={(order) => changeMobileStatus(order, "completed")}
-            />
-          )}
         </div>
       </div>
     </div>

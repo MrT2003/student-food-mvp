@@ -3,12 +3,20 @@
 import AuthBenefits from "@/components/features/auth/AuthBenefits";
 import AuthIntro from "@/components/features/auth/AuthIntro";
 import SocialAuthButtons from "@/components/features/auth/SocialAuthButtons";
-import { useSignIn } from "@/lib/auth/useAuthFlow";
+import { useSignIn, useSignOut } from "@/lib/auth/useAuthFlow";
+import { useAuthStore } from "@/store/useAuthStore";
 import styles from "@/styles/auth-fit.module.css";
 
-export default function RegisterView() {
-  const { pendingProvider, error, continueWithGoogle, continueWithZalo } =
-    useSignIn();
+type Props = {
+  mode?: "register" | "login";
+};
+
+export default function RegisterView({ mode = "register" }: Props) {
+  const { pendingProvider, error, continueWithGoogle, continueWithZalo } = useSignIn();
+  const logoutStatus = useAuthStore((state) => state.logoutStatus);
+  const { logout, signOutError } = useSignOut();
+  const finishingLogout = logoutStatus === "pending" || logoutStatus === "failed";
+  const isRegister = mode === "register";
 
   return (
     <div className={`${styles.page} mx-auto w-full max-w-[1380px]`}>
@@ -36,7 +44,7 @@ export default function RegisterView() {
             </h1>
 
             <p className="mt-4 leading-relaxed text-[#526a9e]">
-              Đăng nhập hoặc tạo tài khoản để tiếp tục.
+              {isRegister ? "Tạo tài khoản để tiếp tục." : "Đăng nhập để tiếp tục."}
             </p>
           </div>
 
@@ -46,8 +54,16 @@ export default function RegisterView() {
               "mx-auto mt-8 w-full max-w-[440px]",
             ].join(" ")}
           >
+
+            {/* Trang đã mở ngay; khóa login mới đến khi session cũ đã kết thúc an toàn. */}
+            {logoutStatus === "pending" && <p role="status">Đang hoàn tất đăng xuất…</p>}
+            {logoutStatus === "failed" && <div role="alert">
+              <p>{signOutError}</p>
+              <button type="button" onClick={() => void logout()}>Thử lại đăng xuất</button>
+            </div>}
             <SocialAuthButtons
               pendingProvider={pendingProvider}
+              disabled={finishingLogout}
               error={error}
               onGoogle={() => void continueWithGoogle()}
               onZalo={() => void continueWithZalo()}

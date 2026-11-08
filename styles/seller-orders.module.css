@@ -158,6 +158,13 @@
   font-size: 17px;
   margin: 0;
 }
+.refreshStatus {
+  flex-shrink: 0;
+  margin: 0 8px 12px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--color-text-muted, #526c95);
+}
 .toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;

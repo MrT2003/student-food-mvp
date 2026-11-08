@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -27,10 +27,10 @@ import {
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
-import { useSellerPreview } from "@/store/useSellerPreviewStore";
-import { useSellerShopStore } from "@/store/useSellerShopStore";
-import { demoSellerRestaurant } from "@/lib/mocks/seller-orders.mock";
-import { SellerMenuActiveIcon } from "@/components/ui/SellerBottomNavIcons";
+import { useSellerAccess } from "./SellerAccessProvider";
+import SellerAccessProblem from "./SellerAccessProblem";
+import { openSellerRestaurant } from "@/lib/seller/open-client";
+import { useAuthStore } from "@/store/useAuthStore";
 import styles from "@/styles/seller-overview.module.css";
 
 export type SellerChecklistItem = {
@@ -119,7 +119,7 @@ export const sellerMobileTodayStats: readonly SellerTodayStatItem[] = [
 
 function ChecklistRowIcon({ kind }: { kind: SellerChecklistItem["icon"] }) {
   if (kind === "utensils") {
-    return <SellerMenuActiveIcon size={19} aria-hidden="true" />;
+    return <Utensils size={19} strokeWidth={2} aria-hidden="true" />;
   }
   if (kind === "wallet") {
     return <Wallet size={19} strokeWidth={2} aria-hidden="true" />;
@@ -133,7 +133,10 @@ function ChecklistRowIcon({ kind }: { kind: SellerChecklistItem["icon"] }) {
 function MobileStatIcon({ tone }: { tone: SellerTodayStatItem["tone"] }) {
   if (tone === "orange-doc") {
     return (
-      <span className={`${styles.mobileStatIcon} ${styles.toneOrangeDoc}`} aria-hidden="true">
+      <span
+        className={`${styles.mobileStatIcon} ${styles.toneOrangeDoc}`}
+        aria-hidden="true"
+      >
         <span className={styles.mobileStatInnerDoc}>
           <FileText size={15} strokeWidth={2.2} />
         </span>
@@ -142,7 +145,10 @@ function MobileStatIcon({ tone }: { tone: SellerTodayStatItem["tone"] }) {
   }
   if (tone === "green-check") {
     return (
-      <span className={`${styles.mobileStatIcon} ${styles.toneGreenCheck}`} aria-hidden="true">
+      <span
+        className={`${styles.mobileStatIcon} ${styles.toneGreenCheck}`}
+        aria-hidden="true"
+      >
         <span className={styles.mobileStatInnerGreen}>
           <Check size={15} strokeWidth={3} />
         </span>
@@ -151,7 +157,10 @@ function MobileStatIcon({ tone }: { tone: SellerTodayStatItem["tone"] }) {
   }
   if (tone === "gray-check") {
     return (
-      <span className={`${styles.mobileStatIcon} ${styles.toneGrayCheck}`} aria-hidden="true">
+      <span
+        className={`${styles.mobileStatIcon} ${styles.toneGrayCheck}`}
+        aria-hidden="true"
+      >
         <span className={styles.mobileStatInnerGray}>
           <Check size={15} strokeWidth={3} />
         </span>
@@ -159,53 +168,127 @@ function MobileStatIcon({ tone }: { tone: SellerTodayStatItem["tone"] }) {
     );
   }
   return (
-    <span className={`${styles.mobileStatIcon} ${styles.toneOrangeDollar}`} aria-hidden="true">
+    <span
+      className={`${styles.mobileStatIcon} ${styles.toneOrangeDollar}`}
+      aria-hidden="true"
+    >
       <span className={styles.mobileStatInnerDollar}>$</span>
     </span>
   );
 }
 
 export default function SellerOverviewView() {
-  const draft = useSellerPreview();
-  const shop = useSellerShopStore((state) => state.shop);
-  const [bannerVisible, setBannerVisible] = useState(true);
+  const { data, loading } = useSellerAccess();
+  const restaurant = data?.restaurant;
+
+  const key = `${data?.user.id ?? ""}:${restaurant?.id ?? ""}`;
+  const [openState, setOpenState] = useState({
+    key: "",
+    pending: false,
+    error: "",
+    message: "",
+  });
+  const request = useRef<{ key: string } | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const opening = openState.key === key && openState.pending;
+  const opened = restaurant?.operating_status === "open";
+  const canOpen =
+    !loading &&
+    data?.user.role === "seller" &&
+    data.user.status === "active" &&
+    restaurant?.operating_status === "closed";
+
+  async function openRestaurant() {
+    if (
+      !canOpen ||
+      opening ||
+      !data ||
+      !restaurant ||
+      request.current?.key === key
+    )
+      return;
+    const marker = { key };
+    request.current = marker;
+    const actor = data.user.id;
+    setOpenState({ key, pending: true, error: "", message: "" });
+    try {
+      const result = await openSellerRestaurant(actor, restaurant.id);
+      if (mounted.current && useAuthStore.getState().user?.id === actor)
+        setOpenState((current) =>
+          current.key === key
+            ? {
+                ...current,
+                message: result.recovered
+                  ? "Đã đọc lại và xác nhận cửa hàng đang mở."
+                  : result.alreadyOpen
+                    ? "Cửa hàng đã mở sẵn."
+                    : "Đã xác nhận cửa hàng đang mở.",
+              }
+            : current,
+        );
+    } catch (error) {
+      if (mounted.current && useAuthStore.getState().user?.id === actor)
+        setOpenState((current) =>
+          current.key === key
+            ? {
+                ...current,
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Không thể mở cửa hàng. Hãy tải lại trạng thái.",
+              }
+            : current,
+        );
+    } finally {
+      if (request.current === marker) request.current = null;
+      if (mounted.current)
+        setOpenState((current) =>
+          current.key === key ? { ...current, pending: false } : current,
+        );
+    }
+  }
+
   const [notice, setNotice] = useState("");
   const [guideOpen, setGuideOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(
     sellerMobileDateOptions[0],
   );
-
-  const name = draft?.name || "Cửa hàng của bạn";
-  const mobileShopName = draft?.name || shop?.name || demoSellerRestaurant.name;
-
+  const name = restaurant?.name || "";
   const unavailable = (feature: string) =>
-    setNotice(
-      `${feature} chưa được triển khai. Hiện đây là bản xem trước giao diện, chưa kết nối API.`,
-    );
-
+    setNotice(`${feature} chưa sẵn sàng.`);
   const setup = [
     {
       icon: Utensils,
       title: "Thêm món đầu tiên",
-      badge: "Chưa có món nào",
+      badge: "Xem danh sách món",
       text: "Tạo món ăn, đặt giá và hình ảnh hấp dẫn để thu hút sinh viên.",
       action: "Thêm món",
     },
     {
       icon: Wallet,
       title: "Thiết lập thanh toán",
-      badge: draft?.cash === false ? "Tiền mặt: Chưa bật" : "Tiền mặt: Đã chọn",
+      badge: "Thiết lập phương thức thanh toán",
       text: "Cấu hình các phương thức thanh toán cho cửa hàng.",
       action: "Thiết lập",
     },
     {
       icon: Store,
       title: "Hoàn thiện thông tin cửa hàng",
-      badge: "Ảnh đại diện: Chưa tải lên",
+      badge: restaurant?.avatar_url
+        ? "Đã có ảnh đại diện"
+        : "Chưa có ảnh đại diện",
       text: "Cập nhật thông tin cửa hàng để khách hàng dễ tìm thấy bạn.",
       action: "Chỉnh sửa",
     },
   ];
+  if (loading && !restaurant) return <p role="status">Đang tải cửa hàng…</p>;
+  if (!restaurant) return <SellerAccessProblem />;
 
   return (
     <div className={styles.page}>
@@ -227,29 +310,6 @@ export default function SellerOverviewView() {
             </header>
             <div className={styles.columns}>
               <div className={styles.content}>
-                {bannerVisible && (
-                  <section className={styles.success}>
-                    <CheckCircle2 size={36} />
-                    <div>
-                      <strong>
-                        {draft
-                          ? "Hoàn tất đăng ký cửa hàng (bản xem trước)!"
-                          : "Chào mừng đến trang tổng quan!"}
-                      </strong>
-                      <p>
-                        {draft
-                          ? "Thông tin được giữ trong phiên trình duyệt. Chưa tạo cửa hàng hoặc cấp quyền seller trên hệ thống."
-                          : "Đăng ký cửa hàng để xem thông tin của bạn tại đây."}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setBannerVisible(false)}
-                      aria-label="Đóng thông báo"
-                    >
-                      <X size={18} />
-                    </button>
-                  </section>
-                )}
                 <section className={styles.card}>
                   <h3>Trạng thái cửa hàng</h3>
                   <div className={styles.status}>
@@ -257,22 +317,56 @@ export default function SellerOverviewView() {
                       <Store size={40} />
                     </span>
                     <div>
-                      <span className={styles.closed}>● Tạm đóng</span>
-                      <p>
-                        Cửa hàng của bạn đang tạm đóng và chưa nhận hàng.
-                        <br />
-                        Bạn cần thêm ít nhất 1 món đang bán trước khi mở cửa
-                        hàng.
-                      </p>
+                      <span className={styles.closed} data-open={opened}>
+                        {opened
+                          ? "Đang mở"
+                          : restaurant.operating_status === "paused"
+                            ? "Tạm ngừng"
+                            : "Tạm đóng"}
+                      </span>
+                      <p>Trạng thái nhận đơn của cửa hàng.</p>
+                      {restaurant.status !== "active" && (
+                        <small>
+                          Quán đang inactive; mở nhận đơn không tự chuyển quán
+                          thành active.
+                        </small>
+                      )}
                     </div>
                     <div className={styles.openAction}>
-                      <button disabled>Mở nhận đơn</button>
+                      <button
+                        disabled={!canOpen || opening}
+                        onClick={() => {
+                          void openRestaurant();
+                        }}
+                      >
+                        {opening
+                          ? "Đang mở…"
+                          : opened
+                            ? "Đang mở"
+                            : "Mở nhận đơn"}
+                      </button>
                       <small>
-                        Chưa có món đang bán. Chức năng mở cửa hàng chưa nối
-                        API.
+                        {opened
+                          ? "Trạng thái được tải từ cửa hàng."
+                          : restaurant.operating_status === "paused"
+                            ? "Chưa hỗ trợ mở từ trạng thái tạm ngừng tại đây."
+                            : "Mở nhận đơn cho chính cửa hàng của bạn."}
                       </small>
                     </div>
                   </div>
+                  {openState.key === key &&
+                    (openState.error || openState.message) && (
+                      <p
+                        className={
+                          openState.error
+                            ? styles.openError
+                            : styles.openMessage
+                        }
+                        role={openState.error ? "alert" : "status"}
+                      >
+                        {openState.error || openState.message}
+                      </p>
+                    )}
                 </section>
                 <section>
                   <div className={styles.sectionTitle}>
@@ -283,48 +377,48 @@ export default function SellerOverviewView() {
                     </small>
                   </div>
                   <div className={styles.setupGrid}>
-                    {setup.map(({ icon: Icon, title, badge, text, action }, index) => (
-                      <article className={styles.setupCard} key={title}>
-                        <div className={styles.setupHeading}>
-                          <span className={styles.icon}>
-                            <Icon />
-                          </span>
-                          <div>
-                            <h4>{title}</h4>
-                            <span
-                              className={
-                                index === 1 && draft?.cash !== false
-                                  ? styles.greenBadge
-                                  : styles.redBadge
-                              }
-                            >
-                              {badge}
+                    {setup.map(
+                      ({ icon: Icon, title, badge, text, action }, index) => (
+                        <article className={styles.setupCard} key={title}>
+                          <div className={styles.setupHeading}>
+                            <span className={styles.icon}>
+                              <Icon />
                             </span>
+                            <div>
+                              <h4>{title}</h4>
+                              <span
+                                className={
+                                  index === 2 && !!restaurant.avatar_url
+                                    ? styles.greenBadge
+                                    : styles.redBadge
+                                }
+                              >
+                                {badge}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        {index === 1 && (
-                          <small>
-                            {draft?.bank === false
-                              ? "Chuyển khoản: Chưa chọn"
-                              : "Chuyển khoản: Chưa cấu hình"}
-                          </small>
-                        )}
-                        {index === 2 && (
-                          <small>
-                            <Clock3 size={13} />{" "}
-                            {draft?.hours || "Giờ hoạt động: Chưa thiết lập"}
-                          </small>
-                        )}
-                        <p>{text}</p>
-                        <button
-                          className={styles.primary}
-                          onClick={() => unavailable(title)}
-                        >
-                          {action}
-                          <ArrowRight size={16} />
-                        </button>
-                      </article>
-                    ))}
+                          {index === 1 && (
+                            <small>
+                              {"Phương thức thanh toán chưa được xác nhận tại đây"}
+                            </small>
+                          )}
+                          {index === 2 && (
+                            <small>
+                              <Clock3 size={13} />{" "}
+                              {restaurant.location || "Chưa có địa điểm"}
+                            </small>
+                          )}
+                          <p>{text}</p>
+                          <button
+                            className={styles.primary}
+                            onClick={() => unavailable(title)}
+                          >
+                            {action}
+                            <ArrowRight size={16} />
+                          </button>
+                        </article>
+                      ),
+                    )}
                     <article className={styles.setupCard}>
                       <div className={styles.setupHeading}>
                         <span className={styles.icon}>
@@ -333,24 +427,22 @@ export default function SellerOverviewView() {
                         <h4>Chia sẻ cửa hàng</h4>
                       </div>
                       <div className={styles.sharePlaceholder}>
-                        <Copy size={16} /> Chưa có liên kết công khai
+                        <Copy size={16} /> {`/restaurants/${restaurant.slug}`}
                       </div>
-                      <p>
-                        Liên kết sẽ có sau khi cửa hàng được tạo trên hệ thống.
-                      </p>
-                      <button className={styles.outline} disabled>
-                        Sao chép link
-                      </button>
+                      <p>Xem trang cửa hàng của bạn.</p>
+                      <Link
+                        className={styles.outline}
+                        href={`/restaurants/${encodeURIComponent(restaurant.slug)}`}
+                      >
+                        Xem cửa hàng
+                      </Link>
                     </article>
                   </div>
                 </section>
                 {notice && (
                   <div className={styles.notice} role="status">
                     {notice}
-                    <button
-                      onClick={() => setNotice("")}
-                      aria-label="Đóng"
-                    >
+                    <button onClick={() => setNotice("")} aria-label="Đóng">
                       <X size={16} />
                     </button>
                   </div>
@@ -359,16 +451,18 @@ export default function SellerOverviewView() {
                   <div className={styles.sectionTitle}>
                     <BarChart3 />
                     <h3>Tổng quan hôm nay</h3>
-                    <small>
-                      Số liệu mẫu cho cửa hàng mới, chưa kết nối API.
-                    </small>
+                    <small>Chưa có số liệu thống kê tại đây.</small>
                   </div>
                   <div className={styles.stats}>
                     {[
-                      { icon: ClipboardList, label: "Đơn mới", value: "0" },
-                      { icon: CheckCircle2, label: "Đã chấp nhận", value: "0" },
-                      { icon: Check, label: "Hoàn thành", value: "0" },
-                      { icon: Wallet, label: "Doanh thu", value: "0đ" },
+                      { icon: ClipboardList, label: "Đơn mới", value: "—" },
+                      {
+                        icon: CheckCircle2,
+                        label: "Đã chấp nhận",
+                        value: "—",
+                      },
+                      { icon: Check, label: "Hoàn thành", value: "—" },
+                      { icon: Wallet, label: "Doanh thu", value: "—" },
                     ].map(({ icon: Icon, label, value }, index) => (
                       <article
                         key={label}
@@ -381,7 +475,7 @@ export default function SellerOverviewView() {
                         <div>
                           <h4>{label}</h4>
                           <strong>{value}</strong>
-                          <small>{index === 3 ? "hôm nay" : "đơn hàng"}</small>
+                          <small>Chưa có số liệu</small>
                         </div>
                       </article>
                     ))}
@@ -391,7 +485,7 @@ export default function SellerOverviewView() {
                   <div className={styles.sectionTitle}>
                     <ClipboardList />
                     <h3>Đơn hàng mới</h3>
-                    <small>Các đơn hàng mới nhất sẽ hiển thị tại đây.</small>
+                    <small>Chưa tải danh sách đơn hàng tại đây.</small>
                     <Link href="/seller/orders">
                       Xem tất cả <ArrowRight size={16} />
                     </Link>
@@ -399,11 +493,8 @@ export default function SellerOverviewView() {
                   <div className={styles.empty}>
                     <ClipboardList size={40} />
                     <div>
-                      <strong>Chưa có đơn hàng nào</strong>
-                      <p>
-                        Khi cửa hàng bắt đầu nhận đơn, các đơn hàng mới sẽ hiển
-                        thị tại đây.
-                      </p>
+                      <strong>Chưa có dữ liệu đơn hàng</strong>
+                      <p>Mở mục Đơn hàng để xem thêm.</p>
                     </div>
                   </div>
                 </section>
@@ -415,28 +506,45 @@ export default function SellerOverviewView() {
                       <ClipboardList />
                     </span>
                     <h3>Việc nên làm tiếp theo</h3>
-                    <small>0/4 đã hoàn thành</small>
+                    <small>Thiết lập cửa hàng</small>
                   </div>
-                  <progress
-                    value={0}
-                    max={4}
-                    aria-label="Tiến độ thiết lập cửa hàng"
-                  />
                   {[
                     ["Thêm món đầu tiên", "Tạo và đăng món ăn đầu tiên"],
                     ["Tải ảnh đại diện", "Giúp cửa hàng của bạn nổi bật hơn"],
                     ["Cấu hình chuyển khoản", "Nhận thanh toán qua ngân hàng"],
-                    ["Mở nhận đơn", "Sau khi hoàn tất thiết lập cửa hàng"],
+                    ["Mở nhận đơn", "Mở nhận đơn cho cửa hàng đang đóng"],
                   ].map(([title, text]) => (
                     <button
                       className={styles.task}
                       key={title}
-                      onClick={() => unavailable(title)}
+                      disabled={
+                        title === "Mở nhận đơn" && (!canOpen || opening)
+                      }
+                      onClick={() =>
+                        title === "Mở nhận đơn"
+                          ? void openRestaurant()
+                          : unavailable(title)
+                      }
                     >
-                      <span className={styles.checkbox} />
+                      <span
+                        className={styles.checkbox}
+                        data-done={title === "Mở nhận đơn" && opened}
+                      >
+                        {title === "Mở nhận đơn" && opened && (
+                          <Check size={17} />
+                        )}
+                      </span>
                       <span>
-                        <strong>{title}</strong>
-                        <small>{text}</small>
+                        <strong>
+                          {title === "Mở nhận đơn" && opened
+                            ? "Đã mở nhận đơn"
+                            : title}
+                        </strong>
+                        <small>
+                          {title === "Mở nhận đơn" && opening
+                            ? "Đang mở…"
+                            : text}
+                        </small>
                       </span>
                       <ChevronRight size={17} />
                     </button>
@@ -463,7 +571,8 @@ export default function SellerOverviewView() {
                       <li>Thêm món và đặt giá bán.</li>
                       <li>Hoàn thiện thông tin, hình ảnh cửa hàng.</li>
                       <li>
-                        Cấu hình thanh toán rồi mở nhận đơn khi đủ điều kiện.
+                        Mở nhận đơn tại thẻ Trạng thái cửa hàng khi bạn sẵn
+                        sàng.
                       </li>
                     </ol>
                   )}
@@ -475,53 +584,22 @@ export default function SellerOverviewView() {
                     Liên hệ hỗ trợ
                   </button>
                 </section>
-                {!draft && (
-                  <Link className={styles.outline} href="/seller/register">
-                    Đăng ký cửa hàng <ArrowRight size={16} />
-                  </Link>
-                )}
               </aside>
             </div>
           </div>
 
-          {/* Phiên bản Mobile trùng khớp 100% với ảnh mẫu */}
+          {/* Phiên bản Mobile */}
           <div className={styles.mobileView}>
             <header className={styles.mobileHeading}>
               <h1>Seller Dashboard</h1>
               <h2>
-                Xin chào, <span>{mobileShopName}</span> 👋
+                Xin chào, <span>{name}</span> 👋
               </h2>
               <p>
                 Cùng hoàn thiện cửa hàng để bắt đầu phục vụ các bạn sinh viên
                 nhé!
               </p>
             </header>
-
-            {bannerVisible && (
-              <section
-                className={styles.mobileSuccess}
-                aria-label="Thông báo tạo cửa hàng thành công"
-              >
-                <span className={styles.mobileSuccessIcon} aria-hidden="true">
-                  <Check size={18} strokeWidth={3} />
-                </span>
-                <div className={styles.mobileSuccessBody}>
-                  <strong>Tạo cửa hàng thành công!</strong>
-                  <p>
-                    Cửa hàng của bạn đã được tạo trên StudentFood. Hãy hoàn
-                    thiện các thông tin dưới đây trước khi mở nhận đơn.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className={styles.mobileSuccessClose}
-                  onClick={() => setBannerVisible(false)}
-                  aria-label="Đóng thông báo"
-                >
-                  <X size={18} />
-                </button>
-              </section>
-            )}
 
             <section
               className={styles.mobileStatusCard}
@@ -539,24 +617,28 @@ export default function SellerOverviewView() {
                         className={styles.mobileClosedDot}
                         aria-hidden="true"
                       />
-                      Tạm đóng
+                      {opened
+                        ? "Đang mở"
+                        : restaurant.operating_status === "paused"
+                          ? "Tạm ngừng"
+                          : "Tạm đóng"}
                     </span>
-                    <p>
-                      Cửa hàng của bạn đang tạm đóng và chưa nhận đơn hàng.
-                    </p>
+                    <p>Trạng thái nhận đơn của cửa hàng.</p>
                   </div>
                 </div>
               </div>
               <div className={styles.mobileStatusRight}>
-                <button
-                  type="button"
-                  disabled
-                  className={styles.mobileOpenButton}
-                >
-                  Mở nhận đơn
-                </button>
+                <span className={styles.mobileOpenButton}>
+                  {opening
+                    ? "Đang mở…"
+                    : opened
+                      ? "Đang mở"
+                      : "Tạm đóng"}
+                </span>
                 <small>
-                  Bạn cần thêm ít nhất 1 món đang bán trước khi mở cửa hàng.
+                  {opened
+                    ? "Trạng thái được tải từ cửa hàng."
+                    : "Sử dụng thẻ trạng thái trên máy tính hoặc danh sách công việc để mở nhận đơn."}
                 </small>
               </div>
             </section>
@@ -576,16 +658,16 @@ export default function SellerOverviewView() {
                   <h3 id="mobile-checklist-heading">Hoàn thiện cửa hàng</h3>
                 </div>
                 <div className={styles.mobileProgressMeta}>
-                  <small>0/4 hoàn thành</small>
+                  <small>{opened ? "1/4 hoàn thành" : "0/4 hoàn thành"}</small>
                   <div
                     className={styles.mobileProgressBar}
                     role="progressbar"
                     aria-label="Tiến độ hoàn thiện cửa hàng"
-                    aria-valuenow={0}
+                    aria-valuenow={opened ? 1 : 0}
                     aria-valuemin={0}
                     aria-valuemax={4}
                   >
-                    <span style={{ width: "0%" }} />
+                    <span style={{ width: opened ? "25%" : "0%" }} />
                   </div>
                 </div>
               </div>
@@ -615,15 +697,6 @@ export default function SellerOverviewView() {
                 ))}
               </div>
             </section>
-
-            {notice && (
-              <div className={styles.notice} role="status">
-                {notice}
-                <button onClick={() => setNotice("")} aria-label="Đóng">
-                  <X size={16} />
-                </button>
-              </div>
-            )}
 
             <section
               className={styles.mobileTodaySection}

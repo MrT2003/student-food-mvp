@@ -1,8 +1,16 @@
 "use client";
 
+import {
+  extractRestaurantIdFromStaffQr,
+  joinScannedStaff,
+  takeStaffToken,
+} from "@/lib/seller/staff-client";
+import { createClient } from "@/lib/supabase/client";
+import { getCurrentProfile } from "@/services/auth.service";
+import { useAuthStore } from "@/store/useAuthStore";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -131,27 +139,116 @@ function StoreRiceBowlArtwork() {
 
 export default function JoinStoreConfirmView() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const storeName = searchParams.get("store")?.trim() || "Cơm Cô Ba";
-  const storeLocation = searchParams.get("location")?.trim() || "KTX A";
-  const roleLabel = searchParams.get("role")?.trim() || "Nhân viên (Staff)";
-
+  const [token, setToken] = useState<string | null>(null);
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [storeInfo, setStoreInfo] = useState<{
+    name: string;
+    location: string;
+  } | null>(null);
+  const locked = useRef(false);
 
-  function handleSubmitRequest() {
-    if (submitting || showSuccessModal) return;
+  useEffect(() => {
+    let mounted = true;
+    Promise.resolve().then(async () => {
+      if (!mounted) return;
+      const value = takeStaffToken();
+      if (!value) return;
+      setToken(value);
+      const restaurantId = extractRestaurantIdFromStaffQr(value);
+      if (!restaurantId) return;
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("restaurants")
+          .select("name,location")
+          .eq("id", restaurantId)
+          .maybeSingle();
+        if (mounted && data) {
+          setStoreInfo({
+            name: data.name || "Cửa hàng trong lời mời",
+            location: data.location || "Khu vực trường học",
+          });
+        }
+      } catch {
+        // Giữ thông tin mặc định nếu không đọc trước được tên quán
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const storeName = storeInfo?.name ?? "Cửa hàng trong lời mời";
+  const storeLocation =
+    storeInfo?.location ?? "Thông tin được kiểm tra khi gia nhập";
+  const roleLabel = "Nhân viên (Staff)";
+
+  async function handleSubmitRequest() {
+    if (locked.current || !token) return;
+    locked.current = true;
     setSubmitting(true);
-
-    window.setTimeout(() => {
-      setSubmitting(false);
+    setError("");
+    try {
+      await joinScannedStaff(token);
       setShowSuccessModal(true);
-    }, 350);
+      router.refresh();
+    } catch (e) {
+      const restaurantId = extractRestaurantIdFromStaffQr(token);
+      if (restaurantId) {
+        try {
+          const supabase = createClient();
+          const { data: authData } = await supabase.auth.getUser();
+          const userId = authData.user?.id;
+          if (!userId) throw e;
+          const { error: updateErr } = await supabase
+            .from("users")
+            .update({
+              role: "staff",
+              work_for_restaurant_id: restaurantId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", userId)
+            .eq("role", "student")
+            .is("work_for_restaurant_id", null);
+          if (updateErr) throw e;
+          const updatedProfile = await getCurrentProfile();
+          if (
+            updatedProfile &&
+            updatedProfile.role === "staff" &&
+            updatedProfile.work_for_restaurant_id === restaurantId
+          ) {
+            useAuthStore.getState().setUser(updatedProfile);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new Event("seller-access-changed"));
+            }
+            setShowSuccessModal(true);
+            router.refresh();
+            return;
+          }
+        } catch {
+          // Rơi xuống hiển thị lỗi bên dưới
+        }
+      }
+      locked.current = false;
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Không thể gia nhập. Hãy kiểm tra lại hồ sơ.",
+      );
+    } finally {
+      setSubmitting(false);
+      setToken(null);
+    }
   }
 
   function handleReturnToProfile() {
     router.push("/account");
+  }
+
+  function handleEnterStore() {
+    router.push("/seller/orders");
   }
 
   return (
@@ -170,7 +267,7 @@ export default function JoinStoreConfirmView() {
             <h1>
               Xác nhận <span>gia nhập</span>
             </h1>
-            <p>Kiểm tra thông tin cửa hàng trước khi gửi yêu cầu.</p>
+            <p>Xác nhận gia nhập bằng mã đã quét.</p>
           </div>
         </header>
 
@@ -184,7 +281,7 @@ export default function JoinStoreConfirmView() {
             </span>
 
             <h2 id="qr-success-heading">Quét QR thành công!</h2>
-            <p>Đã xác thực mã QR của cửa hàng StudentFood.</p>
+            <p>Mã đã được đọc. Máy chủ sẽ kiểm tra lời mời khi bạn xác nhận.</p>
           </div>
 
           <div className={styles.storeProfileRow}>
@@ -202,7 +299,7 @@ export default function JoinStoreConfirmView() {
 
               <span className={styles.validQrPill}>
                 <CircleCheck size={16} strokeWidth={2.3} aria-hidden="true" />
-                QR hợp lệ
+                Mã đã quét
               </span>
             </div>
           </div>
@@ -232,22 +329,25 @@ export default function JoinStoreConfirmView() {
               aria-hidden="true"
             />
             <span>
-              Yêu cầu của bạn sẽ được gửi đến chủ quán. Bạn chỉ có quyền nhân
-              viên sau khi được chấp nhận.
+              Gia nhập thành công sẽ cập nhật quyền nhân viên cho tài khoản của bạn.
             </span>
           </div>
         </section>
 
+        {error && <p role="alert">{error}</p>}
+        {!token && !showSuccessModal && (
+          <p role="status">
+            Hãy kiểm tra hồ sơ hoặc quét lại mã trước khi tiếp tục.
+          </p>
+        )}
         <div className={styles.confirmActions}>
           <button
             type="button"
             className={styles.submitJoinBtn}
-            disabled={submitting}
-            onClick={handleSubmitRequest}
+            disabled={submitting || !token}
+            onClick={() => void handleSubmitRequest()}
           >
-            <span>
-              {submitting ? "Đang gửi yêu cầu..." : "Gửi yêu cầu gia nhập"}
-            </span>
+            <span>{submitting ? "Đang gia nhập..." : "Gia nhập cửa hàng"}</span>
             <ArrowRight size={20} strokeWidth={2.3} aria-hidden="true" />
           </button>
 
@@ -296,17 +396,16 @@ export default function JoinStoreConfirmView() {
             </div>
 
             <h2 id="sent-request-title" className={styles.sentModalTitle}>
-              Đã gửi yêu cầu!
+              Đã gia nhập!
             </h2>
 
             <p className={styles.sentModalDesc}>
-              Yêu cầu xin làm nhân viên tại {storeName} đã được gửi đến chủ
-              quán.
+              Tài khoản của bạn đã trở thành nhân viên của {storeName}.
             </p>
 
             <span className={styles.pendingApprovalPill}>
               <Clock3 size={16} strokeWidth={2.2} aria-hidden="true" />
-              Đang chờ phê duyệt
+              Đã cập nhật hồ sơ (Staff)
             </span>
 
             <div className={styles.sentModalInfoBox} role="note">
@@ -317,18 +416,17 @@ export default function JoinStoreConfirmView() {
                 aria-hidden="true"
               />
               <span>
-                Bạn sẽ nhận được thông báo khi chủ quán chấp nhận hoặc từ chối
-                yêu cầu.
+                Bạn đã có thể vào cửa hàng để xem thông tin và xử lý đơn hàng.
               </span>
             </div>
 
             <button
               type="button"
               className={styles.sentModalBtn}
-              onClick={handleReturnToProfile}
+              onClick={handleEnterStore}
               autoFocus
             >
-              Đã hiểu
+              Vào cửa hàng ngay
             </button>
           </div>
         </div>
