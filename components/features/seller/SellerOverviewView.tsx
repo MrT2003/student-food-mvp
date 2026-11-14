@@ -1,4 +1,5 @@
 "use client";
+import { restaurantPath as publicPath, restaurantUrl } from "@/lib/seller/shop-contract";
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -185,6 +186,7 @@ export default function SellerOverviewView() {
   const [openState, setOpenState] = useState({
     key: "",
     pending: false,
+    target: "open" as "open" | "closed",
     error: "",
     message: "",
   });
@@ -204,9 +206,11 @@ export default function SellerOverviewView() {
     data.user.status === "active" &&
     restaurant?.operating_status === "closed";
 
-  async function openRestaurant() {
+  const canChangeStatus = !loading && data?.user.role === "seller" && data.user.status === "active" && (opened || restaurant?.operating_status === "closed");
+  const progressLabel = openState.target === "closed" ? "Đang đóng…" : "Đang mở…";
+  async function openRestaurant(target: "open" | "closed" = "open") {
     if (
-      !canOpen ||
+      !canChangeStatus ||
       opening ||
       !data ||
       !restaurant ||
@@ -216,19 +220,15 @@ export default function SellerOverviewView() {
     const marker = { key };
     request.current = marker;
     const actor = data.user.id;
-    setOpenState({ key, pending: true, error: "", message: "" });
+    setOpenState({ key, pending: true, target, error: "", message: "" });
     try {
-      const result = await openSellerRestaurant(actor, restaurant.id);
+      const result = await openSellerRestaurant(actor, restaurant.id, target);
       if (mounted.current && useAuthStore.getState().user?.id === actor)
         setOpenState((current) =>
           current.key === key
             ? {
                 ...current,
-                message: result.recovered
-                  ? "Đã đọc lại và xác nhận cửa hàng đang mở."
-                  : result.alreadyOpen
-                    ? "Cửa hàng đã mở sẵn."
-                    : "Đã xác nhận cửa hàng đang mở.",
+                message: `${result.recovered ? "Đã đọc lại và xác nhận" : "Đã xác nhận"} cửa hàng ${target === "open" ? "đang mở" : "đã đóng"}.`,
               }
             : current,
         );
@@ -241,7 +241,7 @@ export default function SellerOverviewView() {
                 error:
                   error instanceof Error
                     ? error.message
-                    : "Không thể mở cửa hàng. Hãy tải lại trạng thái.",
+                    : "Không thể đổi trạng thái cửa hàng. Hãy tải lại trạng thái.",
               }
             : current,
         );
@@ -260,6 +260,17 @@ export default function SellerOverviewView() {
     sellerMobileDateOptions[0],
   );
   const name = restaurant?.name || "";
+  const savedPath = publicPath(restaurant?.slug);
+  async function copyShopLink() {
+    const actor = data?.user.id;
+    if (!actor || useAuthStore.getState().user?.id !== actor) return;
+    const url = restaurantUrl(restaurant?.slug, window.location.origin);
+    if (!url) { setNotice("Chưa có đường dẫn quán hợp lệ từ dữ liệu đã lưu."); return; }
+    try {
+      await navigator.clipboard.writeText(url);
+      if (mounted.current && useAuthStore.getState().user?.id === actor) setNotice("Đã sao chép đường dẫn quán.");
+    } catch { if (mounted.current && useAuthStore.getState().user?.id === actor) setNotice("Không sao chép được. Bạn có thể mở trang quán và sao chép địa chỉ."); }
+  }
   const unavailable = (feature: string) =>
     setNotice(`${feature} chưa sẵn sàng.`);
   const setup = [
@@ -334,15 +345,15 @@ export default function SellerOverviewView() {
                     </div>
                     <div className={styles.openAction}>
                       <button
-                        disabled={!canOpen || opening}
+                        disabled={!canChangeStatus || opening}
                         onClick={() => {
-                          void openRestaurant();
+                          void openRestaurant(opened ? "closed" : "open");
                         }}
                       >
                         {opening
-                          ? "Đang mở…"
+                          ? progressLabel
                           : opened
-                            ? "Đang mở"
+                            ? "Đóng cửa hàng"
                             : "Mở nhận đơn"}
                       </button>
                       <small>
@@ -426,16 +437,16 @@ export default function SellerOverviewView() {
                         </span>
                         <h4>Chia sẻ cửa hàng</h4>
                       </div>
-                      <div className={styles.sharePlaceholder}>
-                        <Copy size={16} /> {`/restaurants/${restaurant.slug}`}
-                      </div>
+                      <button type="button" className={styles.sharePlaceholder} disabled={!savedPath} onClick={() => void copyShopLink()}>
+                        <Copy size={16} /> {savedPath ?? "Chưa có đường dẫn quán hợp lệ"}
+                      </button>
                       <p>Xem trang cửa hàng của bạn.</p>
-                      <Link
+                      {savedPath && <Link
                         className={styles.outline}
-                        href={`/restaurants/${encodeURIComponent(restaurant.slug)}`}
+                        href={savedPath}
                       >
                         Xem cửa hàng
-                      </Link>
+                      </Link>}
                     </article>
                   </div>
                 </section>
@@ -542,7 +553,7 @@ export default function SellerOverviewView() {
                         </strong>
                         <small>
                           {title === "Mở nhận đơn" && opening
-                            ? "Đang mở…"
+                            ? progressLabel
                             : text}
                         </small>
                       </span>
@@ -628,18 +639,21 @@ export default function SellerOverviewView() {
                 </div>
               </div>
               <div className={styles.mobileStatusRight}>
-                <span className={styles.mobileOpenButton}>
+                <button className={styles.mobileOpenButton} disabled={!canChangeStatus || opening} onClick={() => void openRestaurant(opened ? "closed" : "open")}>
                   {opening
-                    ? "Đang mở…"
+                    ? progressLabel
                     : opened
-                      ? "Đang mở"
-                      : "Tạm đóng"}
-                </span>
+                      ? "Đóng cửa hàng"
+                      : "Mở nhận đơn"}
+                </button>
                 <small>
                   {opened
                     ? "Trạng thái được tải từ cửa hàng."
-                    : "Sử dụng thẻ trạng thái trên máy tính hoặc danh sách công việc để mở nhận đơn."}
+                    : "Mở nhận đơn cho cửa hàng đang đóng; trạng thái tạm ngừng chưa hỗ trợ tại đây."}
                 </small>
+                {openState.key === key && (openState.error || openState.message) && (
+                  <p role={openState.error ? "alert" : "status"}>{openState.error || openState.message}</p>
+                )}
               </div>
             </section>
 

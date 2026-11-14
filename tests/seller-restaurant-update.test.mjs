@@ -10,7 +10,7 @@ for(const patch of [{name:' Tên mới '},{description:' Mô tả mới '},{loca
   assert.deepEqual(Object.keys(write.values).sort(),[...Object.keys(patch),'updated_at'].sort());
   assert.deepEqual(write.filters, [['id',restaurantId,'eq'],['owner_id',userId,'eq']]);
   for(const field of ['name','description','location','operating_hours','slug','status','operating_status','owner_id']) assert.deepEqual(f.state.restaurant[field],Object.hasOwn(patch,field)?patch[field].trim():before[field]);
-  assertSafe(result);assert.deepEqual(Object.keys(result.restaurant).sort(),['id','name','description','location','operating_hours'].sort());
+  assertSafe(result);assert.deepEqual(Object.keys(result.restaurant).sort(),['id','name','description','location','operating_hours','avatar_url'].sort());
  });
 }
 for(const [schedule,hours] of [[{mode:'later'},null],[{mode:'same',dayIds:['mon','fri'],openTime:'10:00',closeTime:'14:00'},{mon:{open:'10:00',close:'14:00'},fri:{open:'10:00',close:'14:00'}}],[{mode:'daily',days:[{id:'mon',open:'09:00',close:'13:00'},{id:'fri',open:'10:00',close:'15:00'}]},{mon:{open:'09:00',close:'13:00'},fri:{open:'10:00',close:'15:00'}}]]) {
@@ -66,4 +66,11 @@ test('schedule mode replacement and omitted schedule preserve only intended DB c
  await Promise.all([f.SellerServices.updateRestaurant(userId,restaurantId,{name:'NEW'},f.client),f.SellerServices.updateRestaurant(userId,restaurantId,{location:'NEW LOCATION'},f.client)]);
  assert.equal(f.state.restaurant.operating_hours,null);assert.equal(f.state.restaurant.name,'NEW');assert.equal(f.state.restaurant.location,'NEW LOCATION');
  assert.equal(f.state.restaurant.slug,'original-slug');assert.equal(f.state.restaurant.status,'inactive');assert.equal(f.state.restaurant.operating_status,'paused');
+});
+
+for(const avatar_url of ['https://example.invalid/shop.png',null])test('avatar PATCH writes exactly owned shop and returns persisted URL '+avatar_url,async()=>{
+ const f=fixture();f.state.restaurant.avatar_url='https://example.invalid/old.png';
+ const result=await f.SellerServices.updateRestaurant(userId,restaurantId,{avatar_url},f.client);
+ assert.equal(result.restaurant.avatar_url,avatar_url);assert.deepEqual(Object.keys(f.writes()[0].values).sort(),['avatar_url','updated_at']);
+ await f.SellerServices.updateRestaurant(userId,restaurantId,{name:'New'},f.client);assert.equal(f.state.restaurant.avatar_url,avatar_url);
 });

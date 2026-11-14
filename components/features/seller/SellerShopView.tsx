@@ -17,6 +17,8 @@ import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
 import { useSellerAccess } from "./SellerAccessProvider";
 import { useAuthStore } from "@/store/useAuthStore";
+import { restaurantPath as publicPath, restaurantUrl, contactPhone } from "@/lib/seller/shop-contract";
+import { openSellerRestaurant } from "@/lib/seller/open-client";
 import { updateSellerRestaurant } from "@/lib/seller/management-client";
 import { readShopSchedule, shopSchedulePayload } from "@/lib/seller/schedule-client";
 import type { SellerAccess } from "@/types/seller-access.types";
@@ -45,15 +47,18 @@ export default function SellerShopView() {
 
 export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNullable<SellerAccess["restaurant"]>; actorId: string; isStaff?: boolean }) {
   const parsedSchedule = readShopSchedule(initial.operating_hours);
-  const baseline = useRef({ name: initial.name, description: initial.description ?? "", location: initial.location ?? "" });
+  const baseline = useRef({ name: initial.name, description: initial.description ?? "", location: initial.location ?? "", avatar_url: initial.avatar_url, contact_phone: initial.contact_phone ?? null });
   const pending = useRef(false);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [saving, setSaving] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description ?? "");
   const [location, setLocation] = useState(initial.location ?? "");
+  const [phone, setPhone] = useState(initial.contact_phone ?? "");
   const [avatar, setAvatar] = useState(initial.avatar_url);
+  const [savedAvatar, setSavedAvatar] = useState(initial.avatar_url);
   const [days, setDays] = useState(parsedSchedule.days);
   const [mode, setMode] = useState(parsedSchedule.mode);
   const [opens, setOpens] = useState(parsedSchedule.days.find(day => day.enabled)?.opens ?? "10:00");
@@ -62,6 +67,7 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [reading, setReading] = useState(false);
+  const uploadFailed = useRef(false);
   const [manage, setManage] = useState(false);
   const [demoToken, setDemoToken] = useState("");
   const [tokenUpdated, setTokenUpdated] = useState("");
@@ -71,7 +77,12 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
   useEffect(() => {
     if (manage) dialog.current?.showModal();
   }, [manage]);
-  const restaurantPath = `/restaurants/${encodeURIComponent(initial.slug)}`;
+  const restaurantPath = publicPath(initial.slug);
+  async function copyRestaurant() {
+    const url = restaurantUrl(initial.slug, window.location.origin);
+    if (!url) { setError("Chưa có đường dẫn quán hợp lệ từ dữ liệu đã lưu."); return; }
+    await copy(url);
+  }
   const schedule = days.map((day) =>
     mode === "same" ? { ...day, opens, closes } : day,
   );
@@ -88,7 +99,9 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
   }
   async function copy(value: string) {
     try {
+      if (useAuthStore.getState().user?.id !== actorId) return;
       await navigator.clipboard.writeText(value);
+      if (!mounted.current || useAuthStore.getState().user?.id !== actorId) return;
       message("Đã sao chép liên kết.");
     } catch {
       setError(
@@ -96,10 +109,28 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
       );
     }
   }
+  async function changeOperatingStatus() {
+    if (pending.current || reading || isStaff || !["open", "closed"].includes(initial.operating_status)) return;
+    pending.current = true;
+    setChangingStatus(true); setError(""); setNotice("");
+    const target = open ? "closed" : "open";
+    try {
+      await openSellerRestaurant(actorId, initial.id, target);
+      // Source of truth remains shared seller access; never toggle local form state.
+      if (mounted.current && useAuthStore.getState().user?.id === actorId)
+        message(target === "closed" ? "Đã xác nhận cửa hàng đã đóng." : "Đã xác nhận cửa hàng đang mở.");
+    } catch (err) {
+      if (mounted.current && useAuthStore.getState().user?.id === actorId)
+        setError(err instanceof Error ? err.message : "Không thể đổi trạng thái cửa hàng.");
+    } finally {
+      pending.current = false;
+      if (mounted.current) setChangingStatus(false);
+    }
+  }
   async function readAvatar(file?: File) {
-    if (!file) return;
+    if (!file || pending.current || isStaff) return;
     const requestId = ++uploadRequestId.current;
-    setReading(true);
+    setReading(true); uploadFailed.current = false;
     setError("");
     try {
       const uploaded = await CloudinaryService.uploadImage(file, {
@@ -110,6 +141,7 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
       }
     } catch (err) {
       if (mounted.current && uploadRequestId.current === requestId) {
+        uploadFailed.current = true;
         setError(
           err instanceof Error
             ? err.message
@@ -123,20 +155,22 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
     }
   }
   async function persist(patch: SellerRestaurantPatch) {
-    if (pending.current) return;
+    if (pending.current || reading || isStaff) return;
     pending.current = true;
     setSaving(true); setError(""); setNotice("");
     try {
-      await updateSellerRestaurant(actorId, initial.id, patch);
+      const saved = await updateSellerRestaurant(actorId, initial.id, patch);
       if (!mounted.current || useAuthStore.getState().user?.id !== actorId) return;
       // Chỉ đánh dấu những giá trị vừa gửi đã lưu; không ghi lại field từ snapshot cũ.
       for (const field of ["name", "description", "location"] as const) {
         if (patch[field] !== undefined) baseline.current[field] = patch[field].trim();
       }
+      if (Object.hasOwn(patch, "avatar_url")) { baseline.current.avatar_url = saved.restaurant.avatar_url ?? null; setSavedAvatar(saved.restaurant.avatar_url ?? null); setAvatar(saved.restaurant.avatar_url ?? null); }
+      if (Object.hasOwn(patch, "contact_phone")) { baseline.current.contact_phone = saved.restaurant.contact_phone ?? null; setPhone(saved.restaurant.contact_phone ?? ""); }
       if (patch.name !== undefined) setName(patch.name.trim());
       if (patch.description !== undefined) setDescription(patch.description.trim());
       if (patch.location !== undefined) setLocation(patch.location.trim());
-      message(patch.schedule ? "Đã lưu lịch hoạt động vào cửa hàng." : "Đã lưu thông tin cửa hàng. Ảnh xem trước không được lưu cùng thông tin.");
+      message(patch.schedule ? "Đã lưu lịch hoạt động vào cửa hàng." : "Đã lưu thông tin cửa hàng.");
     } catch (err) {
       if (mounted.current && useAuthStore.getState().user?.id === actorId)
         setError(err instanceof Error ? err.message : "Không thể lưu cửa hàng.");
@@ -154,7 +188,14 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
         patch[field] = value;
       }
     }
-    if (!Object.keys(patch).length) { message("Không có thay đổi tên, mô tả hoặc địa điểm để lưu. Ảnh chỉ xem trước."); return; }
+    if (initial.contact_phone_available) {
+      try { const next = contactPhone(phone); if (next !== baseline.current.contact_phone) patch.contact_phone = next; }
+      catch (err) { setError(err instanceof Error ? err.message : "Số liên hệ chưa hợp lệ."); return; }
+    }
+    if (uploadFailed.current) { setError("Upload ảnh thất bại. Chọn lại ảnh hoặc xóa lựa chọn trước khi lưu."); return; }
+    if (reading) { setError("Vui lòng chờ upload ảnh hoàn tất."); return; }
+    if (avatar !== baseline.current.avatar_url) patch.avatar_url = avatar;
+    if (!Object.keys(patch).length) { message("Không có thay đổi để lưu."); return; }
     await persist(patch);
   }
   async function saveSchedule(event: FormEvent<HTMLFormElement>) {
@@ -174,15 +215,14 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
           <span className={styles.badge} data-open={open}>
             ● {open ? "Đang nhận đơn" : "Tạm ngừng nhận đơn"}
           </span>
-          <Link href={restaurantPath} className={styles.neutral}>
+          {restaurantPath ? <Link href={restaurantPath} className={styles.neutral}>
             <ExternalLink size={18} />
             Xem trang quán
-          </Link>
+          </Link> : <span>Chưa có đường dẫn quán hợp lệ</span>}
           <button
             className={styles.neutral}
-            onClick={() =>
-              void copy(`${window.location.origin}${restaurantPath}`)
-            }
+            disabled={!restaurantPath}
+            onClick={() => void copyRestaurant()}
           >
             <Copy size={18} />
             Sao chép link quán
@@ -227,7 +267,7 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
             </button>
             <strong>Ảnh đại diện</strong>
             <small>
-              {isStaff ? "Ảnh đại diện cửa hàng" : reading ? "Đang tải lên Cloudinary…" : avatar !== initial.avatar_url ? "Ảnh chỉ xem trước; chưa lưu vào quán" : "Ảnh từ DB; thay ảnh hiện chỉ xem trước"}
+              {isStaff ? "Ảnh đại diện cửa hàng" : reading ? "Đang tải lên Cloudinary…" : avatar !== savedAvatar ? "Ảnh đã upload; nhấn Lưu để cập nhật quán" : "Ảnh đã lưu trong DB"}
             </small>
             <input
               ref={upload}
@@ -244,8 +284,10 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
                 type="button"
                 className={styles.textButton}
                 onClick={() => {
+                  if (pending.current) return;
                   uploadRequestId.current++;
                   setReading(false);
+                  uploadFailed.current = false;
                   setAvatar(null);
                 }}
               >
@@ -281,22 +323,22 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
               </label>
               <label>
                 Số điện thoại liên hệ
-                <input disabled value="Chưa hỗ trợ lưu ở màn này" readOnly />
+                <input type="tel" name="contact_phone" maxLength={16} value={phone} disabled={!initial.contact_phone_available} onChange={event => setPhone(event.target.value)} />
+                {!initial.contact_phone_available && <small>Chưa xác minh được cột số liên hệ quán trên DB. Thông tin khác vẫn lưu bình thường.</small>}
               </label>
               <label>
                 Đường dẫn quán
                 <div className={styles.linkBox}>
                   <input
                     readOnly
-                    value={restaurantPath}
+                    value={restaurantPath ?? "Chưa có đường dẫn quán hợp lệ"}
                     aria-label="Đường dẫn quán"
                   />
                   <button
                     type="button"
                     aria-label="Sao chép đường dẫn quán"
-                    onClick={() =>
-                      void copy(`${window.location.origin}${restaurantPath}`)
-                    }
+                    disabled={!restaurantPath}
+                    onClick={() => void copyRestaurant()}
                   >
                     <Copy size={18} />
                   </button>
@@ -494,7 +536,7 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
                 <div className={styles.statusCompactCopy}>
                   <strong>
                     <Store size={16} aria-hidden="true" />
-                    {open ? "Đang mở" : "Tạm ngừng"}
+                    {open ? "Đang mở" : initial.operating_status === "paused" ? "Tạm ngừng" : "Tạm đóng"}
                   </strong>
                   <p>{open ? "Đang nhận đơn" : "Chưa nhận đơn"}</p>
                 </div>
@@ -503,10 +545,11 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
                 <button
                   type="button"
                   className={open ? styles.outline : styles.statusActionBtn}
-                  disabled
-                  title="Chưa nối thay đổi trạng thái ở màn này"
+                  disabled={changingStatus || saving || reading || initial.operating_status === "paused"}
+                  onClick={() => void changeOperatingStatus()}
+                  title={initial.operating_status === "paused" ? "Chưa hỗ trợ chuyển trạng thái tạm ngừng" : undefined}
                 >
-                  {open ? "Tạm ngừng" : "Mở nhận đơn"}
+                  {changingStatus ? (open ? "Đang đóng…" : "Đang mở…") : open ? "Đóng cửa hàng" : "Mở nhận đơn"}
                 </button>
               )}
             </div>
@@ -563,8 +606,7 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
         </section>
       )}
       <p className={styles.demo}>
-        Thông tin và lịch được lưu qua API. Ảnh tải lên Cloudinary chỉ xem trước,
-        chưa cập nhật avatar_url. Đổi trạng thái và liên kết giao hàng ở màn này chưa nối backend.
+        Thông tin, lịch và ảnh đại diện được lưu qua API. Trạng thái đóng/mở được xác nhận qua API; liên kết giao hàng chưa nối backend.
 
       </p>
       {manage && !isStaff && (

@@ -29,7 +29,7 @@ for (const [options,code] of [[{noUser:true},"UNAUTHORIZED"],[{authError:true},"
 test('registration calls the provided RPC once using session identity, preserves leading zero PIN, maps user.role and response allowlist',async()=>{
  const f=fixture({role:'student'});const result=await f.SellerServices.register(userId,registration(),f.client);
  assert.equal(f.rpcCalls().length,1);const call=f.rpcCalls()[0];assert.equal(call.name,'register_seller');assert.equal(call.pinPreserved,true);
- assert.deepEqual(JSON.parse(JSON.stringify(call.payload)),{p_restaurant_name:'Quán',p_description:'Mô tả',p_location:'KTX',p_operating_hours:null});
+ assert.deepEqual(JSON.parse(JSON.stringify(call.payload)),{p_avatar_url:null,p_restaurant_name:'Quán',p_description:'Mô tả',p_location:'KTX',p_operating_hours:null});
  assert.equal(f.writes().length,0);assert.equal(f.profileRole(),'seller');assert.equal(f.state.registrations.length,1);
  assert.equal(f.state.registrations[0].owner_id,userId);
  assert.equal(f.SellerServices.validateRegistration(registration()).appLockPin===testPin(),true);
@@ -115,4 +115,12 @@ test('installed Supabase SDK sends RPC as POST and does not retry ambiguous netw
   await assert.rejects(f.SellerServices.register(userId,registration(),sdk),/REGISTRATION_RESULT_UNKNOWN/);
   assert.equal(rpcRequests,1);
  }
+});
+
+for(const avatar_url of ['https://example.invalid/shop.png',null])test('registration avatar is passed inside atomic RPC '+String(avatar_url),async()=>{
+ const f=fixture({role:'student'});await f.SellerServices.register(userId,registration({avatar_url}),f.client);
+ assert.equal(f.rpcCalls()[0].payload.p_avatar_url,avatar_url);assert.equal(f.state.registrations[0].avatar_url,avatar_url);assert.equal(f.writes().length,0);
+});
+for(const avatar_url of ['blob:temp','data:image/png;base64,abc','http://example.invalid/a','https://u:p@example.invalid/a','',42,{},[]])test('invalid avatar rejected before registration DB '+JSON.stringify(avatar_url),async()=>{
+ const f=fixture({role:'student'});await assert.rejects(f.SellerServices.register(userId,registration({avatar_url}),f.client),/SELLER_VALIDATION_ERROR/);assert.equal(f.calls.length,0);
 });

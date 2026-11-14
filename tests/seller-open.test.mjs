@@ -35,7 +35,7 @@ for(const [options,code,status] of [[{noUser:true},"UNAUTHORIZED",401],[{status:
 test("service rejects actor argument different from Auth, API always uses Auth actor",async()=>{
  const f=setup({authUserId:other});await assert.rejects(f.open(),/UNAUTHORIZED/);assert.equal((await f.api()).status,404);assert.equal(f.rpcCalls().length,0);
 });
-for(const body of [null,[],{},"open",{operating_status:"closed"},{operating_status:"paused"},{operating_status:null},{operating_status:" open "},{...input,owner_id:other},{...input,userId:other},{...input,status:"active"},{...input,updated_at:"client"},{...input,slug:"other"},{...input,operating_hours:null}])test("open strict payload "+JSON.stringify(body),async()=>{
+for(const body of [null,[],{},"open",{operating_status:"paused"},{operating_status:null},{operating_status:" open "},{...input,owner_id:other},{...input,userId:other},{...input,status:"active"},{...input,updated_at:"client"},{...input,slug:"other"},{...input,operating_hours:null}])test("open strict payload "+JSON.stringify(body),async()=>{
  const f=setup();await assert.rejects(f.open(body),/SELLER_VALIDATION_ERROR/);assert.equal(f.calls.length,0);assert.equal((await f.api(body)).status,400);assert.equal(f.rpcCalls().length,0);
 });
 test("open API validates UUID/JSON/Origin and returns no-store",async()=>{
@@ -109,7 +109,7 @@ function uiHarness(open) {
  return {render,nodes,buttons,calls,setData(value){data=value;},setLoading(value){loading=value;},setActor(value){actor=value;},unmount(){effects.forEach(fn=>fn?.());}};
 }
 test("dashboard and checklist share real handler, suppress duplicate requests and render context DB status only",async()=>{
- let done;const ui=uiHarness(()=>new Promise(resolve=>{done=resolve;}));const buttons=ui.buttons();assert.equal(buttons.length,2);assert.equal(buttons[0].props.disabled,false);
+ let done;const ui=uiHarness(()=>new Promise(resolve=>{done=resolve;}));const buttons=ui.buttons();assert.equal(buttons.length,3);assert.equal(buttons[0].props.disabled,false);
  buttons[0].props.onClick();buttons[1].props.onClick();assert.equal(ui.calls.length,1);assert.ok(ui.buttons().every(b=>b.props.disabled));assert.equal(JSON.stringify(ui.render()).includes("Đang mở…"),true);
  done({alreadyOpen:false,recovered:false});await new Promise(r=>setImmediate(r));assert.equal(ui.nodes(ui.render()).some(n=>n.props?.['data-open']===true),false);
  ui.setData(access("open"));const tree=ui.render();assert.ok(ui.nodes(tree).some(n=>n.props?.['data-open']===true));assert.ok(ui.nodes(tree).some(n=>n.props?.['data-done']===true));assert.equal(ui.buttons().length,0);ui.unmount();
@@ -120,4 +120,144 @@ test("dashboard shows failure without changing status; loading/role/paused disab
 });
 test("late dashboard response does not change another account or restaurant context",async()=>{
  for(const changed of ["actor","restaurant"]){let done;const ui=uiHarness(()=>new Promise(resolve=>{done=resolve;}));ui.buttons()[0].props.onClick();ui.setData(changed==="actor"?{...access(),user:{id:other,role:"seller",status:"active"}}:access("closed",{id:other}));if(changed==="actor")ui.setActor(other);ui.render();done({alreadyOpen:false,recovered:false});await new Promise(r=>setImmediate(r));const tree=ui.render();assert.equal(ui.nodes(tree).some(n=>n.props?.role==="status"||n.props?.role==="alert"),false);assert.equal(ui.nodes(tree).some(n=>n.props?.['data-open']===true),false);ui.unmount();}
+});
+
+// Closed is a supported explicit target, never a blind toggle.
+test("close uses same session RPC, repeated close is no-op, and reopen preserves all other fields",async()=>{
+ const f=setup({operatingStatus:"open"});const before=structuredClone(f.state);
+ const close={operating_status:"closed"};const response=await f.api(close);assert.equal(response.status,200);
+ const body=await response.json();assert.equal(body.restaurant.operating_status,"closed");assert.equal(body.alreadyAtTarget,false);
+ assert.equal(f.rpcCalls()[0].payload.p_operating_status,"closed");const closed=structuredClone(f.state);
+ assert.equal((await f.open(close)).alreadyAtTarget,true);assert.deepEqual(f.state,closed);assert.equal(f.rpcCalls().length,1);
+ for(let i=0;i<3;i++){await f.open();await f.open(close);}
+ assert.equal(f.state.restaurant.operating_status,"closed");assert.equal(f.writes().length,0);
+ for(const column of ["status","owner_id","slug","name","operating_hours"])assert.deepEqual(f.state.restaurant[column],before.restaurant[column]);
+ assert.deepEqual(f.state.banks,before.banks);assert.equal(f.profileRole(),"seller");
+ assert.ok(f.calls.every(call=>call.kind!=="rpc"||call.name==="set_restaurant_operating_status"));
+});
+
+for(const options of [{noUser:true},{status:"inactive"},{role:"staff"},{role:"student"},{notOwner:true},{noRestaurant:true}])test("close permission "+JSON.stringify(options),async()=>{
+ const f=setup({...options,operatingStatus:"open"});const before=structuredClone(f.state);
+ assert.ok((await f.api({operating_status:"closed"})).status>=400);assert.equal(f.rpcCalls().length,0);assert.deepEqual(f.state,before);
+});
+
+test("close rejects paused, wrong types and unrelated fields without writes",async()=>{
+ for(const body of [{operating_status:["closed"]},{operating_status:{value:"open"}},{operating_status:"closed",status:"inactive"},{operating_status:"closed",owner_id:other}]){
+  const f=setup({operatingStatus:"open"});assert.equal((await f.api(body)).status,400);assert.equal(f.calls.length,1);assert.equal(f.rpcCalls().length,0);
+ }
+ const f=setup({operatingStatus:"paused"});assert.equal((await f.api({operating_status:"closed"})).status,409);assert.equal(f.rpcCalls().length,0);
+});
+
+test("concurrent close requests have the same target and cannot toggle back open (mock only)",async()=>{
+ const f=setup({operatingStatus:"open"});const responses=await Promise.all([f.open({operating_status:"closed"}),f.open({operating_status:"closed"})]);
+ assert.ok(responses.every(result=>result.restaurant.operating_status==="closed"));assert.equal(f.state.restaurant.operating_status,"closed");
+ assert.ok(f.rpcCalls().every(call=>call.payload.p_operating_status==="closed"));
+});
+
+test("closing client sends closed, reconciles timeout and never resends mutation",async()=>{
+ for(const options of [{},{network:true}]){
+  const f=client({...options,before:"open",after:"closed",body:{restaurant:{id:restaurantId,operating_status:"closed"},alreadyOpen:false,alreadyAtTarget:false}});
+  await f.openSellerRestaurant(userId,restaurantId,"closed");assert.equal(f.calls.length,1);assert.equal(f.reads(),2);assert.equal(f.invalidations(),1);
+  assert.deepEqual(JSON.parse(f.calls[0].request.body),{operating_status:"closed"});
+ }
+ const noOp=client({before:"closed"});assert.equal((await noOp.openSellerRestaurant(userId,restaurantId,"closed")).alreadyAtTarget,true);assert.equal(noOp.calls.length,0);
+ const failed=client({before:"open",after:"open",network:true});await assert.rejects(failed.openSellerRestaurant(userId,restaurantId,"closed"));assert.equal(failed.calls.length,1);
+});
+
+test("desktop and mobile closing buttons share pending guard and keep context status on error",async()=>{
+ let reject;const ui=uiHarness(()=>new Promise((resolve,no)=>{reject=no;}));ui.setData(access("open"));
+ const buttons=ui.nodes(ui.render()).filter(n=>n.type==="button"&&n.props.children==="Đóng cửa hàng");assert.equal(buttons.length,2);assert.ok(buttons.every(b=>!b.props.disabled));
+ buttons[0].props.onClick();buttons[1].props.onClick();assert.equal(ui.calls.length,1);assert.equal(ui.calls[0][2],"closed");assert.ok(JSON.stringify(ui.render()).includes("Đang đóng…"));
+ reject(Error("Không thể đổi trạng thái"));await new Promise(r=>setImmediate(r));assert.ok(ui.nodes(ui.render()).some(n=>n.props?.role==="alert"));assert.ok(ui.nodes(ui.render()).some(n=>n.props?.["data-open"]===true));ui.unmount();
+});
+
+
+test("closing RPC failure before/after commit stays unknown and never retries",async()=>{
+ for(const option of ["rpcNetworkError","commitThenNetworkError"]){
+  const f=setup({operatingStatus:"open",[option]:true});const response=await f.api({operating_status:"closed"});
+  assert.equal(response.status,503);assert.equal((await response.json()).error.code,"RESTAURANT_OPEN_RESULT_UNKNOWN");
+  assert.equal(f.rpcCalls().length,1);assert.equal(f.writes().length,0);assert.equal(f.state.restaurant.operating_status,option==="commitThenNetworkError"?"closed":"open");
+ }
+ const denied=setup({operatingStatus:"open",rpcError:{code:"42501",message:"PRIVATE"}});const before=structuredClone(denied.state);
+ const response=await denied.api({operating_status:"closed"});assert.equal(response.status,403);assertSafe(await response.json());assert.deepEqual(denied.state,before);
+});
+
+
+// Contract integration: real browser helper + access parser + routes + services.
+// Only Auth/SDK/network are substituted; no live database is contacted.
+function wiredClient(options={}) {
+ const f=setup({operatingStatus:"open",...options});const rawFrom=f.client.from.bind(f.client);
+ f.client.from=table=>{
+  const q=rawFrom(table);
+  if(table==="restaurants")q.limit=async()=>({data:[{...f.state.restaurant}],error:null});
+  if(table==="users"){
+   const read=q.maybeSingle.bind(q);q.maybeSingle=async()=>{
+    const result=await read();return {...result,data:result.data?{...result.data,id:userId,work_for_restaurant_id:null}:null};
+   };
+  }
+  return q;
+ };
+ const rpc=f.client.rpc.bind(f.client);f.client.rpc=async(name,args)=>{
+  assert.equal(name,"set_restaurant_operating_status");
+  assert.deepEqual(Object.keys(args).sort(),["p_operating_status","p_restaurant_id"]);
+  assert.ok(["open","closed","paused"].includes(args.p_operating_status));
+  assert.equal(args.p_restaurant_id,restaurantId);
+  const result=await rpc(name,args);return options.emptySdkEnvelope?undefined:result;
+ };
+ const accessServices=load("../services/seller-access.service.ts");
+ const accessRoute=load("../app/api/seller/access/route.ts",{
+  "next/server":{NextResponse:{json:(body,init)=>Response.json(body,init)}},
+  "@/lib/supabase/server":{createClient:async()=>f.client},"@/services/seller-access.service":accessServices,
+ });
+ const requests=[];const fetch=async(path,request)=>{
+  if(path==="/api/seller/access")return accessRoute.GET();
+  requests.push({method:request.method,path,body:JSON.parse(request.body),contentType:request.headers["Content-Type"]});
+  const result=await f.api(JSON.parse(request.body));
+  if(options.corruptResponse && result.ok)return Response.json({unexpected:true});
+  return result;
+ };
+ const accessClient=load("../lib/seller/access-client.ts",{}, {fetch,window:{dispatchEvent(){}},Event});
+ const tools=load("../lib/seller/open-client.ts",{
+  "@/store/useAuthStore":{useAuthStore:{getState:()=>({user:{id:userId,role:"seller",status:"active"}})}},
+  "./access-client":accessClient,
+ },{fetch,AbortController,setTimeout,clearTimeout});
+ return {...f,...tools,requests};
+}
+
+test("closed traverses actual client, HTTP routes, validation, RPC mapping and closed readback",async()=>{
+ const f=wiredClient();const before=structuredClone(f.state.restaurant);
+ const result=await f.openSellerRestaurant(userId,restaurantId,"closed");assert.equal(result.recovered,false);
+ assert.deepEqual(f.requests,[{method:"POST",path:`/api/seller/restaurants/${restaurantId}/open`,body:{operating_status:"closed"},contentType:"application/json"}]);
+ assert.equal(f.state.restaurant.operating_status,"closed");
+ for(const key of ["avatar_url","operating_hours","status","owner_id"])assert.deepEqual(f.state.restaurant[key],before[key]);
+ assert.equal(f.writes().length,0);
+ assert.ok(!f.calls.some(call=>call.filters?.some(([key])=>key==="operating_status")));
+ await f.openSellerRestaurant(userId,restaurantId,"closed");assert.equal(f.requests.length,1);
+ await f.openSellerRestaurant(userId,restaurantId,"open");assert.equal(f.state.restaurant.operating_status,"open");
+});
+
+test("real response parser reconciles committed close after corrupt HTTP or network failure",async()=>{
+ for(const options of [{corruptResponse:true},{commitThenNetworkError:true},{emptySdkEnvelope:true}]){
+  const f=wiredClient(options);assert.equal((await f.openSellerRestaurant(userId,restaurantId,"closed")).recovered,true);
+  assert.equal(f.state.restaurant.operating_status,"closed");assert.equal(f.requests.length,1);assert.equal(f.rpcCalls().length,1);
+ }
+});
+
+test("validation message is pre-mutation and not a rejection of a closed RPC response",async()=>{
+ const f=setup({operatingStatus:"open"});
+ for(const [body,id,field] of [[{operating_status:false},restaurantId,"operating_status"],[{operating_status:"closed",status:"inactive"},restaurantId,"payload"],[{operating_status:"closed"},"not-a-uuid","restaurantId"]]){
+  const response=await f.api(body,{id});assert.equal(response.status,400);const result=await response.json();
+  assert.equal(result.error.code,"VALIDATION_ERROR");assert.ok(result.error.message.includes(field));assert.equal(f.rpcCalls().length,0);
+ }
+});
+
+test("empty SDK envelope after committed close remains unknown for readback, never a definite write failure",async()=>{
+ for(const envelope of [undefined,null]){
+  const f=setup({operatingStatus:"open"});const rpc=f.client.rpc.bind(f.client);
+  f.client.rpc=async(...args)=>{await rpc(...args);return envelope;};
+  const response=await f.api({operating_status:"closed"});
+  assert.equal(f.state.restaurant.operating_status,"closed");assert.equal(f.rpcCalls().length,1);
+  assert.equal(response.status,503);assert.equal((await response.json()).error.code,"RESTAURANT_OPEN_RESULT_UNKNOWN");
+  assert.equal(f.writes().length,0);
+ }
 });
