@@ -7,16 +7,12 @@ import { OrderServices } from "@/services/order.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createClient } from "@/lib/supabase/client";
 import type { OrderedSummary } from "@/types/order.types";
-import type { PreviewRestaurant } from "@/lib/home/mock-data";
 import { formatMoney } from "@/lib/format";
 import FoodPlaceholder from "./FoodPlaceholder";
 import styles from "@/styles/home.module.css";
 import Link from "next/link";
 
-// Giữ tương thích props của HomeView; danh sách này chỉ lấy dữ liệu thật.
-type Props = { restaurants?: PreviewRestaurant[]; onSelect?: (restaurant: PreviewRestaurant) => void };
-
-export default function ReorderSection(_props: Props) {
+export default function ReorderSection() {
   const router = useRouter();
   const userId = useAuthStore((state) => state.user?.id);
   const authStatus = useAuthStore((state) => state.status);
@@ -78,7 +74,7 @@ export default function ReorderSection(_props: Props) {
         : error ? <div role="alert"><p>{error}</p><button type="button" onClick={() => setRetry((value) => value + 1)}>Thử lại</button></div>
         : items.length === 0 ? <p>Bạn chưa có món đã đặt.</p> : null}
       {notice && <p role="status">{notice}</p>}
-      <div className={styles.restaurantGrid} data-compact="true" aria-busy={loading}>
+      <div className={`${styles.restaurantGrid} ${styles.reorderGrid}`} data-compact="true" aria-busy={loading}>
         {items.map((item) => (
           <article key={item.orderItemId} className={`${styles.reorderCard} ${styles.snapshotCard}`} data-dimmed={item.isDimmed}>
             {/* Dùng button thay div onclick để bàn phím cũng mở được thẻ bị làm mờ. */}
@@ -86,10 +82,10 @@ export default function ReorderSection(_props: Props) {
               <FoodPlaceholder restaurant={{ illustration: "rice", avatar_url: item.imageUrl }} small />
               <span className={styles.snapshotInfo}>
                 <strong>{item.name}</strong>
-                <span>{item.restaurantName ?? "Quán không còn khả dụng"}</span>
+                <span className={styles.snapshotMeta}>{item.restaurantName ?? "Quán không còn khả dụng"}</span>
                 {/* Phân loại cũ đã bỏ: <p>{restaurant.categories.join(", ")}</p> */}
-                <span>Số lượng: {item.quantity}</span>
-                <span className={styles.snapshotPrice}>Tổng lần đặt: {price(item)}</span>
+                <span className={styles.snapshotMeta}>Số lượng: {item.quantity}</span>
+                <span className={styles.snapshotPrice}>{price(item)}</span>
                 {item.notices.map((message) => <span key={message} className={styles.snapshotNotice}>{message}</span>)}
               </span>
             </button>

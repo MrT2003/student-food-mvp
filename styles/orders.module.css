@@ -724,9 +724,9 @@
   }
 }
 
-/* Orders: bố trí gọn hơn trên laptop và desktop */
+/* Orders: bá»‘ trÃ­ gá»n hÆ¡n trÃªn laptop vÃ  desktop */
 @media (min-width: 1024px) {
-  /* Chỉ tác động layout đang chứa trang Đơn hàng */
+  /* Chá»‰ tÃ¡c Ä‘á»™ng layout Ä‘ang chá»©a trang ÄÆ¡n hÃ ng */
   :global(main):has(> .page) {
     width: min(1480px, calc(100% - 48px));
     max-width: none;
@@ -740,7 +740,7 @@
     padding: 0;
   }
 
-  /* Tiêu đề và bộ lọc */
+  /* TiÃªu Ä‘á» vÃ  bá»™ lá»c */
   .heading h1 {
     font-size: clamp(30px, 2.2vw, 36px);
     line-height: 1.2;
@@ -775,7 +775,7 @@
     margin-inline: 6px;
   }
 
-  /* Tiêu đề các nhóm đơn hàng */
+  /* TiÃªu Ä‘á» cÃ¡c nhÃ³m Ä‘Æ¡n hÃ ng */
   .section {
     margin-top: 14px;
   }
@@ -799,7 +799,7 @@
     height: 20px;
   }
 
-  /* Card đơn hàng hiện tại */
+  /* Card Ä‘Æ¡n hÃ ng hiá»‡n táº¡i */
   .currentList {
     gap: 12px;
   }
@@ -887,7 +887,7 @@
     line-height: 18px;
   }
 
-  /* Tổng tiền và nút thao tác */
+  /* Tá»•ng tiá»n vÃ  nÃºt thao tÃ¡c */
   .orderActions {
     justify-content: center;
     gap: 5px;
@@ -918,7 +918,7 @@
     line-height: 20px;
   }
 
-  /* Banner hướng dẫn */
+  /* Banner hÆ°á»›ng dáº«n */
   .infoBanner {
     gap: 14px;
     margin: 12px 0;
@@ -946,7 +946,7 @@
     line-height: 20px;
   }
 
-  /* Lịch sử đơn hàng */
+  /* Lá»‹ch sá»­ Ä‘Æ¡n hÃ ng */
   .historyGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
@@ -1023,7 +1023,7 @@
   }
 }
 
-/* Cửa sổ hẹp: tránh ép ba card lịch sử quá chật */
+/* Cá»­a sá»• háº¹p: trÃ¡nh Ã©p ba card lá»‹ch sá»­ quÃ¡ cháº­t */
 @media (min-width: 1024px) and (max-width: 1199px) {
   .currentCard {
     grid-template-columns: 80px minmax(0, 1fr) 240px;
@@ -1046,7 +1046,7 @@
 
 
 /* ==========================================================================
-   Shared Filter Bar (Desktop & Mobile) + Mobile "Đơn Hàng Của Tôi" UI
+   Shared Filter Bar (Desktop & Mobile) + Mobile "ÄÆ¡n HÃ ng Cá»§a TÃ´i" UI
    ========================================================================== */
 
 .desktopView {
@@ -1063,7 +1063,7 @@
   font: inherit;
 }
 
-.page :is(button, a, input, select):focus-visible {
+.page :is(button, a):focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
 }
@@ -1115,7 +1115,7 @@
   box-shadow: 0 4px 10px rgb(255 77 18 / 24%);
 }
 
-/* Search & Date Row (Nằm ngang giữa nút lọc nhanh và dashboard nhỏ) */
+/* Search & Date Row (Náº±m ngang giá»¯a nÃºt lá»c nhanh vÃ  dashboard nhá») */
 .searchRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1199,7 +1199,7 @@
   pointer-events: none;
 }
 
-/* 4 Status Summary Cards (Dashboard nhỏ hiển thị số lượng đơn) */
+/* 4 Status Summary Cards (Dashboard nhá» hiá»ƒn thá»‹ sá»‘ lÆ°á»£ng Ä‘Æ¡n) */
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1554,6 +1554,10 @@
   margin-top: 10px;
 }
 
+.currentActions {
+  margin-left: 94px;
+}
+
 .mobileView .primaryButton,
 .mobileView .outlineButton {
   display: inline-flex;
@@ -1825,6 +1829,10 @@
     gap: 10px;
   }
 
+  .currentActions {
+    margin-left: 86px;
+  }
+
   .currentThumb {
     width: 76px;
     height: 76px;
@@ -1902,6 +1910,10 @@
   .currentTop {
     grid-template-columns: 68px minmax(0, 1fr);
     gap: 8px;
+  }
+
+  .currentActions {
+    margin-left: 0;
   }
 
   .currentThumb {

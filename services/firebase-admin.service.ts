@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createPrivateKey } from "node:crypto";
-import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getMessaging } from "firebase-admin/messaging";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -35,7 +35,7 @@ export type PushSendResult = {
 // Khởi tạo lười: import file không đọc credential; tái sử dụng app qua các lần hot reload.
 // Chỉ gọi từ Node.js server (route dùng runtime="nodejs"), không dùng Edge/browser.
 function messagingClient() {
-  const existing = getApps().find((app) => app.name === APP_NAME);
+  const existing = getApps().find((app: App) => app.name === APP_NAME);
   // Get the messaging service for the existing app
   if (existing) return getMessaging(existing);
 

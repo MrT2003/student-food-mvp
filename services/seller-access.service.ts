@@ -17,6 +17,34 @@ export const SellerAccessServices = {
             throw new SellerAccessError("PROFILE_NOT_FOUND", 403);
         if (profile.data.status !== "active")
             throw new SellerAccessError("ACCOUNT_INACTIVE", 403);
+
+        // Staff assigned to a restaurant can view restaurant info and manage orders
+        if (profile.data.role === "staff") {
+            const staffRestaurantId = profile.data.work_for_restaurant_id;
+            if (!staffRestaurantId)
+                throw new SellerAccessError("NOT_ELIGIBLE", 403);
+            const assigned = await client.from("restaurants").select("id,name,slug,avatar_url,description,location,status,operating_status,operating_hours").eq("id", staffRestaurantId).limit(2);
+            if (assigned.error || !Array.isArray(assigned.data))
+                throw new SellerAccessError("ACCESS_READ_FAILED", 503);
+            const staffRow = assigned.data[0];
+            if (!staffRow)
+                throw new SellerAccessError("SELLER_RESTAURANT_MISSING", 409);
+            return {
+                user: { id, role: "staff", status: "active", work_for_restaurant_id: staffRestaurantId },
+                restaurant: {
+                    id: staffRow.id,
+                    name: staffRow.name,
+                    slug: staffRow.slug,
+                    avatar_url: staffRow.avatar_url,
+                    description: staffRow.description,
+                    location: staffRow.location,
+                    status: staffRow.status,
+                    operating_status: staffRow.operating_status,
+                    operating_hours: staffRow.operating_hours,
+                },
+            };
+        }
+
         if (!["student", "seller"].includes(profile.data.role) || profile.data.work_for_restaurant_id !== null)
             throw new SellerAccessError("NOT_ELIGIBLE", 403);
         // Limit two is an anomaly check, not arbitrary first-restaurant selection.

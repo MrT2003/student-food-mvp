@@ -722,30 +722,278 @@
   }
 }
 
-@media (max-width: 560px) {
+.mobileHeader,
+.mobileBannerCard,
+.accordionHeader {
+  display: none;
+}
+
+.accordionCard,
+.accordionBody {
+  display: contents;
+}
+
+@media (max-width: 768px) {
   .page {
-    width: calc(100% - 24px);
-    padding-top: 18px;
-  }
-
-  .intro,
-  .formCard {
-    padding: 20px 16px;
-  }
-
-  .benefits,
-  .twoColumns,
-  .paymentGrid,
-  .actions {
+    width: calc(100% - 28px);
+    padding: 14px 0 32px;
+    gap: 12px;
     grid-template-columns: 1fr;
   }
 
-  .formHeading h2 {
-    font-size: 28px;
+  .intro,
+  .formHeading,
+  .desktopLegend,
+  .desktopOnlyHint,
+  .desktopBackBtn,
+  .footerNote,
+  .previewLabel {
+    display: none;
   }
 
-  .benefits h2 {
-    font-size: 18px;
+  .mobileHeader {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .mobileBackButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    margin-top: 2px;
+    margin-left: -4px;
+    color: var(--orange);
+    text-decoration: none;
+  }
+
+  .mobileHeaderText {
+    min-width: 0;
+  }
+
+  .mobileHeader h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -0.6px;
+    color: var(--ink);
+  }
+
+  .mobileHeader p {
+    margin: 3px 0 0;
+    color: var(--muted);
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+
+  .mobileBannerCard {
+    display: block;
+    padding: 14px;
+    border: 1px solid #f7e6d6;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #fff9f3, #fcedde);
+    box-shadow: 0 3px 10px rgb(100 64 20 / 4%);
+  }
+
+  .mobileBannerMain {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .mobileBannerIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 58px;
+    width: 58px;
+    height: 58px;
+    border-radius: 14px;
+    background: #fbe6d2;
+    color: var(--orange);
+  }
+
+  .mobileBannerContent {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobileBannerContent h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 15.5px;
+    font-weight: 800;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  .mobileBannerContent p {
+    margin: 3px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .learnMoreBtn {
+    align-self: flex-end;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-top: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--orange);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .mobileBenefitsList {
+    margin: 12px 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid #f1dcc8;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .mobileBenefitsList li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .mobileBenefitsList svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--orange);
+  }
+
+  .mobileBenefitsList strong {
+    color: var(--ink);
+  }
+
+  .formCard {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .form {
+    display: grid;
+    gap: 12px;
+  }
+
+  .accordionCard {
+    display: block;
+    padding: 14px 16px;
+    border: 1px solid #eceff4;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 3px 12px rgb(8 20 71 / 3%);
+  }
+
+  .accordionHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    color: var(--ink);
+  }
+
+  .accordionIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff8126, #ff4018);
+    color: #fff;
+  }
+
+  .accordionText {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .accordionText strong {
+    font-family: var(--font-display);
+    font-size: 16.5px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--ink);
+  }
+
+  .accordionText small {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  .accordionChevron {
+    flex-shrink: 0;
+    color: #4f668c;
+  }
+
+  .accordionBody {
+    display: none;
+  }
+
+  .accordionOpen .accordionBody {
+    display: grid;
+    gap: 14px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #f0f2f6;
+  }
+
+  .twoColumns,
+  .paymentGrid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .field > input,
+  .textareaWrap textarea,
+  .locationInput {
+    background: #f8fafd;
+    border-color: #e2e8f0;
+    border-radius: 10px;
+  }
+
+  .upload {
+    min-height: 104px;
+    border-radius: 12px;
+    background: #f8fafd;
+  }
+
+  .sameSchedule {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dayPicker {
+    grid-column: 1 / -1;
+    padding-left: 0;
+    border-left: 0;
   }
 
   .paymentCard {
@@ -765,13 +1013,17 @@
     grid-column: 2 / -1;
   }
 
-  .dayRow input[type="time"] {
-    padding-inline: 5px;
+  .actions {
+    grid-template-columns: 1fr;
+    margin-top: 4px;
   }
 
-  .bankNotice {
-    padding: 15px;
-    gap: 12px;
+  .primaryButton {
+    width: 100%;
+    min-height: 50px;
+    border-radius: 12px;
+    font-size: 16.5px;
+    gap: 8px;
   }
 }
 

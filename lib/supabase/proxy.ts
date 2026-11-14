@@ -62,28 +62,42 @@ export async function updateSession(request: NextRequest) {
 
   // In case user not yet login then immediately redirect them to the login page
   if (!user && !isPublicRoute) {
-    // Location tương đối giữ origin của browser, không dùng hostname nội bộ Next.
-    // Tự hoạt động trên localhost, tunnel và production, không cần allowlist hardcode.
-    const response = new NextResponse(null, {
-      status: 307,
-      headers: { Location: '/auth/login' },
-    });
-    supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
-    return response;
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https';
+
+    let loginUrl: URL;
+
+    // 1. Kiểm tra xem forwardedHost có thực sự hợp lệ hoặc thuộc về môi trường dev/ngrok không
+    // (Bạn có thể thêm domain chính thức của bạn vào đây)
+    const isSafeHost = forwardedHost && (
+      forwardedHost.endsWith('.ngrok-free.app') || 
+      forwardedHost === 'your-production-domain.com' ||
+      forwardedHost === 'localhost:3000'
+    );
+
+    if (isSafeHost) {
+      // Nếu là host uy tín được phép, mới cho phép dùng
+      loginUrl = new URL(`${forwardedProto}://${forwardedHost}/auth/login`);
+    } else {
+      // Nếu phát hiện host lạ (bị giả mạo), ép về domain mặc định an toàn của app
+      loginUrl = new URL('/auth/login', request.nextUrl.origin);
+    }
+
+    return NextResponse.redirect(loginUrl);
   }
 
-// IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-// creating a new response object with NextResponse.next() make sure to:
-// 1. Pass the request in it, like so:
-//    const myNewResponse = NextResponse.next({ request })
-// 2. Copy over the cookies, like so:
-//    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-// 3. Change the myNewResponse object to fit your needs, but avoid changing
-//    the cookies!
-// 4. Finally:
-//    return myNewResponse
-// If this is not done, you may be causing the browser and server to go out
-// of sync and terminate the user's session prematurely!
+  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
+  // creating a new response object with NextResponse.next() make sure to:
+  // 1. Pass the request in it, like so:
+  //    const myNewResponse = NextResponse.next({ request })
+  // 2. Copy over the cookies, like so:
+  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+  // 3. Change the myNewResponse object to fit your needs, but avoid changing
+  //    the cookies!
+  // 4. Finally:
+  //    return myNewResponse
+  // If this is not done, you may be causing the browser and server to go out
+  // of sync and terminate the user's session prematurely!
 
-return supabaseResponse
+  return supabaseResponse
 }

@@ -23,7 +23,7 @@ export function isOrderAccessDenied(error: unknown): boolean {
 }
 function actorIsCurrent(actor: string) {
   const user = useAuthStore.getState().user;
-  if (user?.id !== actor || user.role !== "seller" || user.status !== "active") throw new SellerOrderClientError("ACCOUNT_CHANGED");
+  if (user?.id !== actor || !["seller", "staff"].includes(user.role) || user.status !== "active") throw new SellerOrderClientError("ACCOUNT_CHANGED");
 }
 const path = (id: string) => `/api/seller/restaurants/${encodeURIComponent(id)}/orders`;
 async function request(actor: string, url: string, method: "GET" | "POST", signal?: AbortSignal) {
@@ -51,8 +51,9 @@ export async function readSellerOrders(actor: string, restaurantId: string, sign
     throw Error("Không tải được danh sách đơn. Hãy thử tải lại.");
   }
 }
-export async function decideSellerOrder(actor: string, restaurantId: string, orderId: string, action: "accept" | "reject") {
-  const expected = action === "accept" ? "accepted" : "rejected";
+export async function decideSellerOrder(actor: string, restaurantId: string, orderId: string, action: "accept" | "reject" | "complete") {
+  const expected = action === "accept" ? "accepted" : action === "reject" ? "rejected" : "completed";
+  const initialStatus = action === "complete" ? "accepted" : "pending";
   try {
     const data = await request(actor, `/api/orders/${encodeURIComponent(orderId)}/${action}`, "POST");
     if (data?.order?.id !== orderId || data.order.restaurant_id !== restaurantId || data.order.order_status !== expected)
@@ -69,6 +70,6 @@ export async function decideSellerOrder(actor: string, restaurantId: string, ord
       if (order.id !== orderId) throw Error("INVALID_ORDER_DATA");
     } catch { throw new SellerOrderClientError("ORDER_RESULT_UNKNOWN"); }
     if (order.order_status === expected) return { recovered: true };
-    throw new SellerOrderClientError(order.order_status === "pending" ? "ORDER_RESULT_UNKNOWN" : "ORDER_CONFLICT");
+    throw new SellerOrderClientError(order.order_status === initialStatus ? "ORDER_RESULT_UNKNOWN" : "ORDER_CONFLICT");
   }
 }
