@@ -1,3 +1,4 @@
+import { normalizeMasterCategory } from "@/lib/categories";
 import { mockRestaurants, mockMenuItems } from "@/lib/mocks/catalog.mock";
 
 export type FoodKind = "rice" | "tea" | "noodles" | "snack" | "bread";
@@ -22,61 +23,61 @@ type Presentation = {
 // Không khai báo lại tên quán, giá món hoặc địa chỉ ở đây.
 const presentations: Record<string, Presentation> = {
   "com-co-ba": {
-    categories: ["Cơm", "Món Việt"],
+    categories: ["Cơm", "Trà sữa & Nước", "Ăn vặt"],
     kind: "rice",
     illustration: "rice",
     popularity: 100,
   },
   "tra-sua-nha-lam": {
-    categories: ["Trà sữa", "Đồ uống"],
+    categories: ["Trà sữa & Nước"],
     kind: "tea",
     illustration: "tea",
     popularity: 95,
   },
   "bun-cha-ha-noi": {
-    categories: ["Bún", "Món Việt"],
+    categories: ["Bún/Phở/Mì"],
     kind: "noodles",
     illustration: "noodles",
     popularity: 90,
   },
   "mi-cay-seoul": {
-    categories: ["Món Hàn", "Ăn vặt"],
+    categories: ["Bún/Phở/Mì"],
     kind: "noodles",
     illustration: "spicy",
     popularity: 85,
   },
   "an-vat-5k": {
-    categories: ["Ăn vặt", "Đồ chiên"],
+    categories: ["Ăn vặt"],
     kind: "snack",
     illustration: "chicken",
     popularity: 80,
   },
   "com-tam-dem": {
-    categories: ["Cơm", "Món Việt"],
+    categories: ["Cơm"],
     kind: "rice",
     illustration: "rice",
     popularity: 75,
   },
   "xien-que-mr-beo": {
-    categories: ["Ăn vặt", "Đồ nướng"],
+    categories: ["Ăn vặt"],
     kind: "snack",
     illustration: "chicken",
     popularity: 70,
   },
   "banh-mi-3t": {
-    categories: ["Bánh mì", "Ăn vặt"],
+    categories: ["Bánh mì / Ăn nhẹ"],
     kind: "bread",
     illustration: "bread",
     popularity: 65,
   },
   "ga-ran-campus": {
-    categories: ["Ăn vặt", "Đồ chiên"],
+    categories: ["Ăn vặt", "Bánh mì / Ăn nhẹ"],
     kind: "snack",
     illustration: "chicken",
     popularity: 60,
   },
   "banh-mi-sau": {
-    categories: ["Bánh mì", "Ăn vặt"],
+    categories: ["Bánh mì / Ăn nhẹ"],
     kind: "bread",
     illustration: "bread",
     popularity: 55,
@@ -96,7 +97,7 @@ export const catalogRestaurantViews = mockRestaurants
 
     const categories = presentation?.categories ?? [
       ...new Set(
-        items.flatMap((item) => (item.category ? [item.category] : [])),
+        items.map((item) => normalizeMasterCategory(item.category, item.name)),
       ),
     ];
 
@@ -132,10 +133,12 @@ export function getDishKind(
   category: string | null,
   fallback: FoodKind,
 ): FoodKind {
-  if (category === "Nước uống") return "tea";
-  if (category === "Cơm") return "rice";
-  if (category === "Món chính") return "noodles";
-  if (category === "Ăn vặt") {
+  const normalized = normalizeMasterCategory(category);
+  if (normalized === "Trà sữa & Nước") return "tea";
+  if (normalized === "Cơm") return "rice";
+  if (normalized === "Bún/Phở/Mì") return "noodles";
+  if (normalized === "Bánh mì / Ăn nhẹ") return "bread";
+  if (normalized === "Ăn vặt") {
     return fallback === "bread" ? "bread" : "snack";
   }
 

@@ -531,21 +531,31 @@ export function ShopForm({ initial, actorId, isStaff = false }: { initial: NonNu
                 value={
                   demoToken
                     ? `/delivery/demo/${demoToken}`
-                    : "Chưa tạo liên kết giao hàng demo"
+                    : "/delivery/demo"
                 }
                 aria-label="Liên kết giao hàng demo"
               />
             </div>
             <button
               className={styles.outline}
-              disabled={!demoToken}
               onClick={() =>
-                void copy(`${window.location.origin}/delivery/demo/${demoToken}`)
+                void copy(
+                  `${window.location.origin}${
+                    demoToken ? `/delivery/demo/${demoToken}` : "/delivery/demo"
+                  }`,
+                )
               }
             >
               <Copy size={18} />
               Sao chép liên kết
             </button>
+            <Link
+              href={demoToken ? `/delivery/demo/${demoToken}` : "/delivery/demo"}
+              className={styles.outline}
+            >
+              <ExternalLink size={18} />
+              Mở xem UI
+            </Link>
             <button className={styles.outline} onClick={() => setManage(true)}>
               <Settings size={18} />
               Quản lý liên kết

@@ -13,11 +13,13 @@ import {
   CupSoda,
   Drumstick,
   MapPin,
+  Sandwich,
   Search,
   Settings,
   Soup,
   Utensils,
 } from "lucide-react";
+import { CATEGORY_EMOJI } from "@/lib/categories";
 import {
   menuCategories,
   type MenuCategory,
@@ -27,12 +29,13 @@ import styles from "@/styles/restaurant.module.css";
 import { formatMoney as formatPrice } from "@/lib/format";
 import { normalizeSearchText as normalize } from "@/lib/format";
 
-const categoryIcons = {
-  Cơm: CookingPot,
-  "Món thêm": Soup,
-  "Nước uống": CupSoda,
+const categoryIcons: Record<MenuCategory, typeof CookingPot> = {
+  "Cơm": CookingPot,
+  "Bún/Phở/Mì": Soup,
   "Ăn vặt": Drumstick,
-  "Món chính": Utensils,
+  "Trà sữa & Nước": CupSoda,
+  "Bánh mì / Ăn nhẹ": Sandwich,
+  "Khác": Utensils,
 };
 
 function FoodPlaceholder({
@@ -204,21 +207,17 @@ export default function RestaurantView({
             Tất cả
           </button>
 
-          {menuCategories.map((item) => {
-            const Icon = categoryIcons[item];
-
-            return (
-              <button
-                type="button"
-                key={item}
-                aria-pressed={category === item}
-                onClick={() => setCategory(category === item ? null : item)}
-              >
-                <Icon size={23} aria-hidden="true" />
-                {item}
-              </button>
-            );
-          })}
+          {menuCategories.map((item) => (
+            <button
+              type="button"
+              key={item}
+              aria-pressed={category === item}
+              onClick={() => setCategory(category === item ? null : item)}
+            >
+              <span aria-hidden="true">{CATEGORY_EMOJI[item]}</span>
+              {item}
+            </button>
+          ))}
         </div>
       </div>
 

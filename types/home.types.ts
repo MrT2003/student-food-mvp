@@ -1,4 +1,5 @@
 import type { Database } from "@/types/database.types";
+import type { MasterCategory } from "@/lib/categories";
 
 type RestaurantRow =
   Database["public"]["Tables"]["restaurants"]["Row"];
@@ -23,7 +24,7 @@ export type HomeFilters = {
   query: string;
   openOnly: boolean;
   location: "all" | "KTX A" | "KTX B";
-  category: "all" | "Cơm" | "Trà sữa" | "Ăn vặt";
+  category: "all" | MasterCategory;
 };
 
 export type ReorderRestaurant = {

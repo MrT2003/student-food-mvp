@@ -13,6 +13,12 @@ import { MenuError } from "@/lib/seller/menu-contract";
 import { useSellerMenuStore } from "@/store/useSellerMenuStore";
 
 import { menuCategories, type SellerMenuRow } from "@/lib/seller/menu";
+import {
+  CATEGORY_EMOJI,
+  isDrinkCategory,
+  normalizeMasterCategory,
+  type MasterCategory,
+} from "@/lib/categories";
 import { formatMoney, normalizeSearchText } from "@/lib/format";
 import { CloudinaryService } from "@/services/cloudinary.service";
 import type { MenuOptionGroupDetail } from "@/types/restaurant.types";
@@ -100,13 +106,16 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
   const router = useRouter();
   const { data } = useSellerAccess();
 
-  const rows = useSellerMenuStore((state) => state.rows);
   const saveMenuItem = useSellerMenuStore((state) => state.saveMenuItem);
   const restaurantId = data!.restaurant!.id;
   const shopName = data!.restaurant!.name;
-  const categories = [...new Set([...menuCategories, ...rows.map(({ item }) => item.category).filter((value): value is string => Boolean(value))])];
+  const categories = menuCategories;
   const [name, setName] = useState(original?.item.name ?? "");
-  const [category, setCategory] = useState(original?.item.category ?? "Đồ uống");
+  const [category, setCategory] = useState<string>(() =>
+    original?.item.category
+      ? normalizeMasterCategory(original.item.category, original.item.name)
+      : "Cơm",
+  );
   const [price, setPrice] = useState(original ? String(original.item.price) : "");
   const [description, setDescription] = useState(original?.item.description ?? "");
   const [image, setImage] = useState<string | null>(original?.item.image_url ?? null);
@@ -264,7 +273,7 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
             </div>
             <div className={styles.fields}>
               <label>Tên món <b>*</b><input aria-invalid={invalidField === "name"} aria-describedby={invalidField === "name" ? "menu-save-error" : undefined} required maxLength={120} placeholder="Ví dụ: Trà sữa truyền thống" value={name} onChange={(event) => setName(event.target.value)} /></label>
-              <label>Danh mục <b>*</b><select aria-invalid={invalidField === "category"} aria-describedby={invalidField === "category" ? "menu-save-error" : undefined} required value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((value) => <option key={value}>{value}</option>)}</select></label>
+              <label>Danh mục <b>*</b><select aria-invalid={invalidField === "category"} aria-describedby={invalidField === "category" ? "menu-save-error" : undefined} required value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((value) => <option key={value} value={value}>{CATEGORY_EMOJI[value as MasterCategory] ? `${CATEGORY_EMOJI[value as MasterCategory]} ${value}` : value}</option>)}</select></label>
               <label>Giá bán <b>*</b><div className={styles.priceInput}><input aria-invalid={invalidField === "price"} aria-describedby={invalidField === "price" ? "menu-save-error" : undefined} required type="number" min={0} max={10000000} step={0.01} placeholder="Nhập giá bán" value={price} onChange={(event) => setPrice(event.target.value)} /><span>đ</span></div></label>
               <label>Mô tả ngắn<div className={styles.description}><textarea aria-invalid={invalidField === "description"} aria-describedby={invalidField === "description" ? "menu-save-error" : undefined} maxLength={160} placeholder="Giới thiệu ngắn về món ăn của bạn…" value={description} onChange={(event) => setDescription(event.target.value)} /><small>{description.length}/160</small></div></label>
             </div>
@@ -296,7 +305,7 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
           </div></section>
         </div><aside className={styles.right}>
           <section ref={preview} className={styles.card}><h2>Xem trước với sinh viên</h2><div className={styles.preview}>
-            <div className={styles.previewImage}>{image ? <Image src={image} width={120} height={150} alt={name || "Ảnh món"} unoptimized /> : <FoodThumbnail kind={category === "Đồ uống" ? "drink" : "food"} />}</div>
+            <div className={styles.previewImage}>{image ? <Image src={image} width={120} height={150} alt={name || "Ảnh món"} unoptimized /> : <FoodThumbnail kind={isDrinkCategory(category) ? "drink" : "food"} />}</div>
             <div className={styles.previewCopy}><div><h3>{name.trim() || "Tên món của bạn"}</h3><strong className={styles.money}>{formatMoney(basePrice)}</strong></div>
               <p><Settings2 size={16} />{groups.length ? "Có tùy chọn thêm" : "Không có tùy chọn"}</p><p><Store size={16} />{shopName}</p>
               <footer><span className={styles.badge} data-selling={active && !outOfStock}>● {status}</span><button type="button" className={styles.outline} onClick={() => setError("Đây là thẻ xem trước trên màn tạo/chỉnh sửa món.")}>Xem món</button></footer>

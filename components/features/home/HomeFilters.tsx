@@ -1,4 +1,5 @@
-import { CupSoda, Drumstick, MapPin, Utensils } from "lucide-react";
+import { MapPin } from "lucide-react";
+import { CATEGORY_EMOJI, MASTER_CATEGORIES } from "@/lib/categories";
 import type { HomeFilters as Filters } from "@/types/home.types";
 import type { Dispatch, SetStateAction } from "react";
 import styles from "@/styles/home.module.css";
@@ -39,30 +40,22 @@ export default function HomeFilters({ filters, onChange, onReset }: Props) {
           {location}
         </button>
       ))}
-      {(["Cơm", "Trà sữa", "Ăn vặt"] as const).map((category) => {
-        const Icon =
-          category === "Trà sữa"
-            ? CupSoda
-            : category === "Ăn vặt"
-              ? Drumstick
-              : Utensils;
-        return (
-          <button
-            key={category}
-            type="button"
-            aria-pressed={filters.category === category}
-            onClick={() =>
-              onChange((value) => ({
-                ...value,
-                category: value.category === category ? "all" : category,
-              }))
-            }
-          >
-            <Icon size={22} aria-hidden="true" />
-            {category}
-          </button>
-        );
-      })}
+      {MASTER_CATEGORIES.map((category) => (
+        <button
+          key={category}
+          type="button"
+          aria-pressed={filters.category === category}
+          onClick={() =>
+            onChange((value) => ({
+              ...value,
+              category: value.category === category ? "all" : category,
+            }))
+          }
+        >
+          <span aria-hidden="true">{CATEGORY_EMOJI[category]}</span>
+          {category}
+        </button>
+      ))}
     </div>
   );
 }

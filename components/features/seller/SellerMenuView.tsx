@@ -36,6 +36,7 @@ import {
   type MenuTab,
   type SellerMenuRow,
 } from "@/lib/seller/menu";
+import { isDrinkCategory, normalizeMasterCategory } from "@/lib/categories";
 import { useSellerMenuStore } from "@/store/useSellerMenuStore";
 import { formatMoney } from "@/lib/format";
 import type { MenuItem } from "@/types/restaurant.types";
@@ -172,14 +173,7 @@ function SellerMenuContent() {
   useEffect(() => {
     if (deleting) deleteDialog.current?.showModal();
   }, [deleting]);
-  const categories = [
-    ...new Set([
-      ...menuCategories,
-      ...rows
-        .map(({ item }) => item.category)
-        .filter((name): name is string => Boolean(name)),
-    ]),
-  ];
+  const categories = menuCategories;
   const visible = filterSellerMenu(rows, query, category, tab, sort);
   const filterKey = JSON.stringify([query, category, tab, sort]);
   const pageCount = Math.max(1, Math.ceil(visible.length / 5));
@@ -358,13 +352,18 @@ function SellerMenuContent() {
                 <div className={styles.list}>
                   {pageRows.map((row) => {
                     const item = row.item,
-                      CategoryIcon =
-                        item.category === "Đồ uống" ? CupSoda : CookingPot;
+                      displayCategory = normalizeMasterCategory(
+                        item.category,
+                        item.name,
+                      ),
+                      CategoryIcon = isDrinkCategory(displayCategory)
+                        ? CupSoda
+                        : CookingPot;
                     return (
                       <article key={item.id} className={styles.row}>
                         <div
                           className={styles.food}
-                          data-category={item.category}
+                          data-category={displayCategory}
                         >
                           {item.image_url ? (
                             <Image
@@ -390,7 +389,7 @@ function SellerMenuContent() {
                         </div>
                         <span className={styles.categoryTag}>
                           <CategoryIcon size={17} />
-                          {item.category}
+                          {displayCategory}
                         </span>
                         <div className={styles.price}>
                           <strong>{formatMoney(item.price)}</strong>
@@ -540,13 +539,16 @@ function SellerMenuContent() {
                       }
                     >
                       <span>
-                        {name === "Đồ uống" ? <CupSoda /> : <CookingPot />}
+                        {isDrinkCategory(name) ? <CupSoda /> : <CookingPot />}
                       </span>
                       <strong>{name}</strong>
                       <small>
                         {
-                          rows.filter(({ item }) => item.category === name)
-                            .length
+                          rows.filter(
+                            ({ item }) =>
+                              normalizeMasterCategory(item.category, item.name) ===
+                              name,
+                          ).length
                         }{" "}
                         món
                       </small>
@@ -711,7 +713,14 @@ function SellerMenuContent() {
                       }
                     >
                       {name} (
-                      {rows.filter(({ item }) => item.category === name).length})
+                      {
+                        rows.filter(
+                          ({ item }) =>
+                            normalizeMasterCategory(item.category, item.name) ===
+                            name,
+                        ).length
+                      }
+                      )
                     </button>
                   ))}
                 </div>
@@ -781,8 +790,13 @@ function SellerMenuContent() {
                 const { item } = row;
                 const status = menuStatus(item);
                 const imageSrc = getSellerMobileMenuItemImage(item);
-                const CategoryIcon =
-                  item.category === "Đồ uống" ? CupSoda : CookingPot;
+                const displayCategory = normalizeMasterCategory(
+                  item.category,
+                  item.name,
+                );
+                const CategoryIcon = isDrinkCategory(displayCategory)
+                  ? CupSoda
+                  : CookingPot;
                 const isMenuOpen = openMenuId === item.id;
                 const useSlashedEye =
                   !item.is_active;
@@ -792,7 +806,7 @@ function SellerMenuContent() {
                     <div className={styles.mobileCardTop}>
                       <div
                         className={styles.mobileFoodThumb}
-                        data-category={item.category}
+                        data-category={displayCategory}
                       >
                         {imageSrc ? (
                           <Image
@@ -872,7 +886,7 @@ function SellerMenuContent() {
 
                         <p className={styles.mobileCardSubtitle}>
                           {formatSellerMobileMenuSubtitle(
-                            item.category,
+                            displayCategory,
                             row.optionCount,
                           )}
                         </p>

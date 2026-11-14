@@ -3,16 +3,15 @@ import type { PreviewRestaurant } from "@/lib/home/mock-data";
 import type { ExploreRestaurant, FoodKind } from "@/lib/explore/mock-data";
 import { dishHref, type PopularDishCard } from "@/lib/explore/popular-data";
 import { getDishKind, type HomeIllustration } from "@/lib/mocks/catalog-views.mock";
+import {
+  MASTER_CATEGORIES,
+  normalizeMasterCategory,
+  type MasterCategory,
+} from "@/lib/categories";
 
-export const menuCategories = [
-  "Cơm",
-  "Món chính",
-  "Món thêm",
-  "Nước uống",
-  "Ăn vặt",
-] as const;
+export const menuCategories = MASTER_CATEGORIES;
 
-export type MenuCategory = (typeof menuCategories)[number];
+export type MenuCategory = MasterCategory;
 
 export type MenuItem = {
   id: string;
@@ -39,8 +38,8 @@ export type RestaurantDetail = {
   menu: MenuItem[];
 };
 
-function toCategory(value: string | null): MenuCategory {
-  return menuCategories.find((category) => category === value) ?? "Món chính";
+function toCategory(value: string | null, itemName?: string): MenuCategory {
+  return normalizeMasterCategory(value, itemName);
 }
 
 function inferVisuals(
@@ -51,7 +50,7 @@ function inferVisuals(
   if (/trà sữa|nước uống|đồ uống|trà|cafe|coffee/.test(joined)) {
     return { kind: "tea", illustration: "tea" };
   }
-  if (/bánh mì/.test(joined)) {
+  if (/bánh mì|ăn nhẹ/.test(joined)) {
     return { kind: "bread", illustration: "bread" };
   }
   if (/món hàn|mì cay|seoul|kim chi/.test(joined)) {
@@ -66,21 +65,21 @@ function inferVisuals(
   return { kind: "rice", illustration: "rice" };
 }
 
-function deriveCategories(items: CatalogItem[], restaurantName: string): string[] {
-  const raw = [
+function deriveCategories(items: CatalogItem[], restaurantName: string): MasterCategory[] {
+  const normalizedFromItems = [
     ...new Set(
       items
         .filter((item) => item.is_active)
-        .flatMap((item) => (item.category ? [item.category] : [])),
+        .map((item) => normalizeMasterCategory(item.category, item.name)),
     ),
   ];
-  if (raw.includes("Nước uống") && !raw.includes("Trà sữa")) {
-    raw.push("Trà sữa");
+
+  if (normalizedFromItems.length > 0) {
+    return normalizedFromItems;
   }
-  if (raw.length > 0) return raw;
-  if (/trà|coffee|cafe/i.test(restaurantName)) return ["Trà sữa", "Nước uống"];
-  if (/ăn vặt|gà|xiên/i.test(restaurantName)) return ["Ăn vặt"];
-  return ["Cơm", "Món Việt"];
+
+  // Chỉ suy luận từ tên quán khi quán chưa có món nào active, không gán cứng ["Cơm", "Món Việt"].
+  return [normalizeMasterCategory(null, restaurantName)];
 }
 
 export function toHomeRestaurants(menus: RestaurantCatalog[]): PreviewRestaurant[] {
@@ -140,11 +139,9 @@ export function toPopularDishCards(menus: RestaurantCatalog[]): PopularDishCard[
     );
 
     return activeItems.map((item) => {
+      const itemCategory = normalizeMasterCategory(item.category, item.name);
       const categories = [
-        ...new Set([
-          ...(item.category ? [item.category] : []),
-          ...restaurantCategories,
-        ]),
+        ...new Set([itemCategory, ...restaurantCategories]),
       ];
       return {
         id: item.id,
@@ -152,7 +149,7 @@ export function toPopularDishCards(menus: RestaurantCatalog[]): PopularDishCard[
         restaurantName: restaurant.name,
         name: item.name,
         price: item.price,
-        kind: getDishKind(item.category, fallbackKind),
+        kind: getDishKind(itemCategory, fallbackKind),
         imageUrl: item.image_url,
         categories,
         rank: rank++,
@@ -170,7 +167,7 @@ export function toMenuItemView(item: MenuItemDetail): MenuItem {
     description: item.description ?? "",
     price: item.price,
     image_url: item.image_url,
-    category: toCategory(item.category),
+    category: toCategory(item.category, item.name),
     available: item.is_active && item.is_available,
     hasOptions: item.option_groups.some(
       (group) =>

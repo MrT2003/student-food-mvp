@@ -1,18 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { MASTER_CATEGORIES, type MasterCategory } from "@/lib/categories";
 import { normalizeSearchText as normalize } from "@/lib/format";
 import { exploreRestaurants, type ExploreRestaurant } from "./mock-data";
 
-export const categories = [
-  "Cơm",
-  "Trà sữa",
-  "Ăn vặt",
-  "Món Việt",
-  "Món Hàn",
-] as const;
+export const categories = MASTER_CATEGORIES;
 
-export type Category = (typeof categories)[number];
+export type Category = MasterCategory;
 export type Location = "all" | "KTX A" | "KTX B";
 export type SortBy = "popular" | "name" | "menu";
 
