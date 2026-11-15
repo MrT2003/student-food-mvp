@@ -605,7 +605,7 @@
   .page {
     grid-template-columns: 1fr;
     gap: 14px;
-    padding-bottom: 120px;
+    padding-bottom: calc(250px + env(safe-area-inset-bottom, 0px));
   }
 
   .stepsColumn {
@@ -993,8 +993,8 @@
 
   .summaryContentGrid {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) auto;
-    align-items: center;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
     gap: 14px;
   }
 
@@ -1037,6 +1037,7 @@
   }
 
   .summaryActionCol .primaryButton {
+    width: 100%;
     margin-top: 0;
     min-height: 58px;
     padding: 10px 14px;
