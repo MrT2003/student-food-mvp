@@ -85,6 +85,14 @@ test("actual form navigates only after successful API and confirmed seller profi
   assert.equal(f.calls[1], "profile"); assert.deepEqual(ui.navigation, ["/seller", "refresh"]);
 });
 
+test('form blocks another creation when network outcome is unknown until profile is reconciled',async()=>{
+ const f=client({fetch:async()=>{throw Error('network unavailable');}});
+ const ui=formHarness(f);await ui.submit();await ui.submit();
+ assert.equal(f.calls.filter(call=>typeof call==='object'&&call.request).length,1);
+ assert.deepEqual(ui.navigation,[]);
+ assert.ok(ui.nodes(ui.render()).some(node=>node.props?.role==='alert'));
+});
+
 test("merged form keeps Cloudinary upload and blocks registration until upload completes", async () => {
   let resolveUpload;
   const f = client();
@@ -99,8 +107,8 @@ test("merged form keeps Cloudinary upload and blocks registration until upload c
   assert.equal(ui.nodes(ui.render()).find((node) => node.props?.type === "submit").props.disabled, false);
   await ui.submit();
   assert.deepEqual(ui.navigation, ["/seller", "refresh"]);
-  // Upload UI không đưa field ảnh ngoài contract vào RPC đăng ký hiện có.
-  assert.equal(Object.hasOwn(JSON.parse(f.calls[0].request.body), "avatar_url"), false);
+  // URL upload đi qua API vào transaction RPC, không chỉ là preview.
+  assert.equal(JSON.parse(f.calls[0].request.body).avatar_url, "https://res.cloudinary.com/test/image/upload/test.webp");
 });
 
 test('duplicate role conflict recovers only with confirmed current seller and owned restaurant',async()=>{

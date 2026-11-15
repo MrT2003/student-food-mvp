@@ -1,25 +1,11 @@
-import {
-  CupSoda,
-  Drumstick,
-  Flame,
-  MapPin,
-  Soup,
-  Utensils,
-} from "lucide-react";
+import { MapPin } from "lucide-react";
+import { CATEGORY_EMOJI } from "@/lib/categories";
 import {
   categories,
   type Category,
   type Location,
 } from "@/lib/explore/useExplore";
 import styles from "@/styles/explore.module.css";
-
-const categoryIcons = {
-  Cơm: Utensils,
-  "Trà sữa": CupSoda,
-  "Ăn vặt": Drumstick,
-  "Món Việt": Soup,
-  "Món Hàn": Flame,
-};
 
 type Props = {
   isAllSelected: boolean;
@@ -63,21 +49,17 @@ export default function ExploreFilters({
         </button>
       ))}
 
-      {categories.map((cat) => {
-        const Icon = categoryIcons[cat];
-
-        return (
-          <button
-            type="button"
-            key={cat}
-            aria-pressed={category === cat}
-            onClick={() => onSelectCategory(category === cat ? null : cat)}
-          >
-            <Icon size={22} aria-hidden="true" />
-            {cat}
-          </button>
-        );
-      })}
+      {categories.map((cat) => (
+        <button
+          type="button"
+          key={cat}
+          aria-pressed={category === cat}
+          onClick={() => onSelectCategory(category === cat ? null : cat)}
+        >
+          <span aria-hidden="true">{CATEGORY_EMOJI[cat]}</span>
+          {cat}
+        </button>
+      ))}
     </div>
   );
 }

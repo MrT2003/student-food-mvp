@@ -24,6 +24,7 @@ function load(file, mocks = {}, globals = {}) {
   const noLog = () => { throw new Error("Must not log token/secret"); };
   vm.runInNewContext(output, { exports, Buffer, URL, console: { error: noLog, log: noLog, warn: noLog },
     require(id) {
+      if (id === "@/lib/seller/shop-contract") return load("../lib/seller/shop-contract.ts");
       if (id === "server-only") return {};
       if (id === "@/lib/http/request-origin") return load("../lib/http/request-origin.ts");
       if (id === "node:crypto") return crypto;

@@ -100,5 +100,33 @@ export const OrderServices = {
 			// Làm mờ nhưng vẫn cho click xem lịch sử; giá null không được hiển thị thành 0đ.
 			return { ...item, isDimmed: notices.length > 0, notices };
 		});
-	}
+	},
+
+	async cancelOrder(orderId: string): Promise<void> {
+		if (!orderId || !orderId.trim()) {
+			throw new Error("Mã đơn hàng không hợp lệ.");
+		}
+		const client = createClient();
+		const { data: { user }, error: authError } = await client.auth.getUser();
+		if (authError || !user) {
+			throw new Error("Vui lòng đăng nhập lại để hủy đơn hàng.");
+		}
+		await assertPurchaseAccess(client);
+		const { error } = await client.rpc("cancel_order", {
+			p_order_id: orderId.trim(),
+		});
+		if (error) {
+			const msg = error.message || "";
+			if (msg.includes("ORDER_NOT_FOUND")) {
+				throw new Error("Không tìm thấy đơn hàng.");
+			}
+			if (msg.includes("ORDER_INVALID_STATUS") || msg.includes("CANNOT_CANCEL") || msg.includes("NOT_PENDING")) {
+				throw new Error("Đơn hàng đã được cửa hàng xác nhận hoặc không còn ở trạng thái chờ xác nhận.");
+			}
+			if (msg.includes("NOT_ALLOWED") || msg.includes("UNAUTHORIZED") || error.code === "42501") {
+				throw new Error("Bạn không có quyền hủy đơn hàng này.");
+			}
+			throw new Error("Không thể hủy đơn hàng lúc này. Vui lòng thử lại.");
+		}
+	},
 }

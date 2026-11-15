@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { startStudentPersistence, useStudentMockStore } from "@/store/useStudentMockStore";
+
+const STUDENT_ORDER_POLL_MS = 5_000;
 
 export default function StudentStorageBoundary({ children }: { children: ReactNode }) {
   const ready = useStudentMockStore((state) => state.hasHydrated);
@@ -21,6 +24,44 @@ export default function StudentStorageBoundary({ children }: { children: ReactNo
   useEffect(() => {
     if (!ready) return;
     void syncFromDatabase(userId);
+
+    if (!userId) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`student-orders:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter: `student_id=eq.${userId}`,
+        },
+        () => {
+          void syncFromDatabase(userId);
+        },
+      )
+      .subscribe();
+
+    const refreshIfVisible = () => {
+      if (document.visibilityState !== "hidden" && navigator.onLine !== false) {
+        void syncFromDatabase(userId);
+      }
+    };
+
+    const intervalId = window.setInterval(refreshIfVisible, STUDENT_ORDER_POLL_MS);
+    window.addEventListener("focus", refreshIfVisible);
+    window.addEventListener("online", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshIfVisible);
+      window.removeEventListener("online", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+      void supabase.removeChannel(channel);
+    };
   }, [ready, userId, syncFromDatabase]);
 
   if (!ready) return <p role="status" style={{ padding: 24 }}>Đang khôi phục giỏ hàng và đơn hàng…</p>;

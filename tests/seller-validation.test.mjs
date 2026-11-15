@@ -16,6 +16,7 @@ function load(file) {
   vm.runInNewContext(output, {
     exports,
     require(id) {
+      if (id === "@/lib/seller/shop-contract") return load("../lib/seller/shop-contract.ts");
       if (id === "server-only") return {};
       if (id === "node:crypto") return crypto;
       if (id === "@/lib/database/server") return {

@@ -9,6 +9,8 @@ export type SellerAccess = {
         id: string;
         name: string;
         slug: string;
+        contact_phone?: string | null;
+        contact_phone_available?: boolean;
         avatar_url: string | null;
         description: string | null;
         location: string | null;

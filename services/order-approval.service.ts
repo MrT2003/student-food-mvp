@@ -41,14 +41,37 @@ async function decide(client: SupabaseClient, userId: string, orderId: unknown, 
     if (result.error && (result.error.code === "PGRST202" || result.error.code === "42883")) {
       const nowIso = new Date().toISOString();
       const updated = await client.from("orders")
-        .update({ order_status: "completed", completed_at: nowIso, updated_at: nowIso })
+        .update({ order_status: "completed", completed_at: nowIso })
         .eq("id", orderId)
         .eq("restaurant_id", order.restaurant_id)
         .select("id,restaurant_id,order_status,accepted_at")
         .maybeSingle();
+      if (!updated.error && updated.data) {
+        return { order: { id: updated.data.id, restaurant_id: updated.data.restaurant_id, order_status: status, accepted_at: updated.data.accepted_at ?? null } };
+      }
+      // Fallback sang complete_delivery nếu bảng orders bật RLS chặn UPDATE trực tiếp
+      const { data: restWithToken } = await client.from("restaurants")
+        .select("delivery_token")
+        .eq("id", order.restaurant_id)
+        .maybeSingle();
+      if (restWithToken?.delivery_token) {
+        const deliveryRpc = await client.rpc("complete_delivery", {
+          p_order_id: orderId,
+          p_delivery_token: restWithToken.delivery_token,
+        });
+        if (!deliveryRpc.error) {
+          const { data: verified } = await client.from("orders")
+            .select("id,restaurant_id,order_status,accepted_at")
+            .eq("id", orderId)
+            .eq("restaurant_id", order.restaurant_id)
+            .maybeSingle();
+          if (verified && verified.order_status === "completed") {
+            return { order: { id: verified.id, restaurant_id: verified.restaurant_id, order_status: status, accepted_at: verified.accepted_at ?? null } };
+          }
+        }
+      }
       check(updated.error);
-      if (!updated.data) throw new OrderApprovalError("ORDER_CONFLICT");
-      return { order: { id: updated.data.id, restaurant_id: updated.data.restaurant_id, order_status: status, accepted_at: updated.data.accepted_at ?? null } };
+      throw new OrderApprovalError("ORDER_CONFLICT");
     }
     if (result.error) {
       const { code, message } = result.error;
