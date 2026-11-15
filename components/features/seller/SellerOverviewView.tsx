@@ -202,7 +202,7 @@ export default function SellerOverviewView() {
     !loading &&
     data?.user.role === "seller" &&
     data.user.status === "active" &&
-    restaurant?.operating_status === "closed";
+    (restaurant?.operating_status === "closed" || opened);
 
   async function openRestaurant() {
     if (
@@ -216,15 +216,16 @@ export default function SellerOverviewView() {
     const marker = { key };
     request.current = marker;
     const actor = data.user.id;
+    const target = opened ? "closed" : "open";
     setOpenState({ key, pending: true, error: "", message: "" });
     try {
-      const result = await openSellerRestaurant(actor, restaurant.id);
+      const result = await openSellerRestaurant(actor, restaurant.id, target);
       if (mounted.current && useAuthStore.getState().user?.id === actor)
         setOpenState((current) =>
           current.key === key
             ? {
                 ...current,
-                message: result.recovered
+                message: target === "closed" ? "Đã xác nhận cửa hàng đã đóng." : result.recovered
                   ? "Đã đọc lại và xác nhận cửa hàng đang mở."
                   : result.alreadyOpen
                     ? "Cửa hàng đã mở sẵn."
@@ -340,14 +341,14 @@ export default function SellerOverviewView() {
                         }}
                       >
                         {opening
-                          ? "Đang mở…"
+                          ? "Đang cập nhật…"
                           : opened
-                            ? "Đang mở"
+                            ? "Đóng cửa hàng"
                             : "Mở nhận đơn"}
                       </button>
                       <small>
                         {opened
-                          ? "Trạng thái được tải từ cửa hàng."
+                          ? "Đóng cửa hàng để ngừng nhận đơn mới."
                           : restaurant.operating_status === "paused"
                             ? "Chưa hỗ trợ mở từ trạng thái tạm ngừng tại đây."
                             : "Mở nhận đơn cho chính cửa hàng của bạn."}
@@ -518,7 +519,7 @@ export default function SellerOverviewView() {
                       className={styles.task}
                       key={title}
                       disabled={
-                        title === "Mở nhận đơn" && (!canOpen || opening)
+                        title === "Mở nhận đơn" && (!canOpen || opening || opened)
                       }
                       onClick={() =>
                         title === "Mở nhận đơn"
@@ -612,7 +613,7 @@ export default function SellerOverviewView() {
                     <Store size={30} strokeWidth={2} />
                   </span>
                   <div className={styles.mobileStatusCopy}>
-                    <span className={styles.mobileClosedPill}>
+                    <span className={styles.mobileClosedPill} data-open={opened}>
                       <span
                         className={styles.mobileClosedDot}
                         aria-hidden="true"
@@ -628,17 +629,17 @@ export default function SellerOverviewView() {
                 </div>
               </div>
               <div className={styles.mobileStatusRight}>
-                <span className={styles.mobileOpenButton}>
+                <button type="button" className={styles.mobileOpenButton} disabled={!canOpen || opening} onClick={() => { void openRestaurant(); }}>
                   {opening
-                    ? "Đang mở…"
+                    ? "Đang cập nhật…"
                     : opened
-                      ? "Đang mở"
-                      : "Tạm đóng"}
-                </span>
+                      ? "Đóng cửa hàng"
+                      : "Mở nhận đơn"}
+                </button>
                 <small>
                   {opened
-                    ? "Trạng thái được tải từ cửa hàng."
-                    : "Sử dụng thẻ trạng thái trên máy tính hoặc danh sách công việc để mở nhận đơn."}
+                    ? "Đóng cửa hàng để ngừng nhận đơn mới."
+                    : "Mở cửa hàng để nhận đơn mới."}
                 </small>
               </div>
             </section>

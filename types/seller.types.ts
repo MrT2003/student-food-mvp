@@ -53,7 +53,7 @@ export type SellerRestaurantUpdateResult = {
 };
 
 export type SellerRestaurantOpenResult = {
-  restaurant: { id: string; operating_status: "open" };
+  restaurant: { id: string; operating_status: "open" | "closed" };
   alreadyOpen: boolean;
 };
 

@@ -911,4 +911,19 @@
   }
 }
 
+@media (max-width: 760px) {
+  .mobileOptionsCard .sectionHeading { gap: 5px; margin-bottom: 14px; }
+  .mobileOptionsCard .sectionHeading h2 { font-size: 20px; line-height: 1.35; }
+  .mobileOptionsCard .sectionHeading p { font-size: 12px; line-height: 1.5; }
+  .mobileOptionsCard .group { padding: 12px; min-width: 0; }
+  .mobileOptionsCard .group header { gap: 7px; }
+  .mobileOptionsCard .group header strong { font-size: 14px; overflow-wrap: anywhere; }
+  .mobileOptionsCard .group header > span { font-size: 11px; }
+  .mobileOptionsCard .groupActions button { width: 36px; height: 36px; }
+  .mobileOptionsCard .chip { max-width: 100%; }
+  .mobileOptionsCard .chip button { min-height: 36px; font-size: 12px; flex-wrap: wrap; overflow-wrap: anywhere; }
+  .mobileOptionsCard .chip button:last-child { flex-shrink: 0; padding-right: 10px; }
+  .mobileOptionsCard .addChoice { min-height: 36px; font-size: 12px; }
+  .mobileOptionsCard .addGroup { min-height: 42px; font-size: 13px; }
+}
 @media(prefers-reduced-motion:reduce) { .switchLabel input,.switchLabel input::after,.mobileToggle input,.mobileToggle input::after { transition:none; } }
