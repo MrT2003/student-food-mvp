@@ -204,7 +204,7 @@ export default function SellerOverviewView() {
     !loading &&
     data?.user.role === "seller" &&
     data.user.status === "active" &&
-    restaurant?.operating_status === "closed";
+    (restaurant?.operating_status === "closed" || opened);
 
   const canChangeStatus = !loading && data?.user.role === "seller" && data.user.status === "active" && (opened || restaurant?.operating_status === "closed");
   const progressLabel = openState.target === "closed" ? "Đang đóng…" : "Đang mở…";
@@ -358,7 +358,7 @@ export default function SellerOverviewView() {
                       </button>
                       <small>
                         {opened
-                          ? "Trạng thái được tải từ cửa hàng."
+                          ? "Đóng cửa hàng để ngừng nhận đơn mới."
                           : restaurant.operating_status === "paused"
                             ? "Chưa hỗ trợ mở từ trạng thái tạm ngừng tại đây."
                             : "Mở nhận đơn cho chính cửa hàng của bạn."}
@@ -529,7 +529,7 @@ export default function SellerOverviewView() {
                       className={styles.task}
                       key={title}
                       disabled={
-                        title === "Mở nhận đơn" && (!canOpen || opening)
+                        title === "Mở nhận đơn" && (!canOpen || opening || opened)
                       }
                       onClick={() =>
                         title === "Mở nhận đơn"
@@ -623,7 +623,7 @@ export default function SellerOverviewView() {
                     <Store size={30} strokeWidth={2} />
                   </span>
                   <div className={styles.mobileStatusCopy}>
-                    <span className={styles.mobileClosedPill}>
+                    <span className={styles.mobileClosedPill} data-open={opened}>
                       <span
                         className={styles.mobileClosedDot}
                         aria-hidden="true"
