@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   Check,
   ChevronDown,
-  ChevronRight,
   ClipboardList,
   CookingPot,
   Eye,
@@ -518,16 +517,6 @@ export function SaveDishSvgIcon({ size = 19 }: { size?: number }) {
   );
 }
 
-function getMobileOptionGroupIcon(groupName: string) {
-  const normalized = normalizeSearchText(groupName);
-  if (normalized.includes("duong")) {
-    return <SugarGroupSvgIcon />;
-  }
-  if (normalized.includes("da")) {
-    return <IceGroupSvgIcon />;
-  }
-  return <ToppingGroupSvgIcon />;
-}
 
 function OptionEditor({
   editor,
@@ -780,20 +769,9 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
   const [mobileImage, setMobileImage] = useState<string>(
     original?.item.image_url || DEFAULT_SELLER_MOBILE_CREATE_IMAGE,
   );
-  const [mobileGroups, setMobileGroups] = useState<DraftGroup[]>(
-    () =>
-      original?.optionGroups?.map((group) => ({
-        id: group.id,
-        name: group.name,
-        is_multiple: group.is_multiple,
-        is_required: group.is_required,
-        options: group.options.map((option) => ({
-          id: option.id,
-          option_name: option.option_name,
-          additional_price: option.additional_price,
-        })),
-      })) ?? createDefaultSellerMobileOptionGroups(),
-  );
+  // Both responsive layouts edit the same option IDs and draft values.
+  const mobileGroups = groups;
+  const setMobileGroups = setGroups;
   const [mobileActive, setMobileActive] = useState(
     original?.item.is_active ?? DEFAULT_SELLER_MOBILE_CREATE_VALUES.is_active,
   );
@@ -959,9 +937,7 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
         ),
       );
     }
-    if (!isMobileTarget) {
-      setGroupsChanged(true);
-    }
+    setGroupsChanged(true);
     setEditor(null);
   }
 
@@ -1936,81 +1912,141 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
                 </div>
               </section>
 
-              {/* Card 2: Tùy chọn món (Không bắt buộc) */}
-              <section
-                className={styles.mobileCard}
-                aria-labelledby="mobile-option-groups-heading"
-              >
-                <div className={styles.mobileOptionHeader}>
-                  <h2
-                    id="mobile-option-groups-heading"
-                    className={styles.mobileCardTitle}
-                  >
-                    Tùy chọn món{" "}
-                    <span className={styles.mobileOptionalTag}>
-                      (Không bắt buộc)
-                    </span>
-                  </h2>
-                  <p className={styles.mobileCardSubtitle}>
-                    Thêm topping, mức đường hoặc mức đá.
-                  </p>
+              {/* Options follow the desktop design and share its draft state. */}
+              <section className={`${styles.mobileCard} ${styles.mobileOptionsCard}`} aria-labelledby="mobile-option-groups-heading">
+                <div className={styles.sectionHeading}>
+                  <h2 id="mobile-option-groups-heading">Tùy chọn món</h2>
+                  <p>Tạo các nhóm topping, mức đường, mức đá hoặc món thêm.</p>
                 </div>
-
-                <div className={styles.mobileOptionList}>
-                  {mobileGroups.map((group) => {
-                    const priceBadge =
-                      formatSellerMobileOptionGroupPriceBadge(group);
-                    return (
-                      <button
-                        key={group.id}
-                        type="button"
-                        className={styles.mobileOptionItem}
-                        onClick={() =>
-                          setEditor({
-                            type: "group",
-                            group,
-                            target: "mobile",
-                          })
-                        }
-                      >
-                        <span
-                          className={styles.mobileOptionIcon}
-                          aria-hidden="true"
+                    {!groups.length && (
+                      <div className={styles.empty}>
+                        <p>Món không có tùy chọn vẫn có thể lưu.</p>
+                        <button
+                          type="button"
+                          className={styles.outline}
+                          onClick={beverageTemplate}
                         >
-                          {getMobileOptionGroupIcon(group.name)}
-                        </span>
-                        <span className={styles.mobileOptionCopy}>
-                          <strong>{group.name}</strong>
-                          <small>
-                            {formatSellerMobileOptionGroupSubtitle(group)}
-                          </small>
-                        </span>
-                        {priceBadge && (
-                          <span className={styles.mobileOptionPricePill}>
-                            {priceBadge}
-                          </span>
-                        )}
-                        <ChevronRight
-                          size={18}
-                          strokeWidth={2.1}
-                          className={styles.mobileOptionArrow}
-                          aria-hidden="true"
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <button
-                  type="button"
-                  className={styles.mobileAddGroupBtn}
-                  onClick={() =>
-                    setEditor({ type: "group", target: "mobile" })
-                  }
-                >
-                  <Plus size={19} strokeWidth={2.3} aria-hidden="true" />
-                  <span>Thêm nhóm tùy chọn</span>
-                </button>
+                          Dùng mẫu đồ uống
+                        </button>
+                      </div>
+                    )}
+                    <div className={styles.groups}>
+                      {groups.map((group) => (
+                        <article key={group.id} className={styles.group}>
+                          <header>
+                            <strong>{group.name}</strong>
+                            <span>
+                              {group.is_multiple ? "Chọn nhiều" : "Chọn một"}
+                              {group.is_required ? " · Bắt buộc" : ""}
+                            </span>
+                            <div className={styles.groupActions}>
+                              <button
+                                type="button"
+                                aria-label={`Sửa nhóm ${group.name}`}
+                                onClick={() =>
+                                  setEditor({
+                                    type: "group",
+                                    group,
+                                    target: "mobile",
+                                  })
+                                }
+                              >
+                                <Pencil size={17} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Xóa nhóm ${group.name}`}
+                                onClick={() => {
+                                  if (
+                                    window.confirm(
+                                      `Xóa nhóm “${group.name}” và các lựa chọn?`,
+                                    )
+                                  ) {
+                                    setGroupsChanged(true);
+                                    setGroups((current) =>
+                                      current.filter(
+                                        (entry) => entry.id !== group.id,
+                                      ),
+                                    );
+                                  }
+                                }}
+                              >
+                                <Trash2 size={17} />
+                              </button>
+                            </div>
+                          </header>
+                          <div className={styles.chips}>
+                            {group.options.map((option) => (
+                              <span key={option.id} className={styles.chip}>
+                                <button
+                                  type="button"
+                                  title="Chỉnh sửa lựa chọn"
+                                  onClick={() =>
+                                    setEditor({
+                                      type: "option",
+                                      groupId: group.id,
+                                      option,
+                                      target: "mobile",
+                                    })
+                                  }
+                                >
+                                  {option.option_name}
+                                  {option.additional_price > 0 && (
+                                    <b>+{formatMoney(option.additional_price)}</b>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={`Xóa ${option.option_name} trong ${group.name}`}
+                                  onClick={() => {
+                                    setGroupsChanged(true);
+                                    setGroups((current) =>
+                                      current.map((entry) =>
+                                        entry.id === group.id
+                                          ? {
+                                              ...entry,
+                                              options: entry.options.filter(
+                                                (value) =>
+                                                  value.id !== option.id,
+                                              ),
+                                            }
+                                          : entry,
+                                      ),
+                                    );
+                                  }}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </span>
+                            ))}
+                            <button
+                              type="button"
+                              className={styles.addChoice}
+                              onClick={() =>
+                                setEditor({
+                                  type: "option",
+                                  groupId: group.id,
+                                  target: "mobile",
+                                })
+                              }
+                            >
+                              <Plus size={16} />
+                              Thêm lựa chọn
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.addGroup}
+                      onClick={() =>
+                        setEditor({ type: "group", target: "mobile" })
+                      }
+                    >
+                      <Plus size={21} />
+                      Thêm nhóm tùy chọn
+                    </button>
               </section>
 
               {/* Card 3: Hiển thị & tình trạng bán */}

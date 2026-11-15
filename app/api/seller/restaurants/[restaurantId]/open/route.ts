@@ -10,11 +10,11 @@ const errors = {
   ACCOUNT_INACTIVE: [403, "Tài khoản không hoạt động."],
   SELLER_REQUIRED: [403, "Chỉ seller được mở cửa hàng của mình."],
   RESTAURANT_NOT_FOUND: [404, "Không tìm thấy cửa hàng thuộc tài khoản của bạn."],
-  OPERATING_STATUS_CONFLICT: [409, "Thao tác này chỉ mở cửa hàng đang đóng. Hãy tải lại trạng thái."],
+  OPERATING_STATUS_CONFLICT: [409, "Chỉ hỗ trợ đổi giữa trạng thái mở và đóng. Hãy tải lại trạng thái."],
   DATABASE_ACCESS_DENIED: [403, "Database từ chối quyền mở cửa hàng."],
   RESTAURANT_OPEN_RPC_UNAVAILABLE: [503, "RPC set_restaurant_operating_status chưa sẵn sàng hoặc không đúng contract."],
-  RESTAURANT_OPEN_RESULT_UNKNOWN: [503, "Chưa xác định kết quả mở cửa hàng. Hãy đọc lại trạng thái trước khi thử lại."],
-  RESTAURANT_OPEN_FAILED: [500, "Không thể mở cửa hàng. Hãy tải lại trạng thái trước khi thử lại."],
+  RESTAURANT_OPEN_RESULT_UNKNOWN: [503, "Chưa xác định kết quả đổi trạng thái cửa hàng. Hãy đọc lại trạng thái trước khi thử lại."],
+  RESTAURANT_OPEN_FAILED: [500, "Không thể đổi trạng thái cửa hàng. Hãy tải lại trạng thái trước khi thử lại."],
 } as const;
 function failure(code: string, message: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status, headers: { "Cache-Control": "no-store" } });

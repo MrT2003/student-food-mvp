@@ -300,8 +300,8 @@ export function ShopForm({
   const [location, setLocation] = useState(initial.location ?? "");
   const [avatar, setAvatar] = useState(initial.avatar_url);
   const [days, setDays] = useState<EditableShopDay[]>(parsedSchedule.days);
-  const [mode, setMode] = useState<"same" | "daily" | "later">(
-    parsedSchedule.mode,
+  const [mode, setMode] = useState<"same" | "daily">(
+    parsedSchedule.mode === "daily" ? "daily" : "same",
   );
   const [opens, setOpens] = useState(
     parsedSchedule.days.find((day) => day.enabled)?.opens ?? "10:00",
@@ -370,12 +370,7 @@ export function ShopForm({
   const mobileAvatarSrc = getSellerMobileShopAvatar(
     avatar ?? initial.avatar_url,
   );
-  const mobileScheduleDays: ShopDay[] =
-    mode === "later" &&
-    isBackendRestaurant(initial) &&
-    initial.operating_hours === null
-      ? createInitialSellerShopPreview(null).daysPreview
-      : schedule;
+  const mobileScheduleDays: ShopDay[] = schedule;
   const mobileScheduleSummary =
     formatSellerMobileScheduleSummary(mobileScheduleDays);
   const mobilePaymentSummary = formatSellerMobilePaymentSummary(null, null);
@@ -762,15 +757,6 @@ export function ShopForm({
                         />
                         Thiết lập theo từng ngày
                       </label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="schedule-mode"
-                          checked={mode === "later"}
-                          onChange={() => setMode("later")}
-                        />
-                        Thiết lập sau
-                      </label>
                     </div>
                     {mode === "same" ? (
                       <>
@@ -827,7 +813,7 @@ export function ShopForm({
                           ))}
                         </div>
                       </>
-                    ) : mode === "daily" ? (
+                    ) : (
                       <div className={styles.daily}>
                         {days.map((day, index) => (
                           <div key={day.label}>
@@ -884,18 +870,13 @@ export function ShopForm({
                           </div>
                         ))}
                       </div>
-                    ) : (
-                      <p>Lưu lựa chọn này sẽ xóa lịch hiện tại (SQL NULL).</p>
                     )}
                   </div>
                   <aside className={styles.schedulePreview}>
                     <strong>
                       Lịch hoạt động <small>(xem trước)</small>
                     </strong>
-                    {mode === "later" ? (
-                      <p>Chưa thiết lập lịch</p>
-                    ) : (
-                      previewDays.map((day) => (
+                    {previewDays.map((day) => (
                         <div key={day.label}>
                           <span>{day.label}</span>
                           <span>
@@ -904,8 +885,7 @@ export function ShopForm({
                               : "Nghỉ"}
                           </span>
                         </div>
-                      ))
-                    )}
+                      ))}
                   </aside>
                 </div>
                 {!isStaff && (
@@ -1360,63 +1340,145 @@ export function ShopForm({
               </button>
             </div>
             <form onSubmit={saveSchedule} className={styles.mobileSheetForm}>
-              <div className={styles.times}>
-                <label>
-                  Giờ mở cửa
-                  <select
-                    required
-                    value={opens}
-                    onChange={(event) => {
-                      setMode("same");
-                      setOpens(event.target.value);
-                    }}
-                  >
-                    {timeChoices.map((time) => (
-                      <option key={time}>{time}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Giờ đóng cửa
-                  <select
-                    required
-                    value={closes}
-                    onChange={(event) => {
-                      setMode("same");
-                      setCloses(event.target.value);
-                    }}
-                  >
-                    {timeChoices.map((time) => (
-                      <option key={time}>{time}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <strong className={styles.dayTitle}>Áp dụng cho các ngày</strong>
-              <div className={styles.dayChips}>
-                {days.map((day, index) => (
-                  <label key={day.label} data-active={day.enabled}>
-                    <input
-                      type="checkbox"
-                      checked={day.enabled}
-                      onChange={(event) => {
-                        setMode("same");
-                        setDays((current) =>
-                          current.map((entry, i) =>
-                            i === index
-                              ? {
-                                  ...entry,
-                                  enabled: event.target.checked,
+                    <div className={styles.radios}>
+                      <label>
+                        <input
+                          type="radio"
+                          name="mobile-schedule-mode"
+                          checked={mode === "same"}
+                          onChange={() => {
+                            setDays(schedule);
+                            setMode("same");
+                          }}
+                        />
+                        Giống nhau mỗi ngày
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="mobile-schedule-mode"
+                          checked={mode === "daily"}
+                          onChange={() => {
+                            setDays(schedule);
+                            setMode("daily");
+                          }}
+                        />
+                        Thiết lập theo từng ngày
+                      </label>
+                    </div>
+                    {mode === "same" ? (
+                      <>
+                        <div className={styles.times}>
+                          <label>
+                            Giờ mở cửa
+                            <select
+                              required
+                              value={opens}
+                              onChange={(event) => setOpens(event.target.value)}
+                            >
+                              {timeChoices.map((time) => (
+                                <option key={time}>{time}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Giờ đóng cửa
+                            <select
+                              required
+                              value={closes}
+                              onChange={(event) => setCloses(event.target.value)}
+                            >
+                              {timeChoices.map((time) => (
+                                <option key={time}>{time}</option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                        <strong className={styles.dayTitle}>
+                          Áp dụng cho các ngày
+                        </strong>
+                        <div className={styles.dayChips}>
+                          {days.map((day, index) => (
+                            <label key={day.label} data-active={day.enabled}>
+                              <input
+                                type="checkbox"
+                                checked={day.enabled}
+                                onChange={(event) =>
+                                  setDays((current) =>
+                                    current.map((entry, i) =>
+                                      i === index
+                                        ? {
+                                            ...entry,
+                                            enabled: event.target.checked,
+                                          }
+                                        : entry,
+                                    ),
+                                  )
                                 }
-                              : entry,
-                          ),
-                        );
-                      }}
-                    />
-                    {day.label}
-                  </label>
-                ))}
-              </div>
+                              />
+                              {day.label}
+                            </label>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className={styles.daily}>
+                        {days.map((day, index) => (
+                          <div key={day.label}>
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={day.enabled}
+                                onChange={(event) =>
+                                  setDays((current) =>
+                                    current.map((entry, i) =>
+                                      i === index
+                                        ? {
+                                            ...entry,
+                                            enabled: event.target.checked,
+                                          }
+                                        : entry,
+                                    ),
+                                  )
+                                }
+                              />
+                              {day.label}
+                            </label>
+                            <input
+                              type="time"
+                              disabled={!day.enabled}
+                              aria-label={`Giờ mở ${day.label}`}
+                              value={day.opens}
+                              onChange={(event) =>
+                                setDays((current) =>
+                                  current.map((entry, i) =>
+                                    i === index
+                                      ? { ...entry, opens: event.target.value }
+                                      : entry,
+                                  ),
+                                )
+                              }
+                            />
+                            <span>–</span>
+                            <input
+                              type="time"
+                              disabled={!day.enabled}
+                              aria-label={`Giờ đóng ${day.label}`}
+                              value={day.closes}
+                              onChange={(event) =>
+                                setDays((current) =>
+                                  current.map((entry, i) =>
+                                    i === index
+                                      ? { ...entry, closes: event.target.value }
+                                      : entry,
+                                  ),
+                                )
+                              }
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
               <div className={styles.mobileSheetActions}>
                 <button
                   type="button"

@@ -324,12 +324,13 @@ async function writeRestaurantBank(userId: string, restaurantId: string, operati
 }
 
 export const SellerServices = {
-  // Endpoint chuyên biệt closed -> open; không mở rộng PATCH thông tin quán.
+  // Explicit open/closed target; never infer a toggle in the database.
   async openRestaurant(userId: string, restaurantId: unknown, input: unknown, supplied?: SupabaseClient): Promise<SellerRestaurantOpenResult> {
     const id = uuidValue(restaurantId);
     if (!isRecord(input)) invalid("payload", "Phải là object JSON.");
     assertFields(input, ["operating_status"], "payload");
-    if (!Object.hasOwn(input, "operating_status") || input.operating_status !== "open") invalid("operating_status", "Chỉ chấp nhận open.");
+    if (!Object.hasOwn(input, "operating_status") || !["open", "closed"].includes(String(input.operating_status))) invalid("operating_status", "Chỉ chấp nhận open hoặc closed.");
+    const target = input.operating_status as "open" | "closed";
     try {
       const { client, profile } = await sellerSession(userId, supplied);
       if (profile.role !== "seller") throw new SellerRestaurantOpenError("SELLER_REQUIRED");
@@ -338,11 +339,11 @@ export const SellerServices = {
       checkSdkError(readError);
       if (!restaurant) throw new SellerRestaurantOpenError("RESTAURANT_NOT_FOUND");
       // Lặp sau khi đã mở là no-op, không gọi RPC để đổi timestamp lần nữa.
-      if (restaurant.operating_status === "open") return { restaurant: { id, operating_status: "open" }, alreadyOpen: true };
-      if (restaurant.operating_status !== "closed") throw new SellerRestaurantOpenError("OPERATING_STATUS_CONFLICT");
+      if (restaurant.operating_status === target) return { restaurant: { id, operating_status: target }, alreadyOpen: target === "open" };
+      if (!["open", "closed"].includes(restaurant.operating_status)) throw new SellerRestaurantOpenError("OPERATING_STATUS_CONFLICT");
       let result;
       try {
-        result = await client.rpc("set_restaurant_operating_status", { p_restaurant_id: id, p_operating_status: "open" });
+        result = await client.rpc("set_restaurant_operating_status", { p_restaurant_id: id, p_operating_status: target });
       } catch { throw new SellerRestaurantOpenError("RESTAURANT_OPEN_RESULT_UNKNOWN"); }
       if (result.error) {
         if (result.error.code === "42501" || result.error.message === "NOT_ALLOWED") throw new SellerRestaurantOpenError("DATABASE_ACCESS_DENIED");
@@ -351,12 +352,12 @@ export const SellerServices = {
         if (!result.error.code) throw new SellerRestaurantOpenError("RESTAURANT_OPEN_RESULT_UNKNOWN");
         throw new SellerRestaurantOpenError("RESTAURANT_OPEN_FAILED");
       }
-      if (!isRecord(result.data) || result.data.success !== true || result.data.operating_status !== "open")
+      if (!isRecord(result.data) || result.data.success !== true || result.data.operating_status !== target)
         throw new SellerRestaurantOpenError("RESTAURANT_OPEN_RESULT_UNKNOWN");
       // Một RPC bằng session, không SDK UPDATE/ghi bù/retry sau kết quả chưa rõ.
       // RPC đã cung cấp kiểm tra owner tại UPDATE; active/seller vẫn là precheck
       // application, không khẳng định đã sửa quyền Data API hoặc race đổi role.
-      return { restaurant: { id, operating_status: "open" }, alreadyOpen: false };
+      return { restaurant: { id, operating_status: target }, alreadyOpen: false };
     } catch (error) {
       if (error instanceof SellerRestaurantOpenError) throw error;
       if (error instanceof SellerAccessError && error.code !== "SUPABASE_OPERATION_FAILED") throw new SellerRestaurantOpenError(error.code);
