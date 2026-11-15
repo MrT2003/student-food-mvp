@@ -28,7 +28,7 @@ import {
 import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
 import { useSellerAccess } from "./SellerAccessProvider";
-import { useSellerPreview } from "@/store/useSellerPreviewStore";
+
 import {
   filterSellerMenu,
   menuCategories,
@@ -36,8 +36,9 @@ import {
   type MenuTab,
   type SellerMenuRow,
 } from "@/lib/seller/menu";
+import { isDrinkCategory, normalizeMasterCategory } from "@/lib/categories";
 import { useSellerMenuStore } from "@/store/useSellerMenuStore";
-import { formatMoney, normalizeSearchText } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import type { MenuItem } from "@/types/restaurant.types";
 import styles from "@/styles/seller-menu-list.module.css";
 
@@ -64,26 +65,7 @@ export const sellerMobileMenuSortOptions = [
   { value: "price", label: "Giá tăng dần" },
 ] as const;
 
-export const SELLER_MOBILE_MENU_IMAGE_MAP: Readonly<Record<string, string>> = {
-  "com ga chien": "/seller-menu-com-ga-chien.png",
-  "com suon nuong": "/seller-menu-com-suon-nuong.png",
-  "tra dao cam sa": "/seller-menu-tra-dao-cam-sa.png",
-  "banh trang tron": "/seller-menu-banh-trang-tron.png",
-  "tra sua truyen thong": "/seller-order-tra-sua.png",
-};
-
-const MOBILE_SHOWCASE_ORDER: Readonly<Record<string, number>> = {
-  "com ga chien": 0,
-  "com suon nuong": 1,
-  "tra dao cam sa": 2,
-  "banh trang tron": 3,
-};
-
-export function getSellerMobileMenuItemImage(item: MenuItem): string | null {
-  if (item.image_url) return item.image_url;
-  const normalizedName = normalizeSearchText(item.name);
-  return SELLER_MOBILE_MENU_IMAGE_MAP[normalizedName] ?? null;
-}
+export function getSellerMobileMenuItemImage(item: MenuItem): string | null { return item.image_url ?? null; }
 
 export function formatSellerMobileMenuSubtitle(
   category: string | null | undefined,
@@ -131,47 +113,38 @@ export function filterAndSortSellerMobileMenu(
     return filtered;
   }
 
-  const seedCutoff = Date.parse("2026-09-10T12:00:00Z");
-  return [...filtered].sort((a, b) => {
-    const timeA = Date.parse(a.item.updated_at);
-    const timeB = Date.parse(b.item.updated_at);
-    const isSeedA = timeA <= seedCutoff;
-    const isSeedB = timeB <= seedCutoff;
-
-    if (!isSeedA || !isSeedB) {
-      return timeB - timeA;
-    }
-
-    const rankA =
-      MOBILE_SHOWCASE_ORDER[normalizeSearchText(a.item.name)] ?? 100;
-    const rankB =
-      MOBILE_SHOWCASE_ORDER[normalizeSearchText(b.item.name)] ?? 100;
-    if (rankA !== rankB) {
-      return rankA - rankB;
-    }
-    return timeB - timeA;
-  });
+  return filtered;
 }
 
 export function applySellerMobileMenuStatusChange(
   status: Exclude<MenuTab, "all">,
-): Pick<MenuItem, "is_active" | "is_available"> {
+): Partial<Pick<MenuItem, "is_active" | "is_available">> {
   if (status === "selling") {
-    return { is_active: true, is_available: true };
+    return { is_available: true };
   }
   if (status === "unavailable") {
-    return { is_active: true, is_available: false };
+    return { is_available: false };
   }
-  return { is_active: false, is_available: true };
+  return { is_active: false };
 }
 
 export default function SellerMenuView() {
   const { data } = useSellerAccess();
-  const draft = useSellerPreview();
-  const restaurantId = data?.restaurant?.id;
-  const shopName = data?.restaurant?.name || draft?.name || "";
+  if (!data?.restaurant || data.user.role !== "seller") return <p role="alert">Chỉ chủ quán được quản lý thực đơn.</p>;
+  return <SellerMenuContent key={`${data.user.id}:${data.restaurant.id}`} />;
+}
+function SellerMenuContent() {
+  const { data } = useSellerAccess();
 
-  const rows = useSellerMenuStore((state) => state.rows);
+  const restaurantId = data?.restaurant?.id;
+  const shopName = data?.restaurant?.name ?? "";
+
+  const cachedRows = useSellerMenuStore((state) => state.rows);
+  const loadedId = useSellerMenuStore(state => state.restaurantId);
+  const rows = loadedId === restaurantId ? cachedRows : [];
+  const menuLoading = useSellerMenuStore(state => state.loading);
+  const menuError = useSellerMenuStore(state => state.error);
+  const busy = useSellerMenuStore(state => state.busy);
   const loadRestaurantMenu = useSellerMenuStore(
     (state) => state.loadRestaurantMenu,
   );
@@ -200,14 +173,7 @@ export default function SellerMenuView() {
   useEffect(() => {
     if (deleting) deleteDialog.current?.showModal();
   }, [deleting]);
-  const categories = [
-    ...new Set([
-      ...menuCategories,
-      ...rows
-        .map(({ item }) => item.category)
-        .filter((name): name is string => Boolean(name)),
-    ]),
-  ];
+  const categories = menuCategories;
   const visible = filterSellerMenu(rows, query, category, tab, sort);
   const filterKey = JSON.stringify([query, category, tab, sort]);
   const pageCount = Math.max(1, Math.ceil(visible.length / 5));
@@ -246,11 +212,10 @@ export default function SellerMenuView() {
       tone: "gray",
     },
   ];
-  function update(id: string, fields: Partial<SellerMenuRow["item"]>) {
-    void updateMenuItemFields(id, fields);
-    setNotice("Đã cập nhật trạng thái món.");
+  async function update(id: string, fields: Partial<SellerMenuRow["item"]>) {
+    try { await updateMenuItemFields(id, fields); setNotice("Đã cập nhật trạng thái món."); } catch (e) { setNotice(e instanceof Error ? e.message : "Không lưu được trạng thái."); }
   }
-  function duplicate(row: SellerMenuRow) {
+  async function duplicate(row: SellerMenuRow) {
     const id = crypto.randomUUID(),
       now = new Date().toISOString();
     const optionGroups = row.optionGroups?.map((group) => {
@@ -283,8 +248,7 @@ export default function SellerMenuView() {
         updated_at: now,
       },
     };
-    void saveMenuItem(newRow, false);
-    setNotice("Đã nhân bản món.");
+    try { await saveMenuItem(newRow, false); setNotice("Đã nhân bản món."); } catch(e) {setNotice(e instanceof Error ? e.message : "Không nhân bản được món.");}
   }
 
   const mobileTabCounts = getSellerMobileMenuTabCounts(rows, query, category);
@@ -305,6 +269,9 @@ export default function SellerMenuView() {
           menuLabel="Thực đơn"
         />
         <main className={styles.main}>
+          {menuLoading && <p role="status">Đang tải thực đơn…</p>}
+          {menuError && <p role="alert">{menuError}<button onClick={() => restaurantId && void loadRestaurantMenu(restaurantId)}>Thử lại</button></p>}
+          <fieldset disabled={busy || menuLoading || !!menuError} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {/* Phiên bản Desktop giữ nguyên 100% */}
           <div className={styles.desktopView}>
             <header className={styles.heading}>
@@ -385,13 +352,18 @@ export default function SellerMenuView() {
                 <div className={styles.list}>
                   {pageRows.map((row) => {
                     const item = row.item,
-                      CategoryIcon =
-                        item.category === "Đồ uống" ? CupSoda : CookingPot;
+                      displayCategory = normalizeMasterCategory(
+                        item.category,
+                        item.name,
+                      ),
+                      CategoryIcon = isDrinkCategory(displayCategory)
+                        ? CupSoda
+                        : CookingPot;
                     return (
                       <article key={item.id} className={styles.row}>
                         <div
                           className={styles.food}
-                          data-category={item.category}
+                          data-category={displayCategory}
                         >
                           {item.image_url ? (
                             <Image
@@ -417,7 +389,7 @@ export default function SellerMenuView() {
                         </div>
                         <span className={styles.categoryTag}>
                           <CategoryIcon size={17} />
-                          {item.category}
+                          {displayCategory}
                         </span>
                         <div className={styles.price}>
                           <strong>{formatMoney(item.price)}</strong>
@@ -474,13 +446,13 @@ export default function SellerMenuView() {
                             onClick={() => setDeleting(row)}
                           >
                             <Trash2 size={16} />
-                            Xóa
+                            Ẩn món
                           </button>
                         </div>
                       </article>
                     );
                   })}
-                  {!visible.length && (
+                  {!menuLoading && !menuError && !visible.length && (
                     <div className={styles.empty}>
                       <CookingPot size={36} />
                       <h3>Không tìm thấy món ăn</h3>
@@ -567,13 +539,16 @@ export default function SellerMenuView() {
                       }
                     >
                       <span>
-                        {name === "Đồ uống" ? <CupSoda /> : <CookingPot />}
+                        {isDrinkCategory(name) ? <CupSoda /> : <CookingPot />}
                       </span>
                       <strong>{name}</strong>
                       <small>
                         {
-                          rows.filter(({ item }) => item.category === name)
-                            .length
+                          rows.filter(
+                            ({ item }) =>
+                              normalizeMasterCategory(item.category, item.name) ===
+                              name,
+                          ).length
                         }{" "}
                         món
                       </small>
@@ -738,7 +713,14 @@ export default function SellerMenuView() {
                       }
                     >
                       {name} (
-                      {rows.filter(({ item }) => item.category === name).length})
+                      {
+                        rows.filter(
+                          ({ item }) =>
+                            normalizeMasterCategory(item.category, item.name) ===
+                            name,
+                        ).length
+                      }
+                      )
                     </button>
                   ))}
                 </div>
@@ -808,19 +790,23 @@ export default function SellerMenuView() {
                 const { item } = row;
                 const status = menuStatus(item);
                 const imageSrc = getSellerMobileMenuItemImage(item);
-                const CategoryIcon =
-                  item.category === "Đồ uống" ? CupSoda : CookingPot;
+                const displayCategory = normalizeMasterCategory(
+                  item.category,
+                  item.name,
+                );
+                const CategoryIcon = isDrinkCategory(displayCategory)
+                  ? CupSoda
+                  : CookingPot;
                 const isMenuOpen = openMenuId === item.id;
                 const useSlashedEye =
-                  !item.is_active ||
-                  normalizeSearchText(item.name) === "tra dao cam sa";
+                  !item.is_active;
 
                 return (
                   <article key={item.id} className={styles.mobileCard}>
                     <div className={styles.mobileCardTop}>
                       <div
                         className={styles.mobileFoodThumb}
-                        data-category={item.category}
+                        data-category={displayCategory}
                       >
                         {imageSrc ? (
                           <Image
@@ -891,7 +877,7 @@ export default function SellerMenuView() {
                                   }}
                                 >
                                   <Trash2 size={15} />
-                                  Xóa
+                                  Ẩn món
                                 </button>
                               </div>
                             )}
@@ -900,7 +886,7 @@ export default function SellerMenuView() {
 
                         <p className={styles.mobileCardSubtitle}>
                           {formatSellerMobileMenuSubtitle(
-                            item.category,
+                            displayCategory,
                             row.optionCount,
                           )}
                         </p>
@@ -977,7 +963,7 @@ export default function SellerMenuView() {
                 );
               })}
 
-              {!mobileVisible.length && (
+              {!menuLoading && !menuError && !mobileVisible.length && (
                 <div className={styles.mobileEmpty}>
                   <CookingPot size={34} />
                   <h3>Không tìm thấy món ăn</h3>
@@ -1002,6 +988,7 @@ export default function SellerMenuView() {
               )}
             </div>
           </div>
+          </fieldset>
         </main>
       </div>
       {deleting && (
@@ -1011,19 +998,16 @@ export default function SellerMenuView() {
           onClose={() => setDeleting(null)}
           aria-labelledby="delete-menu-title"
         >
-          <h2 id="delete-menu-title">Xóa món ăn?</h2>
-          <p>Bạn có muốn xóa “{deleting.item.name}” khỏi menu cửa hàng?</p>
+          <h2 id="delete-menu-title">Ẩn món ăn?</h2>
+          <p>Bạn có muốn xóa “{deleting.item.name}” khỏi menu khách hàng? Có thể hiện lại trong tab Đang ẩn.</p>
           <footer>
             <button onClick={() => setDeleting(null)}>Hủy</button>
             <button
               className={styles.primary}
-              onClick={() => {
-                void deleteMenuItem(deleting.item.id);
-                setDeleting(null);
-                setNotice("Đã xóa món ăn.");
-              }}
+              onClick={async () => { try { await deleteMenuItem(deleting.item.id); setDeleting(null); setNotice("Đã ẩn món; có thể hiện lại."); } catch(e) { setNotice(e instanceof Error ? e.message : "Không ẩn được món."); setDeleting(null); } }}
+              disabled={busy}
             >
-              Xóa món
+              Ẩn món
             </button>
           </footer>
         </dialog>

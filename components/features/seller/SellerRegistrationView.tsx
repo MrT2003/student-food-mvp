@@ -114,6 +114,7 @@ export default function SellerRegistrationView() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadRequestIdRef = useRef(0);
+  useEffect(() => () => { uploadRequestIdRef.current++; }, []);
   const errorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -239,6 +240,7 @@ export default function SellerRegistrationView() {
     // hoặc thông báo thành công nếu cơ chế DB/permission còn chặn đăng ký.
     submitting.current = true;
     setPending(true);
+    let uncertain = false;
     try {
       const result = await submitSellerRegistration({
         name,
@@ -251,12 +253,14 @@ export default function SellerRegistrationView() {
         openTime,
         closeTime,
         startClosed,
+        avatar_url: imagePreview || null,
         appLockPin,
       });
       setMessage(result.message);
       router.push("/seller");
       router.refresh();
     } catch (error) {
+      uncertain = error instanceof Error && /Chưa xác định|chưa tải được|Kiểm tra lại hồ sơ|Kiểm tra lại hồ sơ và/i.test(error.message);
       setErrors([
         error instanceof Error
           ? error.message
@@ -264,7 +268,7 @@ export default function SellerRegistrationView() {
       ]);
     } finally {
       setAppLockPin("");
-      submitting.current = false;
+      submitting.current = uncertain;
       setPending(false);
     }
   }
@@ -913,7 +917,7 @@ export default function SellerRegistrationView() {
 
           <p className={styles.footerNote}>
             Quán mới ở trạng thái đóng. Phương thức thanh toán sẽ được thiết lập
-            sau. Ảnh đã tải lên chưa được gắn vào quán trong bước này. Sau khi
+            sau. Ảnh đã upload sẽ được lưu cùng thông tin quán khi đăng ký thành công. Sau khi
             tạo cửa hàng, bạn sẽ được chuyển đến Seller Dashboard để quản lý cửa
             hàng.
           </p>

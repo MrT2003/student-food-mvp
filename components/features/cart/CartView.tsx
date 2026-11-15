@@ -370,7 +370,7 @@ export default function CartView() {
         )}
       </div>
 
-      <form className={styles.sidebar} onSubmit={handleCheckout}>
+      <form className={styles.sidebar} onSubmit={handleCheckout} noValidate>
         <section className={`${styles.sideCard} ${styles.desktopAddressCard}`}>
           <div className={styles.cardHeading}>
             <span className={styles.orangeIcon}>

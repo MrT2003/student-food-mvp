@@ -4,6 +4,15 @@ import type { SellerAccess } from "@/types/seller-access.types";
 export class SellerAccessError extends Error {
     constructor(public readonly code: string, public readonly status: number) { super(code); }
 }
+// An optional proposed column must not break existing avatar/access on older DBs.
+async function readContact(client: SupabaseClient, id: string) {
+    const { data, error } = await client.from("restaurants").select("contact_phone").eq("id", id).maybeSingle();
+    if (error) {
+        if (["42703", "PGRST204", "42501"].includes(error.code)) return { contact_phone: null, contact_phone_available: false };
+        throw new SellerAccessError("ACCESS_READ_FAILED", 503);
+    }
+    return { contact_phone: data?.contact_phone ?? null, contact_phone_available: data !== null && data?.contact_phone !== undefined };
+}
 export const SellerAccessServices = {
     async read(client: SupabaseClient): Promise<SellerAccess> {
         const { data, error } = await client.auth.getUser();
@@ -32,6 +41,7 @@ export const SellerAccessServices = {
             return {
                 user: { id, role: "staff", status: "active", work_for_restaurant_id: staffRestaurantId },
                 restaurant: {
+                    ...await readContact(client, staffRow.id),
                     id: staffRow.id,
                     name: staffRow.name,
                     slug: staffRow.slug,
@@ -60,6 +70,6 @@ export const SellerAccessServices = {
         if (profile.data.role === "student" && owned.data.length)
             throw new SellerAccessError("PROFILE_RESTAURANT_MISMATCH", 409);
         const row = owned.data[0];
-        return { user: { id, role: profile.data.role, status: "active", work_for_restaurant_id: null }, restaurant: row ? { id: row.id, name: row.name, slug: row.slug, avatar_url: row.avatar_url, description: row.description, location: row.location, status: row.status, operating_status: row.operating_status, operating_hours: row.operating_hours } : null };
+        return { user: { id, role: profile.data.role, status: "active", work_for_restaurant_id: null }, restaurant: row ? { ...await readContact(client, row.id), id: row.id, name: row.name, slug: row.slug, avatar_url: row.avatar_url, description: row.description, location: row.location, status: row.status, operating_status: row.operating_status, operating_hours: row.operating_hours } : null };
     }
 };

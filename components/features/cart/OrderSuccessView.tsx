@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import TransferContent from "@/components/ui/TransferContent";
 import {
@@ -15,11 +16,20 @@ import {
   Truck,
   Utensils,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { useCheckout } from "@/lib/orders/useCheckout";
 import { orderStatusLabels } from "@/lib/orders/order-detail";
 import styles from "@/styles/order-success.module.css";
 import { formatMoney as money } from "@/lib/format";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
+
+type RestaurantBankRow = {
+  restaurant_id: string;
+  bank_name: string;
+  account_no: string;
+  account_name: string;
+  is_default: boolean;
+};
 
 function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
   return <FoodThumbnail kind={kind} className={styles.placeholder} />;
@@ -27,6 +37,43 @@ function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
 
 export default function OrderSuccessView() {
   const checkout = useCheckout();
+  const [restaurantBanks, setRestaurantBanks] = useState<
+    Record<string, RestaurantBankRow>
+  >({});
+
+  useEffect(() => {
+    const orders = checkout?.orders ?? [];
+    const restaurantIds = [
+      ...new Set(
+        orders
+          .filter((o) => o.paymentMethod === "bank_transfer")
+          .map((o) => o.restaurantId),
+      ),
+    ];
+    if (restaurantIds.length === 0) return;
+
+    let cancelled = false;
+    const supabase = createClient();
+    void supabase
+      .from("restaurant_banks")
+      .select("restaurant_id, bank_name, account_no, account_name, is_default")
+      .in("restaurant_id", restaurantIds)
+      .then(({ data }) => {
+        if (cancelled || !Array.isArray(data)) return;
+        const map: Record<string, RestaurantBankRow> = {};
+        for (const row of data as RestaurantBankRow[]) {
+          const existing = map[row.restaurant_id];
+          if (!existing || row.is_default) {
+            map[row.restaurant_id] = row;
+          }
+        }
+        setRestaurantBanks(map);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [checkout]);
 
   if (!checkout || checkout.orders.length === 0) {
     return (
@@ -79,6 +126,10 @@ export default function OrderSuccessView() {
               order.paymentMethod === "bank_transfer" ? CreditCard : Banknote;
 
             const paymentLabel = order.payment;
+            const bankInfo =
+              order.paymentMethod === "bank_transfer"
+                ? restaurantBanks[order.restaurantId]
+                : undefined;
 
             return (
               <article className={styles.orderCard} key={order.id}>
@@ -115,6 +166,24 @@ export default function OrderSuccessView() {
                     <strong>{money(order.total)}</strong>
                   </div>
                 </div>
+
+                {bankInfo && (
+                  <div
+                    style={{
+                      margin: "10px 0 4px",
+                      padding: "10px 14px",
+                      borderRadius: 9,
+                      background: "#f2f8ff",
+                      border: "1px solid #d3e5ff",
+                      fontSize: 14,
+                      color: "#11264f",
+                    }}
+                  >
+                    <strong>Thông tin chuyển khoản:</strong> {bankInfo.bank_name} · STK:{" "}
+                    <strong>{bankInfo.account_no}</strong> · Chủ TK:{" "}
+                    <strong>{bankInfo.account_name}</strong>
+                  </div>
+                )}
 
                 {order.transferContent && <TransferContent value={order.transferContent} />}
                 <details className={styles.details}>

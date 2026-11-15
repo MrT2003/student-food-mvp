@@ -141,26 +141,26 @@ const menuSeeds: MenuSeed[] = [
   [3, 1, "com-tam-bi-cha", "Cơm tấm bì chả", 28000, "Cơm"],
   [4, 1, "com-chien-trung", "Cơm chiên trứng", 25000, "Cơm"],
   [5, 1, "com-thit-kho-tau", "Cơm thịt kho tàu", 30000, "Cơm"],
-  [6, 1, "canh-rong-bien", "Canh rong biển", 15000, "Món thêm"],
-  [7, 1, "tra-dao-cam-sa", "Trà đào cam sả", 18000, "Nước uống"],
-  [8, 1, "tra-sua-truyen-thong", "Trà sữa truyền thống", 18000, "Nước uống"],
-  [9, 1, "tra-tac", "Trà tắc", 12000, "Nước uống"],
+  [6, 1, "canh-rong-bien", "Canh rong biển", 15000, "Khác"],
+  [7, 1, "tra-dao-cam-sa", "Trà đào cam sả", 18000, "Trà sữa & Nước"],
+  [8, 1, "tra-sua-truyen-thong", "Trà sữa truyền thống", 18000, "Trà sữa & Nước"],
+  [9, 1, "tra-tac", "Trà tắc", 12000, "Trà sữa & Nước"],
   [10, 1, "khoai-tay-chien", "Khoai tây chiên", 15000, "Ăn vặt"],
   [11, 1, "com-ga-teriyaki", "Cơm gà sốt teriyaki", 25000, "Cơm"],
 
-  [12, 2, "tra-sua-truyen-thong", "Trà sữa truyền thống", 20000, "Nước uống"],
-  [13, 2, "tra-sua-tran-chau", "Trà sữa trân châu", 18000, "Nước uống"],
-  [14, 2, "tra-dao-cam-sa", "Trà đào cam sả", 20000, "Nước uống"],
+  [12, 2, "tra-sua-truyen-thong", "Trà sữa truyền thống", 20000, "Trà sữa & Nước"],
+  [13, 2, "tra-sua-tran-chau", "Trà sữa trân châu", 18000, "Trà sữa & Nước"],
+  [14, 2, "tra-dao-cam-sa", "Trà đào cam sả", 20000, "Trà sữa & Nước"],
 
-  [15, 3, "bun-cha-dac-biet", "Bún chả đặc biệt", 28000, "Món chính"],
-  [16, 4, "mi-cay-hai-san", "Mì cay hải sản", 30000, "Món chính"],
+  [15, 3, "bun-cha-dac-biet", "Bún chả đặc biệt", 28000, "Bún/Phở/Mì"],
+  [16, 4, "mi-cay-hai-san", "Mì cay hải sản", 30000, "Bún/Phở/Mì"],
 
   [17, 5, "xien-que-thap-cam", "Xiên que thập cẩm", 10000, "Ăn vặt"],
   [18, 5, "khoai-tay-chien", "Khoai tây chiên", 15000, "Ăn vặt"],
   [19, 5, "banh-trang-tron", "Bánh tráng trộn", 15000, "Ăn vặt"],
 
   [20, 6, "com-tam-suon-nuong", "Cơm tấm sườn nướng", 28000, "Cơm"],
-  [21, 8, "banh-mi-bo-nuong", "Bánh mì bò nướng", 22000, "Ăn vặt"],
+  [21, 8, "banh-mi-bo-nuong", "Bánh mì bò nướng", 22000, "Bánh mì / Ăn nhẹ"],
   [22, 9, "ga-ran-campus", "Gà rán Campus", 26000, "Ăn vặt"],
 ];
 

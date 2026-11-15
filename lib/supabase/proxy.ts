@@ -52,13 +52,14 @@ export async function updateSession(request: NextRequest) {
 
   const user = data?.claims
 
-  // Bỏ qua kiểm tra Auth cho các route công khai (Public / Auth / API)
+  // Bỏ qua kiểm tra Auth cho các route công khai (Public / Auth / API / Delivery)
   const pathname = request.nextUrl.pathname
   const isPublicRoute = 
     // pathname === '/' || 
     pathname.startsWith('/login') || 
     pathname.startsWith('/auth') || 
-    pathname.startsWith('/api')
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/delivery')
 
   // In case user not yet login then immediately redirect them to the login page
  if(!user && !isPublicRoute) {

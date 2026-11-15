@@ -25,10 +25,17 @@ import StudentHeader from "@/components/layout/StudentHeader";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
 import SellerSidebar from "./SellerSidebar";
 import { useSellerAccess } from "./SellerAccessProvider";
-import { useSellerPreview } from "@/store/useSellerPreviewStore";
+
+import { MenuError } from "@/lib/seller/menu-contract";
 import { useSellerMenuStore } from "@/store/useSellerMenuStore";
-import { demoSellerRestaurant } from "@/lib/mocks/seller-orders.mock";
+
 import { menuCategories, type SellerMenuRow } from "@/lib/seller/menu";
+import {
+  CATEGORY_EMOJI,
+  isDrinkCategory,
+  normalizeMasterCategory,
+  type MasterCategory,
+} from "@/lib/categories";
 import { formatMoney, normalizeSearchText } from "@/lib/format";
 import { CloudinaryService } from "@/services/cloudinary.service";
 import type { MenuOptionGroupDetail } from "@/types/restaurant.types";
@@ -542,8 +549,8 @@ function OptionEditor({
     const data = new FormData(event.currentTarget);
     const name = String(data.get("name") ?? "").trim();
     const price = Number(data.get("price") ?? 0);
-    if (!name || !Number.isSafeInteger(price) || price < 0 || price > 10000000) {
-      setError("Nhập tên hợp lệ và giá nguyên từ 0 đến 10.000.000đ.");
+    if (!name || !(Number.isFinite(price) && Number(price.toFixed(2)) === price) || price < 0 || price > 10000000) {
+      setError("Nhập tên hợp lệ và giá tối đa hai chữ số thập phân từ 0 đến 10.000.000đ.");
       return;
     }
     const message = onSave({
@@ -613,7 +620,7 @@ function OptionEditor({
               type="number"
               min={0}
               max={10000000}
-              step={1}
+              step={0.01}
               required
               defaultValue={option?.additional_price ?? 0}
             />
@@ -640,20 +647,23 @@ function OptionEditor({
 export default function SellerMenuCreateView({ itemId }: { itemId?: string }) {
   const { data } = useSellerAccess();
   const restaurantId = data?.restaurant?.id;
-  const shopName = data?.restaurant?.name || demoSellerRestaurant.name;
+  const shopName = data?.restaurant?.name || "Cửa hàng của tôi";
   const loading = useSellerMenuStore((state) => state.loading);
   const loadRestaurantMenu = useSellerMenuStore((state) => state.loadRestaurantMenu);
-  const row = useSellerMenuStore((state) =>
-    state.rows.find((entry) => entry.item.id === itemId),
-  );
+  const menuError = useSellerMenuStore(state => state.error);
+  const loadedId = useSellerMenuStore(state => state.restaurantId);
+  const row = useSellerMenuStore((state) => state.rows.find((entry) => entry.item.id === itemId));
   const router = useRouter();
 
   useEffect(() => {
-    if (restaurantId && itemId && !row) {
+    if (restaurantId && data?.user.role === "seller") {
       void loadRestaurantMenu(restaurantId);
     }
-  }, [restaurantId, itemId, row, loadRestaurantMenu]);
+  }, [restaurantId, data?.user.id, data?.user.role, loadRestaurantMenu]);
 
+  if (!restaurantId || data?.user.role !== "seller") return <p role="alert">Chỉ chủ quán được quản lý thực đơn.</p>;
+  if (loadedId !== restaurantId || loading) return <p role="status">Đang tải thực đơn…</p>;
+  if (menuError) return <p role="alert">{menuError}<button onClick={() => void loadRestaurantMenu(restaurantId)}>Thử lại</button></p>;
   if (itemId && !row) {
     if (loading) {
       return (
@@ -687,39 +697,23 @@ export default function SellerMenuCreateView({ itemId }: { itemId?: string }) {
       </div>
     );
   }
-  return (
-    <SellerMenuForm
-      key={itemId ?? "new"}
-      original={itemId ? row : undefined}
-    />
-  );
+  return <SellerMenuForm key={`${data.user.id}:${restaurantId}:${itemId ?? "new"}`} original={itemId ? row : undefined} />;
 }
 
-function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
+function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuRow }) {
+  const [original] = useState(suppliedOriginal);
   const router = useRouter();
   const { data } = useSellerAccess();
-  const seller = useSellerPreview();
-  const rows = useSellerMenuStore((state) => state.rows);
-  const saveMenuItem = useSellerMenuStore((state) => state.saveMenuItem);
-  const restaurantId =
-    data?.restaurant?.id ??
-    original?.item.restaurant_id ??
-    demoSellerRestaurant.id;
-  const shopName =
-    data?.restaurant?.name || seller?.name || demoSellerRestaurant.name;
-  const categories = [
-    ...new Set([
-      ...menuCategories,
-      ...rows
-        .map(({ item }) => item.category)
-        .filter((value): value is string => Boolean(value)),
-    ]),
-  ];
 
-  // Desktop state (100% preserved)
+  const saveMenuItem = useSellerMenuStore((state) => state.saveMenuItem);
+  const restaurantId = data!.restaurant!.id;
+  const shopName = data!.restaurant!.name;
+  const categories = menuCategories;
   const [name, setName] = useState(original?.item.name ?? "");
-  const [category, setCategory] = useState(
-    original?.item.category ?? "Đồ uống",
+  const [category, setCategory] = useState<string>(() =>
+    original?.item.category
+      ? normalizeMasterCategory(original.item.category, original.item.name)
+      : "Cơm",
   );
   const [price, setPrice] = useState(original ? String(original.item.price) : "");
   const [description, setDescription] = useState(
@@ -729,20 +723,10 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
     original?.item.image_url ?? null,
   );
   const [readingImage, setReadingImage] = useState(false);
-  const [groups, setGroups] = useState<DraftGroup[]>(
-    () =>
-      original?.optionGroups?.map((group) => ({
-        id: group.id,
-        name: group.name,
-        is_multiple: group.is_multiple,
-        is_required: group.is_required,
-        options: group.options.map((option) => ({
-          id: option.id,
-          option_name: option.option_name,
-          additional_price: option.additional_price,
-        })),
-      })) ?? [],
-  );
+  const [groups, setGroups] = useState<DraftGroup[]>(() => original?.optionGroups?.filter(group => group.is_active).map((group) => ({
+    id: group.id, name: group.name, is_multiple: group.is_multiple, is_required: group.is_required,
+    options: group.options.filter(option => option.is_active).map((option) => ({ id: option.id, option_name: option.option_name, additional_price: option.additional_price })),
+  })) ?? []);
   const [groupsChanged, setGroupsChanged] = useState(false);
   const [active, setActive] = useState(original?.item.is_active ?? true);
   const [outOfStock, setOutOfStock] = useState(
@@ -754,8 +738,10 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
   const [mobileName, setMobileName] = useState(
     original?.item.name ?? DEFAULT_SELLER_MOBILE_CREATE_VALUES.name,
   );
-  const [mobileCategory, setMobileCategory] = useState(
-    original?.item.category ?? DEFAULT_SELLER_MOBILE_CREATE_VALUES.category,
+  const [mobileCategory, setMobileCategory] = useState<string>(() =>
+    original?.item.category
+      ? normalizeMasterCategory(original.item.category, original.item.name)
+      : normalizeMasterCategory(DEFAULT_SELLER_MOBILE_CREATE_VALUES.category),
   );
   const [mobilePrice, setMobilePrice] = useState(
     original
@@ -787,6 +773,7 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
 
   const [editor, setEditor] = useState<Editor | null>(null);
   const [error, setError] = useState("");
+  const [invalidField, setInvalidField] = useState("");
   const [saving, setSaving] = useState(false);
   const submitted = useRef(false);
   const uploadRequestId = useRef(0);
@@ -820,7 +807,7 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
     }),
   );
 
-  const basePrice = Number(price) || 0;
+  const basePrice = Number(price);
   const status = !active ? "Đang ẩn" : outOfStock ? "Tạm hết" : "Đang bán";
   const mobileBasePrice = Number(mobilePrice) || 0;
   const mobileSellingStatus = resolveSellerMobileSellingStatus(
@@ -872,6 +859,8 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
     price: number;
   }): string | void {
     if (!editor) return;
+    if (editor.type === "group" && !editor.group && groups.length >= 20) return "Tối đa 20 nhóm.";
+    if (editor.type === "option" && !editor.option && (groups.find(g => g.id === editor.groupId)?.options.length ?? 0) >= 50) return "Tối đa 50 lựa chọn/nhóm.";
     const isMobileTarget = editor.target === "mobile";
     const activeGroups = isMobileTarget ? mobileGroups : groups;
     const updateActiveGroups = isMobileTarget ? setMobileGroups : setGroups;
@@ -971,105 +960,49 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
-    if (
-      original &&
-      !useSellerMenuStore
-        .getState()
-        .rows.some((row) => row.item.id === original.item.id)
-    ) {
-      setError("Món này đã bị xóa. Hãy quay lại Menu.");
-      return;
+    setInvalidField("");
+    setError("");
+    if (original && !useSellerMenuStore.getState().rows.some((row) => row.item.id === original.item.id)) {
+      setError("Món này đã bị xóa. Hãy quay lại Menu."); return;
     }
-    if (
-      readingImage ||
-      (!image && (!original || Boolean(original.item.image_url))) ||
-      !name.trim() ||
-      !category ||
-      !price.trim() ||
-      !Number.isSafeInteger(basePrice) ||
-      basePrice < 0 ||
-      basePrice > 10000000
-    ) {
-      setError(
-        "Vui lòng chọn ảnh hợp lệ, nhập tên, danh mục và giá nguyên từ 0 đến 10.000.000đ.",
-      );
-      return;
+    const fail = (field: string, message: string) => { setInvalidField(field); setError(message); };
+    if (readingImage) { fail("image_url", "Vui lòng đợi ảnh tải xong."); return; }
+    if (!image && (!original || Boolean(original.item.image_url))) { fail("image_url", "Vui lòng chọn ảnh món ăn."); return; }
+    if (!name.trim()) { fail("name", "Vui lòng nhập tên món."); return; }
+    if (!category) { fail("category", "Vui lòng chọn danh mục."); return; }
+    if (!price.trim() || !Number.isFinite(basePrice) || Number(basePrice.toFixed(2)) !== basePrice || basePrice < 0 || basePrice > 10000000) {
+      fail("price", "Giá bán phải từ 0 đến 10.000.000đ, tối đa hai chữ số thập phân."); return;
     }
-    if (groups.some((group) => !group.options.length)) {
-      setError("Mỗi nhóm cần ít nhất một lựa chọn, hoặc hãy xóa nhóm trống.");
-      return;
-    }
-    submitted.current = true;
-    setSaving(true);
-    const id = original?.item.id ?? crypto.randomUUID(),
-      now = new Date().toISOString();
+    const emptyGroup = groups.findIndex(group => !group.options.length);
+    if (emptyGroup >= 0) { fail(`groups[${emptyGroup}].options`, `Nhóm ${emptyGroup + 1} cần ít nhất một lựa chọn, hoặc hãy xóa nhóm trống.`); return; }
+    submitted.current = true; setSaving(true);
+    const id = original?.item.id ?? crypto.randomUUID(), now = new Date().toISOString();
     const optionGroups: MenuOptionGroupDetail[] = groups.map((group) => {
-      const previous = original?.optionGroups?.find(
-        (entry) => entry.id === group.id,
-      );
-      return {
-        ...group,
-        menu_item_id: id,
-        is_active: previous?.is_active ?? true,
-        created_at: previous?.created_at ?? now,
-        updated_at: now,
+      const previous = original?.optionGroups?.find((entry) => entry.id === group.id);
+      return { ...group, menu_item_id: id,
+        is_active: true, created_at: previous?.created_at ?? now, updated_at: now,
         options: group.options.map((option) => {
-          const previousOption = previous?.options.find(
-            (entry) => entry.id === option.id,
-          );
-          return {
-            ...option,
-            group_id: group.id,
-            is_active: previousOption?.is_active ?? true,
-            created_at: previousOption?.created_at ?? now,
-            updated_at: now,
-          };
-        }),
-      };
+          const previousOption = previous?.options.find((entry) => entry.id === option.id);
+          return { ...option, group_id: group.id, is_active: true,
+            created_at: previousOption?.created_at ?? now, updated_at: now };
+        }) };
     });
-    const updated: SellerMenuRow = {
-      item: {
-        id,
-        restaurant_id: restaurantId,
-        name: name.trim(),
-        category,
-        price: basePrice,
-        description: description.trim() || null,
-        image_url: image,
-        slug:
-          original?.item.slug ??
-          `${
-            normalizeSearchText(name.trim())
-              .replace(/[^a-z0-9]+/g, "-")
-              .replace(/^-|-$/g, "") || "mon"
-          }-${id.slice(0, 8)}`,
-        is_active: active,
-        is_available: !outOfStock,
-        created_at: original?.item.created_at ?? now,
-        updated_at: now,
-      },
-      optionGroups:
-        original && !original.optionGroups && !groupsChanged
-          ? undefined
-          : optionGroups,
-      optionCount:
-        original && !original.optionGroups && !groupsChanged
-          ? original.optionCount
-          : groups.reduce((count, group) => count + group.options.length, 0),
-      featuredPreview: featured,
-    };
+    const updated: SellerMenuRow = { item: { id, restaurant_id: restaurantId, name: name.trim(), category,
+      price: basePrice, description: description.trim() || null, image_url: image,
+      slug: original?.item.slug ?? `${normalizeSearchText(name.trim()).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "mon"}-${id.slice(0, 8)}`,
+      is_active: active, is_available: !outOfStock, created_at: original?.item.created_at ?? now, updated_at: original?.item.updated_at ?? now },
+      optionGroups: original && !original.optionGroups && !groupsChanged ? undefined : optionGroups,
+      optionCount: original && !original.optionGroups && !groupsChanged ? original.optionCount : groups.reduce((count, group) => count + group.options.length, 0),
+      featuredPreview: featured };
 
     try {
       await saveMenuItem(updated, Boolean(original));
       router.push("/seller/menu");
     } catch (err) {
-      submitted.current = false;
+      if (!(err instanceof Error) || !err.message.includes("Chưa xác định kết quả")) submitted.current = false;
       setSaving(false);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Không thể lưu món ăn vào cơ sở dữ liệu.",
-      );
+      setInvalidField(err instanceof MenuError ? err.issue?.field ?? "" : "");
+      setError(err instanceof Error ? err.message : "Không thể lưu món ăn vào cơ sở dữ liệu.");
     }
   }
 
@@ -1091,33 +1024,45 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
       !mobileName.trim() ||
       !mobileCategory ||
       !mobilePrice.trim() ||
-      !Number.isSafeInteger(mobileBasePrice) ||
+      !Number.isFinite(mobileBasePrice) ||
+      Number(mobileBasePrice.toFixed(2)) !== mobileBasePrice ||
       mobileBasePrice < 0 ||
       mobileBasePrice > 10000000
     ) {
       setError(
-        "Vui lòng chọn ảnh hợp lệ, nhập tên, danh mục và giá nguyên từ 0 đến 10.000.000đ.",
+        "Vui lòng chọn ảnh hợp lệ, nhập tên, danh mục và giá từ 0 đến 10.000.000đ.",
       );
+      return;
+    }
+    const emptyMobileGroup = mobileGroups.findIndex((group) => !group.options.length);
+    if (emptyMobileGroup >= 0) {
+      setError(`Nhóm ${emptyMobileGroup + 1} cần ít nhất một lựa chọn, hoặc hãy xóa nhóm trống.`);
       return;
     }
     submitted.current = true;
     setSaving(true);
     const id = original?.item.id ?? crypto.randomUUID(),
       now = new Date().toISOString();
-    const optionGroups: MenuOptionGroupDetail[] = mobileGroups.map((group) => ({
-      ...group,
-      menu_item_id: id,
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-      options: group.options.map((option) => ({
-        ...option,
-        group_id: group.id,
+    const optionGroups: MenuOptionGroupDetail[] = mobileGroups.map((group) => {
+      const previous = original?.optionGroups?.find((entry) => entry.id === group.id);
+      return {
+        ...group,
+        menu_item_id: id,
         is_active: true,
-        created_at: now,
+        created_at: previous?.created_at ?? now,
         updated_at: now,
-      })),
-    }));
+        options: group.options.map((option) => {
+          const previousOption = previous?.options.find((entry) => entry.id === option.id);
+          return {
+            ...option,
+            group_id: group.id,
+            is_active: true,
+            created_at: previousOption?.created_at ?? now,
+            updated_at: now,
+          };
+        }),
+      };
+    });
     const updated: SellerMenuRow = {
       item: {
         id,
@@ -1137,13 +1082,13 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
         is_active: mobileActive,
         is_available: !mobileOutOfStock,
         created_at: original?.item.created_at ?? now,
-        updated_at: now,
+        updated_at: original?.item.updated_at ?? now,
       },
-      optionGroups,
-      optionCount: mobileGroups.reduce(
-        (count, group) => count + group.options.length,
-        0,
-      ),
+      optionGroups: original && !original.optionGroups && !groupsChanged ? undefined : optionGroups,
+      optionCount:
+        original && !original.optionGroups && !groupsChanged
+          ? original.optionCount
+          : mobileGroups.reduce((count, group) => count + group.options.length, 0),
       featuredPreview: mobileFeatured,
     };
 
@@ -1151,7 +1096,7 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
       await saveMenuItem(updated, Boolean(original));
       router.push("/seller/menu");
     } catch (err) {
-      submitted.current = false;
+      if (!(err instanceof Error) || !err.message.includes("Chưa xác định kết quả")) submitted.current = false;
       setSaving(false);
       setError(
         err instanceof Error
@@ -1201,17 +1146,7 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
     router.push("/seller/menu");
   }
 
-  const saveButton = (
-    <button
-      type="submit"
-      className={styles.primary}
-      disabled={saving || readingImage}
-    >
-      <Save size={20} />
-      {saving ? "Đang lưu…" : "Lưu món"}
-    </button>
-  );
-
+  const saveButton = <button type="submit" className={styles.primary} disabled={saving || readingImage}><Save size={20} />{saving ? "Đang lưu…" : "Lưu món"}</button>;
   return (
     <div className={`${shell.page} ${styles.page}`}>
       <StudentHeader variant="seller" />
@@ -1221,495 +1156,71 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
           {/* Phiên bản Desktop giữ nguyên 100% */}
           <div className={styles.desktopView}>
             <form onSubmit={save}>
-              <header className={styles.heading}>
-                <div>
-                  <h1>{original ? "Chỉnh sửa món" : "Thêm món mới"}</h1>
-                  <p>
-                    {original
-                      ? "Cập nhật thông tin món ăn trên menu cửa hàng của bạn."
-                      : "Tạo món mới để hiển thị trên menu cửa hàng của bạn."}
-                  </p>
-                </div>
-                <div className={styles.buttons}>
-                  <button
-                    type="button"
-                    className={styles.outline}
-                    onClick={() =>
-                      preview.current?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      })
-                    }
-                  >
-                    <Eye size={20} />
-                    Xem trước
-                  </button>
-                  {saveButton}
-                </div>
-              </header>
-              {error && (
-                <p className={styles.error} role="alert">
-                  {error}
-                </p>
-              )}
-              <div className={styles.columns}>
-                <div className={styles.left}>
-                  <section className={styles.card}>
-                    <h2>Thông tin cơ bản</h2>
-                    <div className={styles.basic}>
-                      <div className={styles.uploadField}>
-                        <span>
-                          Ảnh món{" "}
-                          {(!original || original.item.image_url) && <b>*</b>}
-                        </span>
-                        <button
-                          type="button"
-                          className={styles.upload}
-                          onClick={() => upload.current?.click()}
-                          aria-label="Tải hoặc thay ảnh món ăn"
-                        >
-                          {image ? (
-                            <Image
-                              src={image}
-                              alt="Ảnh món đã chọn"
-                              width={300}
-                              height={220}
-                              unoptimized
-                            />
-                          ) : (
-                            <>
-                              <ImagePlus size={42} />
-                              <strong>
-                                {readingImage
-                                  ? "Đang tải ảnh lên Cloudinary…"
-                                  : "Tải ảnh món ăn"}
-                              </strong>
-                              <small>JPG, PNG, WEBP tối đa 5MB</small>
-                            </>
-                          )}
-                        </button>
-                        <input
-                          ref={upload}
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          hidden
-                          onChange={(event) => {
-                            void readImage(event.target.files?.[0], "desktop");
-                            event.target.value = "";
-                          }}
-                        />
-                        {image && (
-                          <button
-                            type="button"
-                            className={styles.textButton}
-                            onClick={() => {
-                              uploadRequestId.current++;
-                              setReadingImage(false);
-                              setImage(null);
-                            }}
-                          >
-                            Xóa ảnh
-                          </button>
-                        )}
-                      </div>
-                      <div className={styles.fields}>
-                        <label>
-                          Tên món <b>*</b>
-                          <input
-                            required
-                            maxLength={120}
-                            placeholder="Ví dụ: Trà sữa truyền thống"
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
-                          />
-                        </label>
-                        <label>
-                          Danh mục <b>*</b>
-                          <select
-                            required
-                            value={category}
-                            onChange={(event) =>
-                              setCategory(event.target.value)
-                            }
-                          >
-                            {categories.map((value) => (
-                              <option key={value}>{value}</option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          Giá bán <b>*</b>
-                          <div className={styles.priceInput}>
-                            <input
-                              required
-                              type="number"
-                              min={0}
-                              max={10000000}
-                              step={1}
-                              placeholder="Nhập giá bán"
-                              value={price}
-                              onChange={(event) => setPrice(event.target.value)}
-                            />
-                            <span>đ</span>
-                          </div>
-                        </label>
-                        <label>
-                          Mô tả ngắn
-                          <div className={styles.description}>
-                            <textarea
-                              maxLength={160}
-                              placeholder="Giới thiệu ngắn về món ăn của bạn…"
-                              value={description}
-                              onChange={(event) =>
-                                setDescription(event.target.value)
-                              }
-                            />
-                            <small>{description.length}/160</small>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  </section>
-                  <section className={styles.card}>
-                    <div className={styles.sectionHeading}>
-                      <h2>Tùy chọn món</h2>
-                      <p>
-                        Tạo các nhóm topping, mức đường, mức đá hoặc món thêm.
-                      </p>
-                    </div>
-                    {original &&
-                      !original.optionGroups &&
-                      original.optionCount > 0 &&
-                      !groupsChanged && (
-                        <p className={styles.demo}>
-                          Món mẫu chỉ có số lượng {original.optionCount} tùy
-                          chọn, chưa có dữ liệu chi tiết. Số lượng này được giữ
-                          nguyên nếu bạn không thêm nhóm mới.
-                        </p>
-                      )}
-                    {!groups.length && (
-                      <div className={styles.empty}>
-                        <p>Món không có tùy chọn vẫn có thể lưu.</p>
-                        <button
-                          type="button"
-                          className={styles.outline}
-                          onClick={beverageTemplate}
-                        >
-                          Dùng mẫu đồ uống
-                        </button>
-                      </div>
-                    )}
-                    <div className={styles.groups}>
-                      {groups.map((group) => (
-                        <article key={group.id} className={styles.group}>
-                          <header>
-                            <strong>{group.name}</strong>
-                            <span>
-                              {group.is_multiple ? "Chọn nhiều" : "Chọn một"}
-                              {group.is_required ? " · Bắt buộc" : ""}
-                            </span>
-                            <div className={styles.groupActions}>
-                              <button
-                                type="button"
-                                aria-label={`Sửa nhóm ${group.name}`}
-                                onClick={() =>
-                                  setEditor({
-                                    type: "group",
-                                    group,
-                                    target: "desktop",
-                                  })
-                                }
-                              >
-                                <Pencil size={17} />
-                              </button>
-                              <button
-                                type="button"
-                                aria-label={`Xóa nhóm ${group.name}`}
-                                onClick={() => {
-                                  if (
-                                    window.confirm(
-                                      `Xóa nhóm “${group.name}” và các lựa chọn?`,
-                                    )
-                                  ) {
-                                    setGroupsChanged(true);
-                                    setGroups((current) =>
-                                      current.filter(
-                                        (entry) => entry.id !== group.id,
-                                      ),
-                                    );
-                                  }
-                                }}
-                              >
-                                <Trash2 size={17} />
-                              </button>
-                            </div>
-                          </header>
-                          <div className={styles.chips}>
-                            {group.options.map((option) => (
-                              <span key={option.id} className={styles.chip}>
-                                <button
-                                  type="button"
-                                  title="Chỉnh sửa lựa chọn"
-                                  onClick={() =>
-                                    setEditor({
-                                      type: "option",
-                                      groupId: group.id,
-                                      option,
-                                      target: "desktop",
-                                    })
-                                  }
-                                >
-                                  {option.option_name}
-                                  {option.additional_price > 0 && (
-                                    <b>+{formatMoney(option.additional_price)}</b>
-                                  )}
-                                </button>
-                                <button
-                                  type="button"
-                                  aria-label={`Xóa ${option.option_name} trong ${group.name}`}
-                                  onClick={() => {
-                                    setGroupsChanged(true);
-                                    setGroups((current) =>
-                                      current.map((entry) =>
-                                        entry.id === group.id
-                                          ? {
-                                              ...entry,
-                                              options: entry.options.filter(
-                                                (value) =>
-                                                  value.id !== option.id,
-                                              ),
-                                            }
-                                          : entry,
-                                      ),
-                                    );
-                                  }}
-                                >
-                                  <X size={14} />
-                                </button>
-                              </span>
-                            ))}
-                            <button
-                              type="button"
-                              className={styles.addChoice}
-                              onClick={() =>
-                                setEditor({
-                                  type: "option",
-                                  groupId: group.id,
-                                  target: "desktop",
-                                })
-                              }
-                            >
-                              <Plus size={16} />
-                              Thêm lựa chọn
-                            </button>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      className={styles.addGroup}
-                      onClick={() =>
-                        setEditor({ type: "group", target: "desktop" })
-                      }
-                    >
-                      <Plus size={21} />
-                      Thêm nhóm tùy chọn
+              <header className={styles.heading}><div><h1>{original ? "Chỉnh sửa món" : "Thêm món mới"}</h1><p>{original ? "Cập nhật thông tin món ăn trên menu cửa hàng của bạn." : "Tạo món mới để hiển thị trên menu cửa hàng của bạn."}</p></div><div className={styles.buttons}>
+                <button type="button" className={styles.outline} onClick={() => preview.current?.scrollIntoView({ behavior: "smooth", block: "center" })}><Eye size={20} />Xem trước</button>{saveButton}
+              </div></header>
+              {error && <p className={styles.error} id="menu-save-error" role="alert">{error}</p>}
+              <div className={styles.columns}><div className={styles.left}>
+                <section className={styles.card}><h2>Thông tin cơ bản</h2><div className={styles.basic}>
+                  <div className={styles.uploadField}><span>Ảnh món {(!original || original.item.image_url) && <b>*</b>}</span>
+                    <button type="button" className={styles.upload} aria-invalid={invalidField === "image_url"} aria-describedby={invalidField === "image_url" ? "menu-save-error" : undefined} onClick={() => upload.current?.click()} aria-label="Tải hoặc thay ảnh món ăn">
+                      {image ? <Image src={image} alt="Ảnh món đã chọn" width={300} height={220} unoptimized /> : <><ImagePlus size={42} /><strong>{readingImage ? "Đang tải ảnh lên Cloudinary…" : "Tải ảnh món ăn"}</strong><small>JPG, PNG, WEBP tối đa 5MB</small></>}
                     </button>
-                  </section>
-                  <section className={styles.card}>
-                    <h2>Trạng thái hiển thị</h2>
-                    <div className={styles.switches}>
-                      {[
-                        {
-                          label: "Đang bán",
-                          text: "Hiển thị cho sinh viên",
-                          value: active,
-                          change: setActive,
-                        },
-                        {
-                          label: "Tạm hết",
-                          text: "Không thể đặt nhưng vẫn giữ trong menu",
-                          value: outOfStock,
-                          change: setOutOfStock,
-                        },
-                        {
-                          label: "Món nổi bật",
-                          text: "Chỉ xem trước trong demo, chưa lưu DB",
-                          value: featured,
-                          change: setFeatured,
-                        },
-                      ].map((entry) => (
-                        <label key={entry.label} className={styles.switchLabel}>
-                          <input
-                            type="checkbox"
-                            role="switch"
-                            checked={entry.value}
-                            onChange={(event) =>
-                              entry.change(event.target.checked)
-                            }
-                          />
-                          <span>
-                            <strong>{entry.label}</strong>
-                            <small>{entry.text}</small>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </section>
-                </div>
-                <aside className={styles.right}>
-                  <section ref={preview} className={styles.card}>
-                    <h2>Xem trước với sinh viên</h2>
-                    <div className={styles.preview}>
-                      <div className={styles.previewImage}>
-                        {image ? (
-                          <Image
-                            src={image}
-                            width={120}
-                            height={150}
-                            alt={name || "Ảnh món"}
-                            unoptimized
-                          />
-                        ) : (
-                          <FoodThumbnail
-                            kind={category === "Đồ uống" ? "drink" : "food"}
-                          />
-                        )}
-                      </div>
-                      <div className={styles.previewCopy}>
-                        <div>
-                          <h3>{name.trim() || "Tên món của bạn"}</h3>
-                          <strong className={styles.money}>
-                            {formatMoney(basePrice)}
-                          </strong>
-                        </div>
-                        <p>
-                          <Settings2 size={16} />
-                          {groups.length
-                            ? "Có tùy chọn thêm"
-                            : "Không có tùy chọn"}
-                        </p>
-                        <p>
-                          <Store size={16} />
-                          {shopName}
-                        </p>
-                        <footer>
-                          <span
-                            className={styles.badge}
-                            data-selling={active && !outOfStock}
-                          >
-                            ● {status}
-                          </span>
-                          <button
-                            type="button"
-                            className={styles.outline}
-                            onClick={() =>
-                              setError(
-                                "Đây là thẻ xem trước. Món demo chưa được nối vào trang chi tiết của sinh viên.",
-                              )
-                            }
-                          >
-                            Xem món
-                          </button>
-                        </footer>
-                      </div>
-                    </div>
-                    {description && (
-                      <p className={styles.previewDescription}>{description}</p>
-                    )}
-                  </section>
-                  <section className={styles.card}>
-                    <h2>Tóm tắt</h2>
-                    <dl className={styles.summary}>
-                      <div>
-                        <dt>
-                          <Tag size={18} />
-                          Danh mục
-                        </dt>
-                        <dd>{category}</dd>
-                      </div>
-                      <div>
-                        <dt>
-                          <Tag size={18} />
-                          Giá gốc
-                        </dt>
-                        <dd>{formatMoney(basePrice)}</dd>
-                      </div>
-                      <div>
-                        <dt>
-                          <ClipboardList size={18} />
-                          Số nhóm tùy chọn
-                        </dt>
-                        <dd>{groups.length}</dd>
-                      </div>
-                      <div>
-                        <dt>
-                          <Eye size={18} />
-                          Trạng thái
-                        </dt>
-                        <dd>{status}</dd>
-                      </div>
-                    </dl>
-                  </section>
-                  <section className={styles.card}>
-                    <h2 className={styles.tipsHeading}>
-                      <Lightbulb />
-                      Gợi ý hoàn thiện
-                    </h2>
-                    {[
-                      {
-                        label: "Thêm ảnh món",
-                        text: "Ảnh rõ nét giúp món ăn thu hút hơn.",
-                        done: Boolean(image),
-                      },
-                      {
-                        label: "Viết mô tả ngắn",
-                        text: "Giúp sinh viên dễ lựa chọn.",
-                        done: Boolean(description.trim()),
-                      },
-                      {
-                        label: "Tạo nhóm tùy chọn",
-                        text: "Thêm topping, mức đường, mức đá nếu có.",
-                        done: groups.length > 0,
-                      },
-                      {
-                        label: "Kiểm tra giá bán",
-                        text: "Đảm bảo giá phù hợp và chính xác.",
-                        done:
-                          price.trim() !== "" &&
-                          Number.isSafeInteger(basePrice) &&
-                          basePrice >= 0 &&
-                          basePrice <= 10000000,
-                      },
-                    ].map((tip) => (
-                      <div className={styles.tip} key={tip.label}>
-                        <span data-done={tip.done}>
-                          {tip.done && <Check size={16} />}
-                        </span>
-                        <div>
-                          <strong>{tip.label}</strong>
-                          <small>{tip.text}</small>
-                        </div>
-                      </div>
-                    ))}
-                  </section>
-                  <div className={styles.bottomActions}>
-                    <button
-                      type="button"
-                      className={styles.outline}
-                      onClick={cancel}
-                    >
-                      Hủy
-                    </button>
-                    {saveButton}
+                    <input ref={upload} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => { void readImage(event.target.files?.[0], "desktop"); event.target.value = ""; }} />
+                    {image && <button type="button" className={styles.textButton} onClick={() => { uploadRequestId.current++; setReadingImage(false); setImage(null); }}>Xóa ảnh</button>}
                   </div>
-                  <p className={styles.demo}>
-                    Demo frontend · Chưa ghi DB. Các thay đổi mất khi tải lại
-                    trang.
-                  </p>
-                </aside>
-              </div>
+                  <div className={styles.fields}>
+                    <label>Tên món <b>*</b><input aria-invalid={invalidField === "name"} aria-describedby={invalidField === "name" ? "menu-save-error" : undefined} required maxLength={120} placeholder="Ví dụ: Trà sữa truyền thống" value={name} onChange={(event) => setName(event.target.value)} /></label>
+                    <label>Danh mục <b>*</b><select aria-invalid={invalidField === "category"} aria-describedby={invalidField === "category" ? "menu-save-error" : undefined} required value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((value) => <option key={value} value={value}>{CATEGORY_EMOJI[value as MasterCategory] ? `${CATEGORY_EMOJI[value as MasterCategory]} ${value}` : value}</option>)}</select></label>
+                    <label>Giá bán <b>*</b><div className={styles.priceInput}><input aria-invalid={invalidField === "price"} aria-describedby={invalidField === "price" ? "menu-save-error" : undefined} required type="number" min={0} max={10000000} step={0.01} placeholder="Nhập giá bán" value={price} onChange={(event) => setPrice(event.target.value)} /><span>đ</span></div></label>
+                    <label>Mô tả ngắn<div className={styles.description}><textarea aria-invalid={invalidField === "description"} aria-describedby={invalidField === "description" ? "menu-save-error" : undefined} maxLength={160} placeholder="Giới thiệu ngắn về món ăn của bạn…" value={description} onChange={(event) => setDescription(event.target.value)} /><small>{description.length}/160</small></div></label>
+                  </div>
+                </div></section>
+                <section className={styles.card}><div className={styles.sectionHeading}><h2>Tùy chọn món</h2><p>Tạo các nhóm topping, mức đường, mức đá hoặc món thêm.</p></div>
+                  {original && !original.optionGroups && original.optionCount > 0 && !groupsChanged && <p className={styles.demo}>Món mẫu chỉ có số lượng {original.optionCount} tùy chọn, chưa có dữ liệu chi tiết. Số lượng này được giữ nguyên nếu bạn không thêm nhóm mới.</p>}
+                  {!groups.length && <div className={styles.empty}><p>Món không có tùy chọn vẫn có thể lưu.</p><button type="button" className={styles.outline} onClick={beverageTemplate}>Dùng mẫu đồ uống</button></div>}
+                  {original?.optionGroups?.filter(g => !groups.some(current => current.id === g.id)).map(g => <button key={g.id} type="button" className={styles.outline} onClick={() => {
+                    if (groups.length >= 20) { setError("Tối đa 20 nhóm."); return; }
+                    setGroupsChanged(true); setGroups(current => [...current, {id:g.id,name:g.name,is_multiple:g.is_multiple,is_required:g.is_required,options:g.options.filter(o=>o.is_active).map(o=>({id:o.id,option_name:o.option_name,additional_price:o.additional_price}))}]);
+                  }}>Khôi phục nhóm: {g.name}</button>)}
+                  <div className={styles.groups}>{groups.map((group, groupIndex) => <article key={group.id} className={styles.group} data-invalid={invalidField.startsWith(`groups[${groupIndex}]`) || undefined}>
+                    <header><strong>{group.name}</strong><span>{group.is_multiple ? "Chọn nhiều" : "Chọn một"}{group.is_required ? " · Bắt buộc" : ""}</span><div className={styles.groupActions}>
+                      <button type="button" aria-label={`Sửa nhóm ${group.name}`} onClick={() => setEditor({ type: "group", group, target: "desktop" })}><Pencil size={17} /></button>
+                      <button type="button" aria-label={`Xóa nhóm ${group.name}`} onClick={() => { if (window.confirm(`Xóa nhóm “${group.name}” và các lựa chọn?`)) { setGroupsChanged(true); setGroups((current) => current.filter((entry) => entry.id !== group.id)); } }}><Trash2 size={17} /></button>
+                    </div></header>
+                    <div className={styles.chips}>{group.options.map((option) => <span key={option.id} className={styles.chip}>
+                      <button type="button" title="Chỉnh sửa lựa chọn" onClick={() => setEditor({ type: "option", groupId: group.id, option, target: "desktop" })}>{option.option_name}{option.additional_price > 0 && <b>+{formatMoney(option.additional_price)}</b>}</button>
+                      <button type="button" aria-label={`Xóa ${option.option_name} trong ${group.name}`} onClick={() => { setGroupsChanged(true); setGroups((current) => current.map((entry) => entry.id === group.id ? { ...entry, options: entry.options.filter((value) => value.id !== option.id) } : entry)); }}><X size={14} /></button>
+                    </span>)}{original?.optionGroups?.find(g=>g.id===group.id)?.options.filter(o=>!group.options.some(current=>current.id===o.id)).map(o=><button key={o.id} type="button" className={styles.addChoice} onClick={()=>{if(group.options.length>=50){setError("Tối đa 50 lựa chọn/nhóm.");return;}setGroupsChanged(true);setGroups(current=>current.map(g=>g.id===group.id?{...g,options:[...g.options,{id:o.id,option_name:o.option_name,additional_price:o.additional_price}]}:g));}}>Khôi phục: {o.option_name}</button>)}
+                    <button type="button" className={styles.addChoice} onClick={() => setEditor({ type: "option", groupId: group.id, target: "desktop" })}><Plus size={16} />Thêm lựa chọn</button></div>
+                  </article>)}</div>
+                  <button type="button" className={styles.addGroup} onClick={() => setEditor({ type: "group", target: "desktop" })}><Plus size={21} />Thêm nhóm tùy chọn</button>
+                </section>
+                <section className={styles.card}><h2>Trạng thái hiển thị</h2><div className={styles.switches}>
+                  {([{ label: "Đang bán", text: "Hiển thị cho sinh viên", value: active, change: setActive },
+                    { label: "Tạm hết", text: "Không thể đặt nhưng vẫn giữ trong menu", value: outOfStock, change: setOutOfStock },
+                    { label: "Món nổi bật", text: "Chỉ xem trước trong demo, chưa lưu DB", value: featured, change: setFeatured }]).map((entry) => <label key={entry.label} className={styles.switchLabel}><input type="checkbox" role="switch" checked={entry.value} onChange={(event) => entry.change(event.target.checked)} /><span><strong>{entry.label}</strong><small>{entry.text}</small></span></label>)}
+                </div></section>
+              </div><aside className={styles.right}>
+                <section ref={preview} className={styles.card}><h2>Xem trước với sinh viên</h2><div className={styles.preview}>
+                  <div className={styles.previewImage}>{image ? <Image src={image} width={120} height={150} alt={name || "Ảnh món"} unoptimized /> : <FoodThumbnail kind={isDrinkCategory(category) ? "drink" : "food"} />}</div>
+                  <div className={styles.previewCopy}><div><h3>{name.trim() || "Tên món của bạn"}</h3><strong className={styles.money}>{formatMoney(basePrice)}</strong></div>
+                    <p><Settings2 size={16} />{groups.length ? "Có tùy chọn thêm" : "Không có tùy chọn"}</p><p><Store size={16} />{shopName}</p>
+                    <footer><span className={styles.badge} data-selling={active && !outOfStock}>● {status}</span><button type="button" className={styles.outline} onClick={() => setError("Đây là thẻ xem trước trên màn tạo/chỉnh sửa món.")}>Xem món</button></footer>
+                  </div></div>{description && <p className={styles.previewDescription}>{description}</p>}
+                </section>
+                <section className={styles.card}><h2>Tóm tắt</h2><dl className={styles.summary}>
+                  <div><dt><Tag size={18} />Danh mục</dt><dd>{category}</dd></div><div><dt><Tag size={18} />Giá gốc</dt><dd>{formatMoney(basePrice)}</dd></div>
+                  <div><dt><ClipboardList size={18} />Số nhóm tùy chọn</dt><dd>{groups.length}</dd></div><div><dt><Eye size={18} />Trạng thái</dt><dd>{status}</dd></div>
+                </dl></section>
+                <section className={styles.card}><h2 className={styles.tipsHeading}><Lightbulb />Gợi ý hoàn thiện</h2>{[
+                  { label: "Thêm ảnh món", text: "Ảnh rõ nét giúp món ăn thu hút hơn.", done: Boolean(image) },
+                  { label: "Viết mô tả ngắn", text: "Giúp sinh viên dễ lựa chọn.", done: Boolean(description.trim()) },
+                  { label: "Tạo nhóm tùy chọn", text: "Thêm topping, mức đường, mức đá nếu có.", done: groups.length > 0 },
+                  { label: "Kiểm tra giá bán", text: "Đảm bảo giá phù hợp và chính xác.", done: price.trim() !== "" && (Number.isFinite(basePrice) && Number(basePrice.toFixed(2)) === basePrice) && basePrice >= 0 && basePrice <= 10000000 },
+                ].map((tip) => <div className={styles.tip} key={tip.label}><span data-done={tip.done}>{tip.done && <Check size={16} />}</span><div><strong>{tip.label}</strong><small>{tip.text}</small></div></div>)}</section>
+                <div className={styles.bottomActions}><button type="button" className={styles.outline} onClick={cancel}>Hủy</button>{saveButton}</div>
+              </aside></div>
             </form>
           </div>
 
@@ -1864,7 +1375,7 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
                           className={styles.mobileCategoryIconWrap}
                           aria-hidden="true"
                         >
-                          {mobileCategory === "Đồ uống" ? (
+                          {isDrinkCategory(mobileCategory) ? (
                             <DrinkCategorySvgIcon size={20} />
                           ) : (
                             <CookingPot size={19} />
@@ -1880,7 +1391,9 @@ function SellerMenuForm({ original }: { original?: SellerMenuRow }) {
                         >
                           {categories.map((value) => (
                             <option key={value} value={value}>
-                              {value}
+                              {CATEGORY_EMOJI[value as MasterCategory]
+                                ? `${CATEGORY_EMOJI[value as MasterCategory]} ${value}`
+                                : value}
                             </option>
                           ))}
                         </select>
