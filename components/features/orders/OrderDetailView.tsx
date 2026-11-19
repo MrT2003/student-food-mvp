@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import CancelOrderButton from "./CancelOrderButton";
 import { useRouter } from "next/navigation";
 import TransferContent from "@/components/ui/TransferContent";
 import type { ReactNode } from "react";
@@ -120,6 +121,7 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
   return (
     <div className={styles.page}>
       <header className={styles.heading}>
+        {order.status === "pending" && <CancelOrderButton orderId={orderId} />}
         <Link
           href="/orders"
           className={styles.backLink}

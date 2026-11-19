@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CancelOrderButton from "./CancelOrderButton";
 import {
   ArrowRight,
   ChevronRight,
@@ -117,6 +118,7 @@ export default function CurrentOrderCard({ order }: Props) {
       </div>
 
       <div className={styles.currentActions}>
+        {order.status === "pending" && <CancelOrderButton orderId={order.id} />}
         <Link
           href={`/orders/${encodeURIComponent(order.id)}/tracking`}
           className={styles.primaryButton}

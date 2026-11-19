@@ -7,7 +7,8 @@ const old=await readFile(new URL('./notification-outbox.sql.test.mjs',import.met
 const schema=old.split('await db.exec(`')[1].split('`);')[0];
 await db.exec(schema);
 await db.exec('ALTER TABLE orders ADD COLUMN student_id uuid;');
-for(const f of ['202611040001_restaurant_notification_outbox.sql','202611070001_student_order_notifications.sql'])
+await db.exec("CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT null::uuid $$;");
+for(const f of ['202611040001_restaurant_notification_outbox.sql','202611070001_student_order_notifications.sql','202611160001_student_cancel_order.sql','202611160002_fix_cancel_order_schema.sql'])
  await db.exec(await readFile(new URL('../supabase/migrations/'+f,import.meta.url),'utf8'));
 await db.exec(`INSERT INTO users VALUES ('11111111-1111-4111-8111-111111111111','active','student',null);
 INSERT INTO restaurants VALUES ('22222222-2222-4222-8222-222222222222',null,'inactive');

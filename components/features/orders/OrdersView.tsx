@@ -23,9 +23,9 @@ import { formatMoney } from "@/lib/format";
 import OrdersHero from "./OrdersHero";
 import OrdersFilterBar from "./OrdersFilterBar";
 import CurrentOrderCard from "./CurrentOrderCard";
+import CancelOrderButton from "./CancelOrderButton";
 import HistoryOrderCard from "./HistoryOrderCard";
 import {
-  cancelPendingOrder,
   computeSummaryCounts,
   defaultOrderSummaryCounts,
   filterOrderCards,
@@ -150,6 +150,7 @@ function DesktopCurrentOrderCard({ order }: DesktopOrderCardProps) {
           <MapPin size={19} aria-hidden="true" />
           Theo dõi đơn
         </Link>
+        {order.status === "pending" && <CancelOrderButton orderId={order.id} />}
 
         <Link
           href={`/orders/${encodeURIComponent(order.id)}`}
@@ -289,14 +290,6 @@ export default function OrdersView({
     setNotice("");
   }
 
-  function handleCancelOrder(orderId: string) {
-    const result = cancelPendingOrder(demoOrders, demoCounts, orderId);
-    if (result.cancelledOrder) {
-      setDemoOrders(result.orders);
-      setDemoCounts(result.counts);
-      setNotice(`Đã hủy đơn hàng #${result.cancelledOrder.orderCode}.`);
-    }
-  }
 
   function handleContactRestaurant(order: OrderCardViewModel) {
     setNotice(
@@ -489,7 +482,6 @@ export default function OrdersView({
                   <CurrentOrderCard
                     key={order.id}
                     order={order}
-                    onCancel={handleCancelOrder}
                     onContact={handleContactRestaurant}
                   />
                 ))}
