@@ -24,12 +24,42 @@ import {
 } from "lucide-react";
 import { formatMoney } from "@/lib/format";
 import styles from "@/styles/delivery.module.css";
+import DeliveryOrderDetailModal, {
+  DEFAULT_DELIVERY_ORDER_NOTE,
+  formatDeliveryDetailTimestamp,
+  getDeliveryDetailActionButtonLabel,
+  getDeliveryDetailStatusBadgeLabel,
+  getDeliveryOrderDishImage,
+  getDeliveryOrderDishItems,
+  getDeliveryOrderDishUnitLabel,
+} from "./DeliveryOrderDetailModal";
+
+export {
+  DeliveryOrderDetailModal,
+  DEFAULT_DELIVERY_ORDER_NOTE,
+  formatDeliveryDetailTimestamp,
+  getDeliveryDetailActionButtonLabel,
+  getDeliveryDetailStatusBadgeLabel,
+  getDeliveryOrderDishImage,
+  getDeliveryOrderDishItems,
+  getDeliveryOrderDishUnitLabel,
+};
+
+export type DeliveryOrderItemDetail = {
+  id: string;
+  name: string;
+  quantity: number;
+  unitLabel: string;
+  price: number;
+  imageUrl: string | null;
+};
 
 export type DeliveryOrder = {
   id: string;
   orderCode: string;
   badgeState: "new" | "waiting" | "done";
   time: string;
+  deliveredAt?: string;
   customerName: string;
   phone: string;
   dorm: "KTX A" | "KTX B";
@@ -38,6 +68,8 @@ export type DeliveryOrder = {
   paymentMethod: "cash" | "transfer";
   total: number;
   items: string[];
+  dishItems?: DeliveryOrderItemDetail[];
+  note?: string;
   status: "delivering" | "delivered";
 };
 
@@ -58,6 +90,7 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
     orderCode: "#SF0128",
     badgeState: "new",
     time: "10:24",
+    deliveredAt: "11:24",
     customerName: "Nguyễn Minh Anh",
     phone: "0321 456 789",
     dorm: "KTX A",
@@ -66,6 +99,25 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
     paymentMethod: "cash",
     total: 56000,
     items: ["Cơm sườn nướng x1", "Trà tắc x1"],
+    dishItems: [
+      {
+        id: "1-item-1",
+        name: "Cơm sườn nướng",
+        quantity: 1,
+        unitLabel: "1 phần",
+        price: 45000,
+        imageUrl: "/delivery-order-com-suon-nuong.png",
+      },
+      {
+        id: "1-item-2",
+        name: "Trà tắc",
+        quantity: 1,
+        unitLabel: "1 ly",
+        price: 11000,
+        imageUrl: "/delivery-order-tra-tac.png",
+      },
+    ],
+    note: "Gọi trước khi giao.",
     status: "delivering",
   },
   {
@@ -73,6 +125,7 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
     orderCode: "#SF0129",
     badgeState: "new",
     time: "11:05",
+    deliveredAt: "11:30",
     customerName: "Trần Thị Bảo Ngọc",
     phone: "0909 876 543",
     dorm: "KTX B",
@@ -85,6 +138,33 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
       "Canh rong biển x1",
       "Trà sữa truyền thống x1",
     ],
+    dishItems: [
+      {
+        id: "2-item-1",
+        name: "Cơm gà xối mỡ",
+        quantity: 1,
+        unitLabel: "1 phần",
+        price: 35000,
+        imageUrl: "/seller-menu-com-ga-chien.png",
+      },
+      {
+        id: "2-item-2",
+        name: "Canh rong biển",
+        quantity: 1,
+        unitLabel: "1 phần",
+        price: 12000,
+        imageUrl: "/delivery-order-com-suon-nuong.png",
+      },
+      {
+        id: "2-item-3",
+        name: "Trà sữa truyền thống",
+        quantity: 1,
+        unitLabel: "1 ly",
+        price: 25000,
+        imageUrl: "/seller-order-tra-sua.png",
+      },
+    ],
+    note: "Gọi trước khi giao.",
     status: "delivering",
   },
   {
@@ -92,6 +172,7 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
     orderCode: "#SF0130",
     badgeState: "waiting",
     time: "11:32",
+    deliveredAt: "11:50",
     customerName: "Lê Hoàng Nam",
     phone: "0789 321 654",
     dorm: "KTX A",
@@ -100,6 +181,25 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
     paymentMethod: "cash",
     total: 48000,
     items: ["Bánh tráng trộn x1", "Trà đào x1"],
+    dishItems: [
+      {
+        id: "3-item-1",
+        name: "Bánh tráng trộn",
+        quantity: 1,
+        unitLabel: "1 phần",
+        price: 25000,
+        imageUrl: "/seller-order-banh-trang-tron.png",
+      },
+      {
+        id: "3-item-2",
+        name: "Trà đào",
+        quantity: 1,
+        unitLabel: "1 ly",
+        price: 23000,
+        imageUrl: "/seller-menu-tra-dao-cam-sa.png",
+      },
+    ],
+    note: "Gọi trước khi giao.",
     status: "delivering",
   },
   {
@@ -107,6 +207,7 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
     orderCode: "#SF0131",
     badgeState: "waiting",
     time: "11:45",
+    deliveredAt: "12:05",
     customerName: "Phạm Quốc Bảo",
     phone: "0912 345 678",
     dorm: "KTX B",
@@ -115,21 +216,60 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
     paymentMethod: "cash",
     total: 65000,
     items: ["Cơm tấm sườn bì chả x1", "Trà chanh x1"],
+    dishItems: [
+      {
+        id: "4-item-1",
+        name: "Cơm tấm sườn bì chả",
+        quantity: 1,
+        unitLabel: "1 phần",
+        price: 50000,
+        imageUrl: "/delivery-order-com-suon-nuong.png",
+      },
+      {
+        id: "4-item-2",
+        name: "Trà chanh",
+        quantity: 1,
+        unitLabel: "1 ly",
+        price: 15000,
+        imageUrl: "/delivery-order-tra-tac.png",
+      },
+    ],
+    note: "Gọi trước khi giao.",
     status: "delivering",
   },
   {
     id: "5",
-    orderCode: "#SF0120",
+    orderCode: "#SF0118",
     badgeState: "done",
-    time: "09:15",
-    customerName: "Võ Hoàng Yến",
-    phone: "0934 567 890",
+    time: "11:24",
+    deliveredAt: "11:24",
+    customerName: "Nguyễn Minh Anh",
+    phone: "0321 456 789",
     dorm: "KTX A",
-    addressDetail: "Tòa A1, Sảnh chính",
-    itemCount: 1,
-    paymentMethod: "transfer",
-    total: 35000,
-    items: ["Cơm gà chiên nước mắm x1"],
+    addressDetail: "Cổng B, Phòng 302",
+    itemCount: 2,
+    paymentMethod: "cash",
+    total: 56000,
+    items: ["Cơm sườn nướng x1", "Trà tắc x1"],
+    dishItems: [
+      {
+        id: "5-item-1",
+        name: "Cơm sườn nướng",
+        quantity: 1,
+        unitLabel: "1 phần",
+        price: 45000,
+        imageUrl: "/delivery-order-com-suon-nuong.png",
+      },
+      {
+        id: "5-item-2",
+        name: "Trà tắc",
+        quantity: 1,
+        unitLabel: "1 ly",
+        price: 11000,
+        imageUrl: "/delivery-order-tra-tac.png",
+      },
+    ],
+    note: "Gọi trước khi giao.",
     status: "delivered",
   },
   {
@@ -137,6 +277,7 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
     orderCode: "#SF0121",
     badgeState: "done",
     time: "09:40",
+    deliveredAt: "10:05",
     customerName: "Đặng Tuấn Kiệt",
     phone: "0978 123 456",
     dorm: "KTX B",
@@ -145,6 +286,25 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
     paymentMethod: "cash",
     total: 52000,
     items: ["Cơm sườn trứng x1", "Trà đào cam sả x1"],
+    dishItems: [
+      {
+        id: "6-item-1",
+        name: "Cơm sườn trứng",
+        quantity: 1,
+        unitLabel: "1 phần",
+        price: 38000,
+        imageUrl: "/delivery-order-com-suon-nuong.png",
+      },
+      {
+        id: "6-item-2",
+        name: "Trà đào cam sả",
+        quantity: 1,
+        unitLabel: "1 ly",
+        price: 14000,
+        imageUrl: "/seller-menu-tra-dao-cam-sa.png",
+      },
+    ],
+    note: "Gọi trước khi giao.",
     status: "delivered",
   },
 ];
@@ -199,6 +359,21 @@ export function getDeliveryBadgeLabel(
   return "Đã giao";
 }
 
+export function resolveDeliveryOrderForDetail(
+  orders: readonly DeliveryOrder[],
+  targetIdOrCode: string | null | undefined,
+): DeliveryOrder | null {
+  if (!targetIdOrCode) return null;
+  const normalized = targetIdOrCode.trim().replace(/^#/, "").toLowerCase();
+  return (
+    orders.find(
+      (candidate) =>
+        candidate.id.toLowerCase() === normalized ||
+        candidate.orderCode.replace(/^#/, "").toLowerCase() === normalized,
+    ) ?? null
+  );
+}
+
 export function DeliveryScooterIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -222,7 +397,7 @@ export function DeliveryScooterIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-function RoadBannerGraphic() {
+function RoadBannerGraphic({ pinColor = "#EF4444" }: { pinColor?: string }) {
   return (
     <svg
       className={styles.bannerRoadSvg}
@@ -232,7 +407,7 @@ function RoadBannerGraphic() {
     >
       <path
         d="M8 58C24 46 30 34 26 24C22 14 44 10 74 6"
-        stroke="#F6E3D4"
+        stroke={pinColor === "#15803D" ? "#DCFCE7" : "#F6E3D4"}
         strokeWidth="12"
         strokeLinecap="round"
       />
@@ -245,7 +420,7 @@ function RoadBannerGraphic() {
       />
       <path
         d="M44 10C40.134 10 37 13.134 37 17C37 22.25 44 29 44 29C44 29 51 22.25 51 17C51 13.134 47.866 10 44 10Z"
-        fill="#EF4444"
+        fill={pinColor}
       />
       <circle cx="44" cy="17" r="2.5" fill="#FFFFFF" />
     </svg>
@@ -287,7 +462,14 @@ function DeliveryOrderCardItem({
             {badgeLabel}
           </span>
         </div>
-        <span className={styles.orderTime}>{order.time}</span>
+        {order.status === "delivered" ? (
+          <span className={styles.orderTimeDeliveredPill}>
+            <Check size={13} strokeWidth={2.6} aria-hidden="true" />
+            <span>Đã giao lúc {order.deliveredAt ?? order.time}</span>
+          </span>
+        ) : (
+          <span className={styles.orderTime}>{order.time}</span>
+        )}
       </div>
 
       <div className={styles.orderBody}>
@@ -426,10 +608,12 @@ export default function DeliveryDashboard({
   shopName = "Cơm Cô Ba",
   initialOrders = initialMockDeliveryOrders,
   initialCompletedBaseCount = 10,
+  initialDetailOrderId = null,
 }: {
   shopName?: string;
   initialOrders?: DeliveryOrder[];
   initialCompletedBaseCount?: number;
+  initialDetailOrderId?: string | null;
 }) {
   const [orders, setOrders] = useState<DeliveryOrder[]>(initialOrders);
   const [activeTab, setActiveTab] = useState<"delivering" | "delivered">(
@@ -438,7 +622,11 @@ export default function DeliveryDashboard({
   const [dormFilter, setDormFilter] = useState<DeliveryDormFilter>("all");
   const [toast, setToast] = useState("");
   const [qrOrder, setQrOrder] = useState<DeliveryOrder | null>(null);
-  const [detailOrder, setDetailOrder] = useState<DeliveryOrder | null>(null);
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(
+    initialDetailOrderId,
+  );
+
+  const detailOrder = resolveDeliveryOrderForDetail(orders, detailOrderId);
 
   const { deliveringCount, deliveredCount } = getDeliveryOrderCounts(
     orders,
@@ -468,7 +656,12 @@ export default function DeliveryDashboard({
     setOrders((current) =>
       current.map((entry) =>
         entry.id === orderId
-          ? { ...entry, status: "delivered", badgeState: "done" }
+          ? {
+              ...entry,
+              status: "delivered",
+              badgeState: "done",
+              deliveredAt: entry.deliveredAt ?? entry.time,
+            }
           : entry,
       ),
     );
@@ -763,7 +956,9 @@ export default function DeliveryDashboard({
                         order={order}
                         testIdPrefix="desktop-delivery-order-card"
                         onMarkDelivered={handleMarkDelivered}
-                        onOpenDetail={setDetailOrder}
+                        onOpenDetail={(selected) =>
+                          setDetailOrderId(selected.id)
+                        }
                         onOpenQr={setQrOrder}
                       />
                     ))}
@@ -932,32 +1127,63 @@ export default function DeliveryDashboard({
           </div>
 
           {/* Banner tóm tắt */}
-          <section
-            className={styles.banner}
-            aria-label="Tóm tắt đơn giao hôm nay"
-          >
-            <div
-              className={styles.bannerIconBox}
-              data-testid="delivery-scooter-box"
+          {activeTab === "delivered" ? (
+            <section
+              className={styles.banner}
+              aria-label="Tóm tắt đơn đã giao hôm nay"
             >
-              <DeliveryScooterIcon />
-            </div>
-            <div className={styles.bannerCopy}>
-              <span>Hôm nay</span>
-              <strong>{deliveringCount} đơn cần giao</strong>
-              <small>Cố gắng giao đúng giờ nhé!</small>
-            </div>
-            <div className={styles.bannerArt}>
-              <RoadBannerGraphic />
-              <div className={styles.bannerSlogan}>
-                Sinh viên
-                <br />
-                ngon hơn
-                <br />
-                mỗi ngày !
+              <div
+                className={`${styles.bannerIconBox} ${styles.bannerIconBoxDone}`}
+                data-testid="delivery-done-box"
+              >
+                <Check size={30} strokeWidth={2.8} aria-hidden="true" />
               </div>
-            </div>
-          </section>
+              <div className={styles.bannerCopy}>
+                <span>Hôm nay</span>
+                <strong>{deliveredCount} đơn đã giao</strong>
+                <small>Cảm ơn bạn đã giao hàng thật tuyệt!</small>
+              </div>
+              <div className={styles.bannerArt}>
+                <RoadBannerGraphic pinColor="#15803D" />
+                <div
+                  className={`${styles.bannerSlogan} ${styles.bannerSloganDone}`}
+                >
+                  Giao đúng
+                  <br />
+                  Giao đủ
+                  <br />
+                  Cảm ơn bạn!
+                </div>
+              </div>
+            </section>
+          ) : (
+            <section
+              className={styles.banner}
+              aria-label="Tóm tắt đơn giao hôm nay"
+            >
+              <div
+                className={styles.bannerIconBox}
+                data-testid="delivery-scooter-box"
+              >
+                <DeliveryScooterIcon />
+              </div>
+              <div className={styles.bannerCopy}>
+                <span>Hôm nay</span>
+                <strong>{deliveringCount} đơn cần giao</strong>
+                <small>Cố gắng giao đúng giờ nhé!</small>
+              </div>
+              <div className={styles.bannerArt}>
+                <RoadBannerGraphic />
+                <div className={styles.bannerSlogan}>
+                  Sinh viên
+                  <br />
+                  ngon hơn
+                  <br />
+                  mỗi ngày !
+                </div>
+              </div>
+            </section>
+          )}
 
           {toast && (
             <div role="status" className={styles.toast}>
@@ -981,7 +1207,7 @@ export default function DeliveryDashboard({
                   order={order}
                   testIdPrefix="delivery-order-card"
                   onMarkDelivered={handleMarkDelivered}
-                  onOpenDetail={setDetailOrder}
+                  onOpenDetail={(selected) => setDetailOrderId(selected.id)}
                   onOpenQr={setQrOrder}
                 />
               ))}
@@ -999,78 +1225,13 @@ export default function DeliveryDashboard({
         </main>
       </div>
 
-      {/* Popup xem chi tiết đơn hàng */}
+      {/* Popup "Chi tiết đơn hàng" thống nhất bố cục, font chữ, màu sắc giữa Mobile & Desktop */}
       {detailOrder && (
-        <div
-          className={styles.modalBackdrop}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delivery-detail-title"
-          onClick={() => setDetailOrder(null)}
-        >
-          <div
-            className={styles.modalCard}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className={styles.modalHeader}>
-              <h3 id="delivery-detail-title">
-                Chi tiết đơn {detailOrder.orderCode}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setDetailOrder(null)}
-                aria-label="Đóng chi tiết đơn"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className={styles.detailModalBody}>
-              <div className={styles.detailModalRow}>
-                <span>Khách hàng</span>
-                <strong>{detailOrder.customerName}</strong>
-              </div>
-              <div className={styles.detailModalRow}>
-                <span>Số điện thoại</span>
-                <strong>{detailOrder.phone}</strong>
-              </div>
-              <div className={styles.detailModalRow}>
-                <span>Địa chỉ giao</span>
-                <strong>
-                  {detailOrder.dorm} • {detailOrder.addressDetail}
-                </strong>
-              </div>
-              <div className={styles.detailModalRow}>
-                <span>Thanh toán</span>
-                <strong>
-                  {detailOrder.paymentMethod === "transfer"
-                    ? "Chuyển khoản"
-                    : "Tiền mặt"}
-                </strong>
-              </div>
-              <div className={styles.detailModalItems}>
-                <span>Danh sách món ({detailOrder.itemCount} món)</span>
-                <ul>
-                  {detailOrder.items.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className={styles.detailModalTotal}>
-                <span>Tổng tiền</span>
-                <strong>{formatMoney(detailOrder.total)}</strong>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className={styles.modalCloseBtn}
-              onClick={() => setDetailOrder(null)}
-            >
-              Đóng
-            </button>
-          </div>
-        </div>
+        <DeliveryOrderDetailModal
+          order={detailOrder}
+          onClose={() => setDetailOrderId(null)}
+          onMarkDelivered={handleMarkDelivered}
+        />
       )}
 
       {/* Popup hiển thị mã QR của đơn hàng */}

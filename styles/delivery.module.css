@@ -837,6 +837,11 @@
   height: 33px;
 }
 
+.bannerIconBoxDone {
+  background: #dcfce7;
+  color: #15803d;
+}
+
 .bannerCopy {
   display: flex;
   flex-direction: column;
@@ -888,6 +893,10 @@
   text-align: right;
   transform: rotate(-8deg);
   white-space: nowrap;
+}
+
+.bannerSloganDone {
+  color: #15803d;
 }
 
 /* Order Cards List */
@@ -958,6 +967,19 @@
   font-size: 13px;
   font-weight: 600;
   color: #64748b;
+}
+
+.orderTimeDeliveredPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #e3f9eb;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 /* Order Info Grid */
@@ -1402,6 +1424,542 @@
 }
 
 /* =====================================================================
+   POPUP "CHI TIẾT ĐƠN HÀNG" (QUYỀN GIAO HÀNG — SELLER)
+   - Desktop (> 760px): Rộng rãi chuẩn thiết kế Desktop (max-width: 520px,
+     border-radius: 22px, padding: 22px 24px, box-shadow) & transition popup cửa sổ,
+     đồng thời thống nhất bố cục, font chữ, màu sắc với bản Mobile.
+   - Mobile (<= 760px): Bottom-sheet popup giữ nguyên 100% khớp ảnh mẫu.
+   ===================================================================== */
+@keyframes detailBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes detailDesktopPopupIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes detailMobileSheetUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0.92;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.detailSheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(15, 23, 42, 0.52);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+  animation: detailBackdropFadeIn 0.18s ease-out;
+}
+
+.detailSheetCard {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 22px 24px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.22);
+  text-align: left;
+  box-sizing: border-box;
+  font-family: var(--font-body, "Be Vietnam Pro", system-ui, -apple-system, sans-serif);
+  color: #081447;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  animation: detailDesktopPopupIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.detailSheetHandleWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.detailSheetHandle {
+  width: 44px;
+  height: 5px;
+  border-radius: 999px;
+  background: #d5dce6;
+}
+
+.detailSheetTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detailSheetTitle {
+  margin: 0;
+  font-family: var(--font-display, "Inter", inherit);
+  font-size: 21px;
+  line-height: 26px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: #081447;
+}
+
+.detailSheetCloseIconBtn {
+  border: 0;
+  background: transparent;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #475569;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.detailSheetCloseIconBtn:hover {
+  background: #f1f5f9;
+  color: #081447;
+}
+
+.detailOrderMetaHeader {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.detailOrderCodeRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.detailOrderCode {
+  font-family: var(--font-display, "Inter", inherit);
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #081447;
+}
+
+.detailStatusPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  line-height: 16px;
+  font-weight: 700;
+}
+
+.detailStatusPillDelivered {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.detailStatusPillDelivering {
+  background: #fff0e6;
+  color: #ea580c;
+}
+
+.detailTimestampRow {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  color: #526077;
+}
+
+.detailTimestampRow svg {
+  color: #526077;
+  flex-shrink: 0;
+}
+
+.detailSectionsStack {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detailSectionCard {
+  background: #ffffff;
+  border: 1px solid #eceff4;
+  border-radius: 16px;
+  padding: 13px 16px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+}
+
+.detailSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detailSectionIcon {
+  color: #526077;
+  flex-shrink: 0;
+}
+
+.detailSectionTitle {
+  margin: 0;
+  font-family: var(--font-display, "Inter", inherit);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 800;
+  color: #081447;
+}
+
+/* Card 1: Khách hàng */
+.detailCustomerMain {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.detailCustomerIdentity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detailCustomerName {
+  font-family: var(--font-display, "Inter", inherit);
+  font-size: 16px;
+  line-height: 21px;
+  font-weight: 800;
+  color: #081447;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailCustomerPhoneRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.detailCustomerPhoneIcon {
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.detailCustomerPhone {
+  font-size: 14px;
+  line-height: 19px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.detailCallCustomerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 10px;
+  border: 1px solid #bfd7f6;
+  background: #f5f9ff;
+  color: #0b6bcb;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.detailCallCustomerBtn:hover {
+  background: #eaf3ff;
+}
+
+.detailAddressRow {
+  margin-top: 7px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.detailAddressPin {
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.detailDormBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 6px;
+  background: #ffe4e4;
+  color: #d92d20;
+  font-size: 12.5px;
+  line-height: 17px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.detailAddressText {
+  font-size: 14px;
+  line-height: 19px;
+  font-weight: 500;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Card 2: Món ăn */
+.detailDishList {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.detailDishRow {
+  display: grid;
+  grid-template-columns: 55px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.detailDishRow:first-child {
+  padding-top: 2px;
+}
+
+.detailDishRow:last-child {
+  padding-bottom: 2px;
+}
+
+.detailDishRow + .detailDishRow {
+  border-top: 1px solid #f1f5f9;
+}
+
+.detailDishThumbWrap {
+  width: 55px;
+  height: 38px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #f8fafc;
+  border: 1px solid #eef2f6;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.detailDishThumb {
+  width: 55px;
+  height: 38px;
+  object-fit: cover;
+  display: block;
+}
+
+.detailDishCopy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.detailDishName {
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 700;
+  color: #081447;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailDishMultiplier {
+  font-size: 12.5px;
+  line-height: 16px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.detailDishUnit {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+  padding-right: 4px;
+}
+
+.detailDishPrice {
+  font-family: var(--font-display, "Inter", inherit);
+  font-size: 14.5px;
+  line-height: 19px;
+  font-weight: 800;
+  color: #081447;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Card 3: Thanh toán & Tổng tiền */
+.detailPaymentCard {
+  padding: 0 16px;
+}
+
+.detailPaymentRow,
+.detailTotalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.detailTotalRow {
+  border-top: 1px solid #f1f5f9;
+}
+
+.detailPaymentLabelGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detailPaymentLabel,
+.detailTotalLabel {
+  font-family: var(--font-display, "Inter", inherit);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 800;
+  color: #081447;
+}
+
+.detailPaymentMethodBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.detailPaymentCash {
+  background: #e3f9eb;
+  color: #15803d;
+}
+
+.detailPaymentTransfer {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.detailTotalValue {
+  font-family: var(--font-display, "Inter", inherit);
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 800;
+  color: #e1251b;
+  white-space: nowrap;
+}
+
+/* Card 4: Ghi chú đơn hàng */
+.detailNoteText {
+  margin: 3px 0 0;
+  padding-left: 24px;
+  font-size: 13.5px;
+  line-height: 19px;
+  font-weight: 500;
+  color: #475569;
+}
+
+/* Cụm nút cuối popup: Đánh dấu đã giao / Đã giao + Đóng */
+.detailFooterActions {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detailPrimaryActionBtn,
+.detailCloseActionBtn {
+  width: 100%;
+  height: 43px;
+  min-height: 43px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-display, "Inter", inherit);
+  font-size: 15.5px;
+  line-height: 1;
+  font-weight: 800;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+
+.detailPrimaryActionBtnPending {
+  border: 1px solid #bbf7d0;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.detailPrimaryActionBtnPending:hover {
+  background: #bbf7d0;
+}
+
+.detailPrimaryActionBtnPending:active {
+  transform: scale(0.99);
+}
+
+.detailPrimaryActionBtnDone {
+  border: 1px solid #d1fae5;
+  background: #dff5e6;
+  color: #15803d;
+  cursor: default;
+}
+
+.detailCloseActionBtn {
+  border: 1.5px solid #f08275;
+  background: #ffffff;
+  color: #d92d20;
+}
+
+.detailCloseActionBtn:hover {
+  background: #fff5f5;
+}
+
+/* =====================================================================
    MOBILE VIEWPORTS (<= 760px) — Chỉ bật giao diện Mobile trên thiết bị di động
    ===================================================================== */
 @media (max-width: 760px) {
@@ -1420,6 +1978,42 @@
 
   .shell {
     max-width: 480px;
+  }
+
+  .detailSheetBackdrop {
+    align-items: end;
+    justify-items: center;
+    padding: 0;
+  }
+
+  .detailSheetCard {
+    max-width: 480px;
+    max-height: 92dvh;
+    border-radius: 26px 26px 0 0;
+    padding: 10px max(16px, env(safe-area-inset-right, 0px))
+      calc(14px + env(safe-area-inset-bottom, 0px))
+      max(16px, env(safe-area-inset-left, 0px));
+    box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.16);
+    animation: detailMobileSheetUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .detailSectionsStack {
+    margin-top: 12px;
+    gap: 10px;
+  }
+
+  .detailSectionCard {
+    border-radius: 15px;
+    padding: 11px 13px;
+  }
+
+  .detailPaymentCard {
+    padding: 0 13px;
+  }
+
+  .detailDishRow {
+    gap: 10px;
+    padding: 7px 0;
   }
 }
 
@@ -1469,6 +2063,11 @@
   .completeBtn svg {
     width: 14px;
     height: 14px;
+  }
+
+  .detailSheetCard {
+    padding-inline: max(14px, env(safe-area-inset-left, 0px))
+      max(14px, env(safe-area-inset-right, 0px));
   }
 }
 
@@ -1541,6 +2140,28 @@
   .completeBtn svg {
     width: 14px;
     height: 14px;
+  }
+
+  .detailSheetCard {
+    padding-inline: max(13px, env(safe-area-inset-left, 0px))
+      max(13px, env(safe-area-inset-right, 0px));
+  }
+
+  .detailSheetTitle {
+    font-size: 20px;
+    line-height: 25px;
+  }
+
+  .detailOrderCode {
+    font-size: 19px;
+  }
+
+  .detailSectionCard {
+    padding: 10px 12px;
+  }
+
+  .detailPaymentCard {
+    padding: 0 12px;
   }
 }
 
@@ -1635,5 +2256,73 @@
   .completeBtn svg {
     width: 13px;
     height: 13px;
+  }
+
+  .detailSheetCard {
+    padding: 9px 11px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-radius: 22px 22px 0 0;
+  }
+
+  .detailSheetTitle {
+    font-size: 19px;
+    line-height: 24px;
+  }
+
+  .detailOrderCode {
+    font-size: 18px;
+  }
+
+  .detailSectionsStack {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .detailSectionCard {
+    padding: 9px 11px;
+    border-radius: 13px;
+  }
+
+  .detailPaymentCard {
+    padding: 0 11px;
+  }
+
+  .detailCustomerName {
+    font-size: 15px;
+  }
+
+  .detailCallCustomerBtn {
+    height: 34px;
+    padding: 0 11px;
+    font-size: 12.5px;
+  }
+
+  .detailDishRow {
+    grid-template-columns: 48px minmax(0, 1fr) auto auto;
+    gap: 8px;
+  }
+
+  .detailDishThumbWrap,
+  .detailDishThumb {
+    width: 48px;
+    height: 34px;
+  }
+
+  .detailDishName {
+    font-size: 13.5px;
+  }
+
+  .detailDishPrice {
+    font-size: 13.5px;
+  }
+
+  .detailTotalValue {
+    font-size: 18px;
+  }
+
+  .detailPrimaryActionBtn,
+  .detailCloseActionBtn {
+    height: 40px;
+    min-height: 40px;
+    font-size: 14.5px;
   }
 }
