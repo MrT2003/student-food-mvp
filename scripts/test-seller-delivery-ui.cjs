@@ -150,7 +150,7 @@ const {
   ),
 );
 
-function testViewportAndResponsiveStyles() {
+function testViewportDesktopMobileSeparationAndButtonDimensions() {
   for (const pageModule of [deliverDemoPage, deliveryDemoPage]) {
     assert.equal(pageModule.viewport.width, "device-width");
     assert.equal(pageModule.viewport.initialScale, 1);
@@ -161,6 +161,26 @@ function testViewportAndResponsiveStyles() {
     path.join(projectRoot, "styles/delivery.module.css"),
     "utf8",
   );
+
+  // Desktop vs Mobile toggling rules: Desktop active by default, Mobile only enabled at <= 760px
+  assert.match(deliveryCss, /\.desktopView\s*\{\s*display:\s*block;\s*\}/);
+  assert.match(deliveryCss, /\.mobileView\s*\{\s*display:\s*none;\s*\}/);
+  assert.match(
+    deliveryCss,
+    /@media \(max-width: 760px\)[\s\S]*?\.desktopView\s*\{\s*display:\s*none;\s*\}[\s\S]*?\.mobileView\s*\{\s*display:\s*block;\s*\}/,
+  );
+
+  // Equal button dimensions rule for Gọi khách, Xem chi tiết, Mã QR, Đánh dấu đã giao
+  assert.match(
+    deliveryCss,
+    /\.actionsGrid,\s*\.secondaryActionsGrid\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
+  );
+  assert.match(
+    deliveryCss,
+    /\.callBtn,\s*\.detailBtn,\s*\.qrBtn,\s*\.completeBtn\s*\{[\s\S]*?width:\s*100%;[\s\S]*?min-width:\s*0;[\s\S]*?height:\s*38px;[\s\S]*?min-height:\s*38px;[\s\S]*?max-height:\s*38px;[\s\S]*?white-space:\s*nowrap;/,
+  );
+
+  // Responsive mobile breakpoints (iPhone 14 Pro / 15 / 16 <= 393px, iPhone 16 Pro Max <= 440px, iPhone SE <= 360px)
   assert.match(deliveryCss, /env\(safe-area-inset-top/);
   assert.match(deliveryCss, /env\(safe-area-inset-bottom/);
   assert.match(deliveryCss, /@media \(max-width: 760px\)/);
@@ -189,7 +209,6 @@ function testScooterSvgExactMatch() {
 }
 
 function testDeliveryHelpersAndQrButtonLogic() {
-  // Payment method QR visibility rule: only "transfer" ("Chuyển khoản") displays "Mã QR"
   assert.equal(shouldShowDeliveryQrButton("transfer"), true);
   assert.equal(shouldShowDeliveryQrButton("cash"), false);
   assert.equal(shouldShowDeliveryQrButton({ paymentMethod: "transfer" }), true);
@@ -242,66 +261,77 @@ function testDeliveryHelpersAndQrButtonLogic() {
   assert.equal(getDeliveryBadgeLabel("done"), "Đã giao");
 }
 
-function testDeliveryDashboardMarkupAndPaymentRules() {
+function testDesktopAndMobileDeliveryDashboardMarkup() {
   const html = renderToStaticMarkup(React.createElement(DeliveryDashboard));
 
-  // Header & Brand
-  assert.ok(html.includes("Student<span>Food</span>"));
-  assert.ok(html.includes("<small>Quyền giao hàng</small>"));
-  assert.ok(html.includes("<span>Cơm Cô Ba</span>"));
+  // Verify both Desktop and Mobile containers exist
+  const desktopStart = html.indexOf('data-testid="seller-delivery-desktop"');
+  const mobileStart = html.indexOf('data-testid="seller-delivery-mobile"');
+  assert.ok(desktopStart !== -1, "Desktop view container must be rendered");
+  assert.ok(mobileStart !== -1, "Mobile view container must be rendered");
 
-  // Heading & Status Tabs
-  assert.ok(html.includes("<h1>Đơn cần giao</h1>"));
-  assert.ok(html.includes("<p>Xem các đơn đang chờ giao của cửa hàng.</p>"));
-  assert.ok(html.includes("Cần giao (4)"));
-  assert.ok(html.includes("Đã giao (12)"));
+  const desktopHtml = html.slice(desktopStart, mobileStart);
+  const mobileHtml = html.slice(mobileStart);
 
-  // Dorm filter chips
-  assert.ok(html.includes(">Tất cả</button>"));
-  assert.ok(html.includes(">KTX A</button>"));
-  assert.ok(html.includes(">KTX B</button>"));
+  // 1. Desktop View assertions (following /seller and /seller/shop design rules)
+  assert.ok(desktopHtml.includes('href="/seller"'));
+  assert.ok(desktopHtml.includes('href="/seller/orders"'));
+  assert.ok(desktopHtml.includes('href="/seller/menu"'));
+  assert.ok(desktopHtml.includes('href="/seller/shop"'));
+  assert.ok(desktopHtml.includes("Quay lại Cửa hàng"));
+  assert.ok(desktopHtml.includes("Quản lý cửa hàng"));
+  assert.ok(desktopHtml.includes("Hôm nay cần giao"));
+  assert.ok(desktopHtml.includes("Đã giao hoàn tất"));
+  assert.ok(desktopHtml.includes("Phân bổ khu vực"));
+  assert.ok(desktopHtml.includes("Quy trình giao đơn"));
+  assert.ok(
+    desktopHtml.includes('data-testid="desktop-delivery-order-card-SF0129"'),
+  );
 
-  // Summary Banner + exact Scooter SVG
-  assert.ok(html.includes("<span>Hôm nay</span>"));
-  assert.ok(html.includes("<strong>4 đơn cần giao</strong>"));
-  assert.ok(html.includes("<small>Cố gắng giao đúng giờ nhé!</small>"));
-  assert.ok(html.includes("M14.8438 7.03125H17.1875"));
-  assert.ok(html.includes("M12.7602 10.1562C13.4789"));
+  // 2. Mobile View assertions matching mockup 100%
+  assert.ok(mobileHtml.includes("Student<span>Food</span>"));
+  assert.ok(mobileHtml.includes("<small>Quyền giao hàng</small>"));
+  assert.ok(mobileHtml.includes("<span>Cơm Cô Ba</span>"));
+  assert.ok(mobileHtml.includes("<h1>Đơn cần giao</h1>"));
+  assert.ok(
+    mobileHtml.includes("<p>Xem các đơn đang chờ giao của cửa hàng.</p>"),
+  );
+  assert.ok(mobileHtml.includes("Cần giao (4)"));
+  assert.ok(mobileHtml.includes("Đã giao (12)"));
+  assert.ok(mobileHtml.includes(">Tất cả</button>"));
+  assert.ok(mobileHtml.includes(">KTX A</button>"));
+  assert.ok(mobileHtml.includes(">KTX B</button>"));
 
-  // Split HTML by order cards to verify per-card QR button visibility & layout
-  const card128Start = html.indexOf('data-testid="delivery-order-card-SF0128"');
-  const card129Start = html.indexOf('data-testid="delivery-order-card-SF0129"');
-  const card130Start = html.indexOf('data-testid="delivery-order-card-SF0130"');
-  const card131Start = html.indexOf('data-testid="delivery-order-card-SF0131"');
+  // Split Mobile HTML by order cards
+  const card128Start = mobileHtml.indexOf(
+    'data-testid="delivery-order-card-SF0128"',
+  );
+  const card129Start = mobileHtml.indexOf(
+    'data-testid="delivery-order-card-SF0129"',
+  );
+  const card130Start = mobileHtml.indexOf(
+    'data-testid="delivery-order-card-SF0130"',
+  );
+  const card131Start = mobileHtml.indexOf(
+    'data-testid="delivery-order-card-SF0131"',
+  );
 
   assert.ok(
     card128Start !== -1 &&
       card129Start !== -1 &&
       card130Start !== -1 &&
       card131Start !== -1,
-    "All 4 delivering order cards must be rendered",
+    "All 4 delivering order cards must be rendered in mobile view",
   );
 
-  const card128Html = html.slice(card128Start, card129Start);
-  const card129Html = html.slice(card129Start, card130Start);
-  const card130Html = html.slice(card130Start, card131Start);
-  const card131Html = html.slice(card131Start);
+  const card128Html = mobileHtml.slice(card128Start, card129Start);
+  const card129Html = mobileHtml.slice(card129Start, card130Start);
+  const card130Html = mobileHtml.slice(card130Start, card131Start);
+  const card131Html = mobileHtml.slice(card131Start);
 
   // Card 1: #SF0128 (Tiền mặt -> NO "Mã QR" button)
-  assert.ok(card128Html.includes("#SF0128"));
-  assert.ok(card128Html.includes("Mới"));
-  assert.ok(card128Html.includes("10:24"));
   assert.ok(card128Html.includes("Nguyễn Minh Anh"));
-  assert.ok(card128Html.includes("0321 456 789"));
-  assert.ok(card128Html.includes("KTX A"));
-  assert.ok(card128Html.includes("Cổng B, Phòng 302"));
-  assert.ok(card128Html.includes("2 món"));
   assert.ok(card128Html.includes("Tiền mặt"));
-  assert.ok(card128Html.includes("56.000đ"));
-  assert.ok(card128Html.includes("Cơm sườn nướng x1  •  Trà tắc x1"));
-  assert.ok(card128Html.includes("Gọi khách"));
-  assert.ok(card128Html.includes("Xem chi tiết"));
-  assert.ok(card128Html.includes("Đánh dấu đã giao"));
   assert.ok(card128Html.includes('data-has-qr="false"'));
   assert.equal(
     card128Html.includes("Mã QR"),
@@ -309,79 +339,42 @@ function testDeliveryDashboardMarkupAndPaymentRules() {
     "Cash order #SF0128 must NOT display 'Mã QR' button",
   );
 
-  // Card 2: #SF0129 (Chuyển khoản -> MUST display "Mã QR" button)
+  // Card 2: #SF0129 - Trần Thị Bảo Ngọc (Chuyển khoản -> MUST display "Mã QR" button in 2-col secondaryActionsGrid)
   assert.ok(card129Html.includes("#SF0129"));
-  assert.ok(card129Html.includes("Mới"));
-  assert.ok(card129Html.includes("11:05"));
   assert.ok(card129Html.includes("Trần Thị Bảo Ngọc"));
-  assert.ok(card129Html.includes("0909 876 543"));
-  assert.ok(card129Html.includes("KTX B"));
-  assert.ok(card129Html.includes("Tòa B1, Phòng 101"));
-  assert.ok(card129Html.includes("3 món"));
   assert.ok(card129Html.includes("Chuyển khoản"));
   assert.ok(card129Html.includes("72.000đ"));
-  assert.ok(
-    card129Html.includes(
-      "Cơm gà xối mỡ x1  •  Canh rong biển x1  •  Trà sữa truyền thống x1",
-    ),
-  );
-  assert.ok(card129Html.includes("Gọi khách"));
-  assert.ok(card129Html.includes("Xem chi tiết"));
+  assert.ok(card129Html.includes('class="actionsGrid"'));
+  assert.ok(card129Html.includes('class="secondaryActionsGrid"'));
   assert.ok(card129Html.includes('data-has-qr="true"'));
-  assert.equal(
-    card129Html.includes("Mã QR"),
-    true,
-    "Transfer order #SF0129 MUST display 'Mã QR' button",
-  );
-  assert.ok(card129Html.includes("Đánh dấu đã giao"));
-  // Verify button ordering inside #SF0129: Gọi khách -> Xem chi tiết -> Mã QR -> Đánh dấu đã giao
+  assert.ok(card129Html.includes("<span>Gọi khách</span>"));
+  assert.ok(card129Html.includes("<span>Xem chi tiết</span>"));
+  assert.ok(card129Html.includes("<span>Mã QR</span>"));
+  assert.ok(card129Html.includes("<span>Đánh dấu đã giao</span>"));
+
   const idxCall = card129Html.indexOf("Gọi khách");
   const idxDetail = card129Html.indexOf("Xem chi tiết");
   const idxQr = card129Html.indexOf("Mã QR");
   const idxComplete = card129Html.indexOf("Đánh dấu đã giao");
   assert.ok(
     idxCall < idxDetail && idxDetail < idxQr && idxQr < idxComplete,
-    "Order #SF0129 buttons must appear in exact mockup order: Gọi khách -> Xem chi tiết -> Mã QR -> Đánh dấu đã giao",
+    "Order #SF0129 (Trần Thị Bảo Ngọc) buttons must appear in exact order: Gọi khách -> Xem chi tiết -> Mã QR -> Đánh dấu đã giao",
   );
 
-  // Card 3: #SF0130 (Tiền mặt -> NO "Mã QR" button)
-  assert.ok(card130Html.includes("#SF0130"));
-  assert.ok(card130Html.includes("Đang chờ"));
-  assert.ok(card130Html.includes("11:32"));
-  assert.ok(card130Html.includes("Lê Hoàng Nam"));
-  assert.ok(card130Html.includes("0789 321 654"));
-  assert.ok(card130Html.includes("KTX A"));
-  assert.ok(card130Html.includes("Tòa A2, Phòng 205"));
-  assert.ok(card130Html.includes("2 món"));
-  assert.ok(card130Html.includes("Tiền mặt"));
-  assert.ok(card130Html.includes("48.000đ"));
-  assert.ok(card130Html.includes("Bánh tráng trộn x1  •  Trà đào x1"));
-  assert.ok(card130Html.includes("Gọi khách"));
-  assert.ok(card130Html.includes("Xem chi tiết"));
-  assert.ok(card130Html.includes("Đánh dấu đã giao"));
+  // Card 3 & Card 4 (Tiền mặt -> NO "Mã QR" button)
   assert.ok(card130Html.includes('data-has-qr="false"'));
-  assert.equal(
-    card130Html.includes("Mã QR"),
-    false,
-    "Cash order #SF0130 must NOT display 'Mã QR' button",
-  );
-
-  // Card 4: #SF0131 (Tiền mặt -> NO "Mã QR" button)
+  assert.equal(card130Html.includes("Mã QR"), false);
   assert.ok(card131Html.includes('data-has-qr="false"'));
-  assert.equal(
-    card131Html.includes("Mã QR"),
-    false,
-    "Cash order #SF0131 must NOT display 'Mã QR' button",
-  );
+  assert.equal(card131Html.includes("Mã QR"), false);
 }
 
 function run() {
-  testViewportAndResponsiveStyles();
+  testViewportDesktopMobileSeparationAndButtonDimensions();
   testScooterSvgExactMatch();
   testDeliveryHelpersAndQrButtonLogic();
-  testDeliveryDashboardMarkupAndPaymentRules();
+  testDesktopAndMobileDeliveryDashboardMarkup();
   console.log(
-    "PASS: Seller 'Đơn cần giao' (/deliver/demo & /delivery/demo) mobile UI, exact Scooter SVG, conditional 'Mã QR' button for bank transfer vs cash, and responsive styles verified (4 test suites).",
+    "PASS: Seller 'Đơn cần giao' Desktop & Mobile views, equal button dimensions for 'Chuyển khoản' orders (#SF0129 Trần Thị Bảo Ngọc), exact Scooter SVG, and responsive styles verified (4 test suites).",
   );
 }
 

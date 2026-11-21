@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useState, type SVGProps } from "react";
 import {
+  ArrowLeft,
   Banknote,
   Check,
+  CheckCircle2,
   ChevronDown,
+  Clock3,
   CreditCard,
   FileText,
   List,
@@ -13,6 +16,8 @@ import {
   Package,
   Phone,
   QrCode,
+  ShieldCheck,
+  Store,
   User,
   Utensils,
   X,
@@ -145,7 +150,9 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
 ];
 
 export function shouldShowDeliveryQrButton(
-  orderOrMethod: Pick<DeliveryOrder, "paymentMethod"> | DeliveryOrder["paymentMethod"],
+  orderOrMethod:
+    | Pick<DeliveryOrder, "paymentMethod">
+    | DeliveryOrder["paymentMethod"],
 ): boolean {
   const method =
     typeof orderOrMethod === "string"
@@ -245,6 +252,176 @@ function RoadBannerGraphic() {
   );
 }
 
+function DeliveryOrderCardItem({
+  order,
+  testIdPrefix,
+  onMarkDelivered,
+  onOpenDetail,
+  onOpenQr,
+}: {
+  order: DeliveryOrder;
+  testIdPrefix: string;
+  onMarkDelivered: (orderId: string, orderCode: string) => void;
+  onOpenDetail: (order: DeliveryOrder) => void;
+  onOpenQr: (order: DeliveryOrder) => void;
+}) {
+  const badgeLabel = getDeliveryBadgeLabel(order.badgeState);
+  const badgeClass =
+    order.badgeState === "new"
+      ? styles.stateNew
+      : order.badgeState === "waiting"
+        ? styles.stateWaiting
+        : styles.stateDone;
+  const showQrButton = shouldShowDeliveryQrButton(order);
+
+  return (
+    <article
+      className={styles.orderCard}
+      data-testid={`${testIdPrefix}-${order.orderCode.replace("#", "")}`}
+      data-payment-method={order.paymentMethod}
+    >
+      <div className={styles.orderHeader}>
+        <div className={styles.orderCodeWrap}>
+          <strong className={styles.orderCode}>{order.orderCode}</strong>
+          <span className={`${styles.stateBadge} ${badgeClass}`}>
+            {badgeLabel}
+          </span>
+        </div>
+        <span className={styles.orderTime}>{order.time}</span>
+      </div>
+
+      <div className={styles.orderBody}>
+        <div className={styles.customerInfo}>
+          <div className={styles.infoRow}>
+            <User
+              size={16}
+              className={styles.infoIcon}
+              aria-hidden="true"
+            />
+            <span className={styles.customerName}>{order.customerName}</span>
+          </div>
+
+          <div className={styles.infoRow}>
+            <Phone
+              size={15}
+              className={styles.infoIcon}
+              aria-hidden="true"
+            />
+            <span className={styles.customerPhone}>{order.phone}</span>
+          </div>
+
+          <div className={styles.infoRow}>
+            <MapPin
+              size={16}
+              className={styles.pinIcon}
+              aria-hidden="true"
+            />
+            <span className={styles.dormBadge}>{order.dorm}</span>
+            <span className={styles.addressDetail}>{order.addressDetail}</span>
+          </div>
+        </div>
+
+        <div className={styles.orderMeta}>
+          <span className={styles.itemCount}>
+            <Package size={16} aria-hidden="true" />
+            {order.itemCount} món
+          </span>
+
+          <span
+            className={`${styles.paymentBadge} ${
+              order.paymentMethod === "cash"
+                ? styles.paymentCash
+                : styles.paymentTransfer
+            }`}
+          >
+            {order.paymentMethod === "cash" ? (
+              <>
+                <Banknote size={14} aria-hidden="true" />
+                Tiền mặt
+              </>
+            ) : (
+              <>
+                <CreditCard size={14} aria-hidden="true" />
+                Chuyển khoản
+              </>
+            )}
+          </span>
+
+          <strong className={styles.orderTotal}>
+            {formatMoney(order.total)}
+          </strong>
+        </div>
+      </div>
+
+      <div className={styles.itemsSummary}>
+        <List size={15} aria-hidden="true" />
+        <span className={styles.itemsText}>{order.items.join("  •  ")}</span>
+      </div>
+
+      {/* Hàng nút 1: Gọi khách | Xem chi tiết */}
+      <div className={styles.actionsGrid}>
+        <a
+          href={`tel:${order.phone.replace(/\s+/g, "")}`}
+          className={styles.callBtn}
+        >
+          <Phone size={15} aria-hidden="true" />
+          <span>Gọi khách</span>
+        </a>
+
+        <button
+          type="button"
+          className={styles.detailBtn}
+          onClick={() => onOpenDetail(order)}
+        >
+          <FileText size={15} aria-hidden="true" />
+          <span>Xem chi tiết</span>
+        </button>
+      </div>
+
+      {/* Hàng nút 2: Nếu Chuyển khoản -> Mã QR | Đánh dấu đã giao (cùng kích thước Gọi khách / Xem chi tiết); Nếu Tiền mặt -> chỉ hiển thị Đánh dấu đã giao full width */}
+      <div
+        className={
+          showQrButton
+            ? styles.secondaryActionsGrid
+            : styles.secondaryActionsSingle
+        }
+        data-has-qr={showQrButton ? "true" : "false"}
+      >
+        {showQrButton && (
+          <button
+            type="button"
+            className={styles.qrBtn}
+            onClick={() => onOpenQr(order)}
+          >
+            <QrCode size={15} aria-hidden="true" />
+            <span>Mã QR</span>
+          </button>
+        )}
+
+        {order.status === "delivering" ? (
+          <button
+            type="button"
+            className={styles.completeBtn}
+            onClick={() => onMarkDelivered(order.id, order.orderCode)}
+          >
+            <Check size={16} strokeWidth={2.5} aria-hidden="true" />
+            <span>Đánh dấu đã giao</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className={`${styles.completeBtn} ${styles.completeBtnDone}`}
+          >
+            <Check size={16} strokeWidth={2.5} aria-hidden="true" />
+            <span>Đã giao thành công</span>
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
 export default function DeliveryDashboard({
   shopName = "Cơm Cô Ba",
   initialOrders = initialMockDeliveryOrders,
@@ -268,6 +445,20 @@ export default function DeliveryDashboard({
     initialCompletedBaseCount,
   );
 
+  const deliveringOrders = orders.filter(
+    (order) => order.status === "delivering",
+  );
+  const ktxADeliveringCount = deliveringOrders.filter(
+    (order) => order.dorm === "KTX A",
+  ).length;
+  const ktxBDeliveringCount = deliveringOrders.filter(
+    (order) => order.dorm === "KTX B",
+  ).length;
+  const transferDeliveringCount = deliveringOrders.filter((order) =>
+    shouldShowDeliveryQrButton(order),
+  ).length;
+  const cashDeliveringCount = deliveringOrders.length - transferDeliveringCount;
+
   const visibleOrders = filterDeliveryOrders(orders, {
     status: activeTab,
     dorm: dormFilter,
@@ -286,320 +477,527 @@ export default function DeliveryDashboard({
 
   return (
     <div className={styles.page} data-testid="seller-delivery-page">
-      {/* Top Header */}
-      <header className={styles.header}>
-        <div className={`${styles.shell} ${styles.headerInner}`}>
-          <Link
-            href="/"
-            className={styles.brand}
-            aria-label="StudentFood - Quyền giao hàng"
-          >
-            <span className={styles.brandIcon}>
-              <Utensils size={23} strokeWidth={2.1} aria-hidden="true" />
-            </span>
-            <span className={styles.brandText}>
-              <strong>
-                Student<span>Food</span>
-              </strong>
-              <small>Quyền giao hàng</small>
-            </span>
-          </Link>
-
-          <button
-            type="button"
-            className={styles.shopPill}
-            aria-label={`Cửa hàng: ${shopName}`}
-          >
-            <span className={styles.shopAvatar} aria-hidden="true">
-              🍲
-            </span>
-            <span>{shopName}</span>
-            <ChevronDown
-              size={15}
-              className={styles.shopChevron}
-              aria-hidden="true"
-            />
-          </button>
-        </div>
-      </header>
-
-      <main className={`${styles.shell} ${styles.main}`}>
-        <div className={styles.heading}>
-          <h1>Đơn cần giao</h1>
-          <p>Xem các đơn đang chờ giao của cửa hàng.</p>
-        </div>
-
-        {/* 2 Tab Cần giao / Đã giao */}
-        <div
-          className={styles.statusTabs}
-          role="tablist"
-          aria-label="Trạng thái giao hàng"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "delivering"}
-            className={`${styles.statusTab} ${
-              activeTab === "delivering" ? styles.statusTabActive : ""
-            }`}
-            onClick={() => setActiveTab("delivering")}
-          >
-            Cần giao ({deliveringCount})
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "delivered"}
-            className={`${styles.statusTab} ${
-              activeTab === "delivered" ? styles.statusTabActive : ""
-            }`}
-            onClick={() => setActiveTab("delivered")}
-          >
-            Đã giao ({deliveredCount})
-          </button>
-        </div>
-
-        {/* Bộ lọc khu vực KTX */}
-        <div
-          className={styles.locationFilters}
-          role="group"
-          aria-label="Lọc theo khu KTX"
-        >
-          {deliveryDormFilterOptions.map((chip) => (
-            <button
-              key={chip.value}
-              type="button"
-              aria-pressed={dormFilter === chip.value}
-              className={`${styles.locationChip} ${
-                dormFilter === chip.value ? styles.locationChipActive : ""
-              }`}
-              onClick={() => setDormFilter(chip.value)}
+      {/* =====================================================================
+          PHIÊN BẢN DESKTOP (> 760px) — Tuân thủ quy tắc hệ thống (/seller & /seller/shop)
+         ===================================================================== */}
+      <div className={styles.desktopView} data-testid="seller-delivery-desktop">
+        <header className={styles.desktopTopHeader}>
+          <div className={styles.desktopTopHeaderInner}>
+            <Link
+              href="/"
+              className={styles.desktopBrand}
+              aria-label="StudentFood - Quyền giao hàng"
             >
-              {chip.label}
-            </button>
-          ))}
-        </div>
+              <span className={styles.desktopBrandIcon}>
+                <Utensils size={28} strokeWidth={2} aria-hidden="true" />
+              </span>
+              <span className={styles.desktopBrandCopy}>
+                <strong>
+                  Student<span>Food</span>
+                </strong>
+                <small>Món ngon, gần bạn hơn</small>
+              </span>
+            </Link>
 
-        {/* Banner tóm tắt */}
-        <section className={styles.banner} aria-label="Tóm tắt đơn giao hôm nay">
-          <div className={styles.bannerIconBox} data-testid="delivery-scooter-box">
-            <DeliveryScooterIcon />
-          </div>
-          <div className={styles.bannerCopy}>
-            <span>Hôm nay</span>
-            <strong>{deliveringCount} đơn cần giao</strong>
-            <small>Cố gắng giao đúng giờ nhé!</small>
-          </div>
-          <div className={styles.bannerArt}>
-            <RoadBannerGraphic />
-            <div className={styles.bannerSlogan}>
-              Sinh viên
-              <br />
-              ngon hơn
-              <br />
-              mỗi ngày !
+            <nav
+              className={styles.desktopTopNav}
+              aria-label="Điều hướng Seller"
+            >
+              <Link href="/seller">Tổng quan</Link>
+              <Link href="/seller/orders">Đơn hàng</Link>
+              <Link href="/seller/menu">Thực đơn</Link>
+              <Link href="/seller/shop">Cửa hàng</Link>
+              <span className={styles.desktopTopNavCurrent} aria-current="page">
+                Đơn cần giao
+              </span>
+            </nav>
+
+            <div className={styles.desktopTopActions}>
+              <span className={styles.desktopPermissionPill}>
+                <ShieldCheck size={16} aria-hidden="true" />
+                Quyền giao hàng
+              </span>
+              <button
+                type="button"
+                className={styles.shopPill}
+                aria-label={`Cửa hàng: ${shopName}`}
+              >
+                <span className={styles.shopAvatar} aria-hidden="true">
+                  🍲
+                </span>
+                <span>{shopName}</span>
+                <ChevronDown
+                  size={15}
+                  className={styles.shopChevron}
+                  aria-hidden="true"
+                />
+              </button>
             </div>
           </div>
-        </section>
+        </header>
 
-        {toast && (
-          <div role="status" className={styles.toast}>
-            <span>{toast}</span>
-            <button
-              type="button"
-              onClick={() => setToast("")}
-              aria-label="Đóng thông báo"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
+        <div className={styles.desktopWorkspace}>
+          {/* Sidebar trái chuẩn hệ thống Seller (/seller, /seller/shop) */}
+          <aside
+            className={styles.desktopSidebar}
+            aria-label="Bảng điều hướng giao hàng cửa hàng"
+          >
+            <div className={styles.desktopSidebarShop}>
+              <div className={styles.desktopSidebarAvatar} aria-hidden="true">
+                🍲
+              </div>
+              <div className={styles.desktopSidebarShopText}>
+                <strong>{shopName}</strong>
+                <span>Quyền giao hàng</span>
+              </div>
+            </div>
 
-        {/* Danh sách Card đơn hàng */}
-        {visibleOrders.length > 0 ? (
-          <div className={styles.orderList}>
-            {visibleOrders.map((order) => {
-              const badgeLabel = getDeliveryBadgeLabel(order.badgeState);
-              const badgeClass =
-                order.badgeState === "new"
-                  ? styles.stateNew
-                  : order.badgeState === "waiting"
-                    ? styles.stateWaiting
-                    : styles.stateDone;
-              const showQrButton = shouldShowDeliveryQrButton(order);
+            <div className={styles.desktopSidebarSection}>
+              <small className={styles.desktopSidebarLabel}>
+                TRẠNG THÁI ĐƠN GIAO
+              </small>
+              <button
+                type="button"
+                className={styles.desktopSidebarNavBtn}
+                data-active={activeTab === "delivering"}
+                onClick={() => setActiveTab("delivering")}
+              >
+                <DeliveryScooterIcon />
+                <span>Đơn cần giao</span>
+                <strong className={styles.desktopSidebarCount}>
+                  {deliveringCount}
+                </strong>
+              </button>
+              <button
+                type="button"
+                className={styles.desktopSidebarNavBtn}
+                data-active={activeTab === "delivered"}
+                onClick={() => setActiveTab("delivered")}
+              >
+                <CheckCircle2 size={20} aria-hidden="true" />
+                <span>Đơn đã giao</span>
+                <strong className={styles.desktopSidebarCountMuted}>
+                  {deliveredCount}
+                </strong>
+              </button>
+            </div>
 
-              return (
-                <article
-                  key={order.id}
-                  className={styles.orderCard}
-                  data-testid={`delivery-order-card-${order.orderCode.replace("#", "")}`}
-                  data-payment-method={order.paymentMethod}
+            <div className={styles.desktopSidebarSection}>
+              <small className={styles.desktopSidebarLabel}>
+                KHU VỰC KÝ TÚC XÁ
+              </small>
+              {deliveryDormFilterOptions.map((chip) => (
+                <button
+                  key={`desktop-sidebar-${chip.value}`}
+                  type="button"
+                  className={styles.desktopSidebarDormBtn}
+                  data-active={dormFilter === chip.value}
+                  onClick={() => setDormFilter(chip.value)}
                 >
-                  <div className={styles.orderHeader}>
-                    <div className={styles.orderCodeWrap}>
-                      <strong className={styles.orderCode}>
-                        {order.orderCode}
-                      </strong>
-                      <span className={`${styles.stateBadge} ${badgeClass}`}>
-                        {badgeLabel}
-                      </span>
-                    </div>
-                    <span className={styles.orderTime}>{order.time}</span>
-                  </div>
+                  <MapPin size={16} aria-hidden="true" />
+                  <span>{chip.label}</span>
+                </button>
+              ))}
+            </div>
 
-                  <div className={styles.orderBody}>
-                    <div className={styles.customerInfo}>
-                      <div className={styles.infoRow}>
-                        <User
-                          size={16}
-                          className={styles.infoIcon}
-                          aria-hidden="true"
-                        />
-                        <span className={styles.customerName}>
-                          {order.customerName}
-                        </span>
-                      </div>
+            <Link href="/seller/shop" className={styles.desktopSidebarBack}>
+              <ArrowLeft size={17} aria-hidden="true" />
+              Quay lại Cửa hàng
+            </Link>
+          </aside>
 
-                      <div className={styles.infoRow}>
-                        <Phone
-                          size={15}
-                          className={styles.infoIcon}
-                          aria-hidden="true"
-                        />
-                        <span className={styles.customerPhone}>
-                          {order.phone}
-                        </span>
-                      </div>
+          {/* Vùng nội dung chính Desktop */}
+          <main className={styles.desktopMain}>
+            <div className={styles.desktopHeading}>
+              <div>
+                <h1>Đơn cần giao</h1>
+                <p>
+                  Xem các đơn đang chờ giao của cửa hàng và cập nhật tiến độ
+                  giao hàng cho sinh viên.
+                </p>
+              </div>
+              <div className={styles.desktopHeadingActions}>
+                <span className={styles.desktopStatusBadge}>
+                  ● Đang điều phối ({deliveringCount} đơn chờ giao)
+                </span>
+                <Link href="/seller/shop" className={styles.desktopNeutralBtn}>
+                  <Store size={17} aria-hidden="true" />
+                  Quản lý cửa hàng
+                </Link>
+              </div>
+            </div>
 
-                      <div className={styles.infoRow}>
-                        <MapPin
-                          size={16}
-                          className={styles.pinIcon}
-                          aria-hidden="true"
-                        />
-                        <span className={styles.dormBadge}>{order.dorm}</span>
-                        <span className={styles.addressDetail}>
-                          {order.addressDetail}
-                        </span>
-                      </div>
-                    </div>
+            {/* 3 Thẻ thống kê nhanh chuẩn giao diện Seller Desktop */}
+            <section
+              className={styles.desktopStatsRow}
+              aria-label="Thống kê nhanh đơn giao hôm nay"
+            >
+              <article className={styles.desktopStatCard}>
+                <div className={styles.desktopStatIconOrange}>
+                  <DeliveryScooterIcon />
+                </div>
+                <div>
+                  <span className={styles.desktopStatLabel}>
+                    Hôm nay cần giao
+                  </span>
+                  <strong className={styles.desktopStatValue}>
+                    {deliveringCount} đơn cần giao
+                  </strong>
+                  <small className={styles.desktopStatSub}>
+                    Cố gắng giao đúng giờ nhé!
+                  </small>
+                </div>
+              </article>
 
-                    <div className={styles.orderMeta}>
-                      <span className={styles.itemCount}>
-                        <Package size={16} aria-hidden="true" />
-                        {order.itemCount} món
-                      </span>
+              <article className={styles.desktopStatCard}>
+                <div className={styles.desktopStatIconGreen}>
+                  <CheckCircle2 size={24} aria-hidden="true" />
+                </div>
+                <div>
+                  <span className={styles.desktopStatLabel}>
+                    Đã giao hoàn tất
+                  </span>
+                  <strong className={styles.desktopStatValue}>
+                    {deliveredCount} đơn đã giao
+                  </strong>
+                  <small className={styles.desktopStatSub}>
+                    Hoàn thành trong ca hôm nay
+                  </small>
+                </div>
+              </article>
 
-                      <span
-                        className={`${styles.paymentBadge} ${
-                          order.paymentMethod === "cash"
-                            ? styles.paymentCash
-                            : styles.paymentTransfer
-                        }`}
-                      >
-                        {order.paymentMethod === "cash" ? (
-                          <>
-                            <Banknote size={14} aria-hidden="true" />
-                            Tiền mặt
-                          </>
-                        ) : (
-                          <>
-                            <CreditCard size={14} aria-hidden="true" />
-                            Chuyển khoản
-                          </>
-                        )}
-                      </span>
+              <article className={styles.desktopStatCard}>
+                <div className={styles.desktopStatIconBlue}>
+                  <MapPin size={24} aria-hidden="true" />
+                </div>
+                <div>
+                  <span className={styles.desktopStatLabel}>
+                    Phân bổ khu vực
+                  </span>
+                  <strong className={styles.desktopStatValue}>
+                    KTX A ({ktxADeliveringCount}) • KTX B ({ktxBDeliveringCount}
+                    )
+                  </strong>
+                  <small className={styles.desktopStatSub}>
+                    Tiền mặt: {cashDeliveringCount} • Chuyển khoản:{" "}
+                    {transferDeliveringCount}
+                  </small>
+                </div>
+              </article>
+            </section>
 
-                      <strong className={styles.orderTotal}>
-                        {formatMoney(order.total)}
-                      </strong>
-                    </div>
-                  </div>
+            {toast && (
+              <div role="status" className={styles.toast}>
+                <span>{toast}</span>
+                <button
+                  type="button"
+                  onClick={() => setToast("")}
+                  aria-label="Đóng thông báo"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
 
-                  <div className={styles.itemsSummary}>
-                    <List size={15} aria-hidden="true" />
-                    <span className={styles.itemsText}>
-                      {order.items.join("  •  ")}
-                    </span>
-                  </div>
-
-                  {/* Hàng nút 1: Gọi khách | Xem chi tiết */}
-                  <div className={styles.actionsGrid}>
-                    <a
-                      href={`tel:${order.phone.replace(/\s+/g, "")}`}
-                      className={styles.callBtn}
-                    >
-                      <Phone size={15} aria-hidden="true" />
-                      Gọi khách
-                    </a>
-
+            <div className={styles.desktopContentColumns}>
+              <div className={styles.desktopOrdersColumn}>
+                {/* Thanh công cụ lọc Tab + Khu KTX trên Desktop */}
+                <div className={styles.desktopFilterBar}>
+                  <div
+                    className={styles.desktopStatusTabs}
+                    role="tablist"
+                    aria-label="Trạng thái giao hàng trên máy tính"
+                  >
                     <button
                       type="button"
-                      className={styles.detailBtn}
-                      onClick={() => setDetailOrder(order)}
+                      role="tab"
+                      aria-selected={activeTab === "delivering"}
+                      className={`${styles.statusTab} ${
+                        activeTab === "delivering" ? styles.statusTabActive : ""
+                      }`}
+                      onClick={() => setActiveTab("delivering")}
                     >
-                      <FileText size={15} aria-hidden="true" />
-                      Xem chi tiết
+                      Cần giao ({deliveringCount})
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTab === "delivered"}
+                      className={`${styles.statusTab} ${
+                        activeTab === "delivered" ? styles.statusTabActive : ""
+                      }`}
+                      onClick={() => setActiveTab("delivered")}
+                    >
+                      Đã giao ({deliveredCount})
                     </button>
                   </div>
 
-                  {/* Hàng nút 2: Nếu Chuyển khoản -> Mã QR | Đánh dấu đã giao; Nếu Tiền mặt -> chỉ hiển thị Đánh dấu đã giao full width */}
                   <div
-                    className={
-                      showQrButton
-                        ? styles.secondaryActionsGrid
-                        : styles.secondaryActionsSingle
-                    }
-                    data-has-qr={showQrButton ? "true" : "false"}
+                    className={styles.desktopDormChips}
+                    role="group"
+                    aria-label="Lọc theo khu KTX trên máy tính"
                   >
-                    {showQrButton && (
+                    {deliveryDormFilterOptions.map((chip) => (
                       <button
+                        key={`desktop-chip-${chip.value}`}
                         type="button"
-                        className={styles.qrBtn}
-                        onClick={() => setQrOrder(order)}
+                        aria-pressed={dormFilter === chip.value}
+                        className={`${styles.locationChip} ${
+                          dormFilter === chip.value
+                            ? styles.locationChipActive
+                            : ""
+                        }`}
+                        onClick={() => setDormFilter(chip.value)}
                       >
-                        <QrCode size={15} aria-hidden="true" />
-                        Mã QR
+                        {chip.label}
                       </button>
-                    )}
-
-                    {order.status === "delivering" ? (
-                      <button
-                        type="button"
-                        className={styles.completeBtn}
-                        onClick={() =>
-                          handleMarkDelivered(order.id, order.orderCode)
-                        }
-                      >
-                        <Check size={16} strokeWidth={2.5} aria-hidden="true" />
-                        Đánh dấu đã giao
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled
-                        className={`${styles.completeBtn} ${styles.completeBtnDone}`}
-                      >
-                        <Check size={16} strokeWidth={2.5} aria-hidden="true" />
-                        Đã giao thành công
-                      </button>
-                    )}
+                    ))}
                   </div>
-                </article>
-              );
-            })}
+                </div>
+
+                {visibleOrders.length > 0 ? (
+                  <div className={styles.desktopOrdersGrid}>
+                    {visibleOrders.map((order) => (
+                      <DeliveryOrderCardItem
+                        key={`desktop-${order.id}`}
+                        order={order}
+                        testIdPrefix="desktop-delivery-order-card"
+                        onMarkDelivered={handleMarkDelivered}
+                        onOpenDetail={setDetailOrder}
+                        onOpenQr={setQrOrder}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.empty}>
+                    <strong>Không có đơn hàng nào</strong>
+                    <p>
+                      {activeTab === "delivering"
+                        ? "Tất cả đơn trong khu vực này đã được giao xong."
+                        : "Chưa có đơn hàng đã giao trong khu vực này."}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Cột phải Desktop: Banner tóm tắt & Hướng dẫn thao tác */}
+              <aside className={styles.desktopRightRail}>
+                <section
+                  className={styles.banner}
+                  aria-label="Tóm tắt lộ trình giao hàng"
+                >
+                  <div className={styles.bannerIconBox}>
+                    <DeliveryScooterIcon />
+                  </div>
+                  <div className={styles.bannerCopy}>
+                    <span>Hôm nay</span>
+                    <strong>{deliveringCount} đơn cần giao</strong>
+                    <small>Cố gắng giao đúng giờ nhé!</small>
+                  </div>
+                  <div className={styles.bannerArt}>
+                    <RoadBannerGraphic />
+                    <div className={styles.bannerSlogan}>
+                      Sinh viên
+                      <br />
+                      ngon hơn
+                      <br />
+                      mỗi ngày !
+                    </div>
+                  </div>
+                </section>
+
+                <section className={styles.desktopGuideCard}>
+                  <h3>
+                    <Clock3 size={18} aria-hidden="true" />
+                    Quy trình giao đơn
+                  </h3>
+                  <ol className={styles.desktopGuideList}>
+                    <li>
+                      Kiểm tra khu <strong>KTX A / KTX B</strong> và tòa, phòng
+                      trước khi xuất phát.
+                    </li>
+                    <li>
+                      Bấm <strong>Gọi khách</strong> khi tới điểm hẹn. Với đơn{" "}
+                      <strong>Chuyển khoản</strong>, mở <strong>Mã QR</strong>{" "}
+                      để khách quét nhanh.
+                    </li>
+                    <li>
+                      Sau khi bàn giao món, bấm{" "}
+                      <strong>Đánh dấu đã giao</strong> để hoàn tất đơn.
+                    </li>
+                  </ol>
+                </section>
+              </aside>
+            </div>
+          </main>
+        </div>
+      </div>
+
+      {/* =====================================================================
+          PHIÊN BẢN MOBILE (<= 760px) — Khớp 100% ảnh mẫu, chỉ bật trên thiết bị Mobile
+         ===================================================================== */}
+      <div className={styles.mobileView} data-testid="seller-delivery-mobile">
+        {/* Top Header */}
+        <header className={styles.header}>
+          <div className={`${styles.shell} ${styles.headerInner}`}>
+            <Link
+              href="/"
+              className={styles.brand}
+              aria-label="StudentFood - Quyền giao hàng"
+            >
+              <span className={styles.brandIcon}>
+                <Utensils size={23} strokeWidth={2.1} aria-hidden="true" />
+              </span>
+              <span className={styles.brandText}>
+                <strong>
+                  Student<span>Food</span>
+                </strong>
+                <small>Quyền giao hàng</small>
+              </span>
+            </Link>
+
+            <button
+              type="button"
+              className={styles.shopPill}
+              aria-label={`Cửa hàng: ${shopName}`}
+            >
+              <span className={styles.shopAvatar} aria-hidden="true">
+                🍲
+              </span>
+              <span>{shopName}</span>
+              <ChevronDown
+                size={15}
+                className={styles.shopChevron}
+                aria-hidden="true"
+              />
+            </button>
           </div>
-        ) : (
-          <div className={styles.empty}>
-            <strong>Không có đơn hàng nào</strong>
-            <p>
-              {activeTab === "delivering"
-                ? "Tất cả đơn trong khu vực này đã được giao xong."
-                : "Chưa có đơn hàng đã giao trong khu vực này."}
-            </p>
+        </header>
+
+        <main className={`${styles.shell} ${styles.main}`}>
+          <div className={styles.heading}>
+            <h1>Đơn cần giao</h1>
+            <p>Xem các đơn đang chờ giao của cửa hàng.</p>
           </div>
-        )}
-      </main>
+
+          {/* 2 Tab Cần giao / Đã giao */}
+          <div
+            className={styles.statusTabs}
+            role="tablist"
+            aria-label="Trạng thái giao hàng"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "delivering"}
+              className={`${styles.statusTab} ${
+                activeTab === "delivering" ? styles.statusTabActive : ""
+              }`}
+              onClick={() => setActiveTab("delivering")}
+            >
+              Cần giao ({deliveringCount})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "delivered"}
+              className={`${styles.statusTab} ${
+                activeTab === "delivered" ? styles.statusTabActive : ""
+              }`}
+              onClick={() => setActiveTab("delivered")}
+            >
+              Đã giao ({deliveredCount})
+            </button>
+          </div>
+
+          {/* Bộ lọc khu vực KTX */}
+          <div
+            className={styles.locationFilters}
+            role="group"
+            aria-label="Lọc theo khu KTX"
+          >
+            {deliveryDormFilterOptions.map((chip) => (
+              <button
+                key={chip.value}
+                type="button"
+                aria-pressed={dormFilter === chip.value}
+                className={`${styles.locationChip} ${
+                  dormFilter === chip.value ? styles.locationChipActive : ""
+                }`}
+                onClick={() => setDormFilter(chip.value)}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Banner tóm tắt */}
+          <section
+            className={styles.banner}
+            aria-label="Tóm tắt đơn giao hôm nay"
+          >
+            <div
+              className={styles.bannerIconBox}
+              data-testid="delivery-scooter-box"
+            >
+              <DeliveryScooterIcon />
+            </div>
+            <div className={styles.bannerCopy}>
+              <span>Hôm nay</span>
+              <strong>{deliveringCount} đơn cần giao</strong>
+              <small>Cố gắng giao đúng giờ nhé!</small>
+            </div>
+            <div className={styles.bannerArt}>
+              <RoadBannerGraphic />
+              <div className={styles.bannerSlogan}>
+                Sinh viên
+                <br />
+                ngon hơn
+                <br />
+                mỗi ngày !
+              </div>
+            </div>
+          </section>
+
+          {toast && (
+            <div role="status" className={styles.toast}>
+              <span>{toast}</span>
+              <button
+                type="button"
+                onClick={() => setToast("")}
+                aria-label="Đóng thông báo"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
+          {/* Danh sách Card đơn hàng Mobile */}
+          {visibleOrders.length > 0 ? (
+            <div className={styles.orderList}>
+              {visibleOrders.map((order) => (
+                <DeliveryOrderCardItem
+                  key={order.id}
+                  order={order}
+                  testIdPrefix="delivery-order-card"
+                  onMarkDelivered={handleMarkDelivered}
+                  onOpenDetail={setDetailOrder}
+                  onOpenQr={setQrOrder}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className={styles.empty}>
+              <strong>Không có đơn hàng nào</strong>
+              <p>
+                {activeTab === "delivering"
+                  ? "Tất cả đơn trong khu vực này đã được giao xong."
+                  : "Chưa có đơn hàng đã giao trong khu vực này."}
+              </p>
+            </div>
+          )}
+        </main>
+      </div>
 
       {/* Popup xem chi tiết đơn hàng */}
       {detailOrder && (
