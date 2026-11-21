@@ -252,6 +252,39 @@ export default function SellerPaymentView() {
   );
 }
 
+function readStoredPaymentMethods(
+  restaurantId: string,
+): { cash: boolean; bank: boolean } | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  try {
+    const raw =
+      window.localStorage.getItem(`sf:seller-payment-methods:${restaurantId}`) ??
+      window.localStorage.getItem("sf:seller-payment-methods:latest");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { cash?: unknown; bank?: unknown };
+    if (typeof parsed?.cash === "boolean" && typeof parsed?.bank === "boolean") {
+      return { cash: parsed.cash, bank: parsed.bank };
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return null;
+}
+
+function writeStoredPaymentMethods(
+  restaurantId: string,
+  next: { cash: boolean; bank: boolean },
+) {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    const payload = JSON.stringify(next);
+    window.localStorage.setItem(`sf:seller-payment-methods:${restaurantId}`, payload);
+    window.localStorage.setItem("sf:seller-payment-methods:latest", payload);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function BankManager({
   actorId,
   restaurantId,
@@ -269,13 +302,33 @@ export function BankManager({
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [cashEnabled, setCashEnabled] = useState(true);
-  const [bankEnabled, setBankEnabled] = useState(true);
+  const [cashEnabled, setCashEnabled] = useState(
+    () => readStoredPaymentMethods(restaurantId)?.cash ?? true,
+  );
+  const [bankEnabled, setBankEnabled] = useState(
+    () => readStoredPaymentMethods(restaurantId)?.bank ?? false,
+  );
   const [guide, setGuide] = useState(false);
   const [showMobileQrModal, setShowMobileQrModal] = useState(false);
   const pending = useRef(false), mounted = useRef(true), generation = useRef(0);
   const current = useCallback(() => mounted.current && useAuthStore.getState().user?.id === actorId, [actorId]);
   const cancel = useCallback(() => { generation.current++; }, []);
+
+  function toggleCashMethod() {
+    setCashEnabled((prevCash) => {
+      const nextCash = !prevCash;
+      writeStoredPaymentMethods(restaurantId, { cash: nextCash, bank: bankEnabled });
+      return nextCash;
+    });
+  }
+
+  function toggleBankMethod() {
+    setBankEnabled((prevBank) => {
+      const nextBank = !prevBank;
+      writeStoredPaymentMethods(restaurantId, { cash: cashEnabled, bank: nextBank });
+      return nextBank;
+    });
+  }
 
   const reload = useCallback(async () => {
     const run = ++generation.current;
@@ -284,6 +337,13 @@ export function BankManager({
       const result = await readSellerBanks(actorId, restaurantId);
       if (current() && run === generation.current) {
         setBanks(result.banks);
+        const stored = readStoredPaymentMethods(restaurantId);
+        if (stored) {
+          setCashEnabled(stored.cash);
+          setBankEnabled(stored.bank);
+        } else {
+          setBankEnabled(result.banks.length > 0);
+        }
         setError("");
       }
     } catch (err) {
@@ -497,7 +557,7 @@ export function BankManager({
                     role="switch"
                     aria-checked={cashEnabled}
                     aria-label="Bật Tiền mặt khi nhận hàng"
-                    onClick={() => setCashEnabled((v) => !v)}
+                    onClick={toggleCashMethod}
                     style={{
                       position: "absolute",
                       right: 16,
@@ -533,7 +593,7 @@ export function BankManager({
                     role="switch"
                     aria-checked={bankEnabled}
                     aria-label="Bật Chuyển khoản ngân hàng"
-                    onClick={() => setBankEnabled((v) => !v)}
+                    onClick={toggleBankMethod}
                     style={{
                       position: "absolute",
                       right: 16,
@@ -845,7 +905,7 @@ export function BankManager({
                   role="switch"
                   aria-checked={cashEnabled}
                   aria-label="Bật Tiền mặt"
-                  onClick={() => setCashEnabled((v) => !v)}
+                  onClick={toggleCashMethod}
                   style={{
                     width: 48,
                     height: 28,
@@ -879,7 +939,7 @@ export function BankManager({
                   role="switch"
                   aria-checked={bankEnabled}
                   aria-label="Bật Chuyển khoản"
-                  onClick={() => setBankEnabled((v) => !v)}
+                  onClick={toggleBankMethod}
                   style={{
                     width: 48,
                     height: 28,

@@ -957,6 +957,46 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
     );
   }
 
+  function foodTemplate() {
+    setGroupsChanged(true);
+    const templates: [string, boolean, boolean, string[], number[]][] = [
+      [
+        "Món ăn thêm",
+        true,
+        false,
+        ["Trứng ốp la", "Chả thêm", "Cơm / Bún thêm", "Canh thêm"],
+        [5000, 7000, 5000, 5000],
+      ],
+      [
+        "Khẩu phần",
+        false,
+        true,
+        ["Phần thường", "Phần đặc biệt"],
+        [0, 10000],
+      ],
+      [
+        "Ghi chú khẩu vị",
+        true,
+        false,
+        ["Thêm đồ chua", "Không ớt / Ít cay", "Không hành"],
+        [0, 0, 0],
+      ],
+    ];
+    setGroups(
+      templates.map(([name, multiple, required, names, prices]) => ({
+        id: crypto.randomUUID(),
+        name,
+        is_multiple: multiple,
+        is_required: required,
+        options: names.map((option_name, index) => ({
+          id: crypto.randomUUID(),
+          option_name,
+          additional_price: prices[index],
+        })),
+      })),
+    );
+  }
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
@@ -1157,7 +1197,7 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
           <div className={styles.desktopView}>
             <form onSubmit={save}>
               <header className={styles.heading}><div><h1>{original ? "Chỉnh sửa món" : "Thêm món mới"}</h1><p>{original ? "Cập nhật thông tin món ăn trên menu cửa hàng của bạn." : "Tạo món mới để hiển thị trên menu cửa hàng của bạn."}</p></div><div className={styles.buttons}>
-                <button type="button" className={styles.outline} onClick={() => preview.current?.scrollIntoView({ behavior: "smooth", block: "center" })}><Eye size={20} />Xem trước</button>{saveButton}
+                <button type="button" className={styles.outline} onClick={cancel}>Hủy</button>{saveButton}
               </div></header>
               {error && <p className={styles.error} id="menu-save-error" role="alert">{error}</p>}
               <div className={styles.columns}><div className={styles.left}>
@@ -1178,7 +1218,7 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
                 </div></section>
                 <section className={styles.card}><div className={styles.sectionHeading}><h2>Tùy chọn món</h2><p>Tạo các nhóm topping, mức đường, mức đá hoặc món thêm.</p></div>
                   {original && !original.optionGroups && original.optionCount > 0 && !groupsChanged && <p className={styles.demo}>Món mẫu chỉ có số lượng {original.optionCount} tùy chọn, chưa có dữ liệu chi tiết. Số lượng này được giữ nguyên nếu bạn không thêm nhóm mới.</p>}
-                  {!groups.length && <div className={styles.empty}><p>Món không có tùy chọn vẫn có thể lưu.</p><button type="button" className={styles.outline} onClick={beverageTemplate}>Dùng mẫu đồ uống</button></div>}
+                  {!groups.length && <div className={styles.empty}><p>Món không có tùy chọn vẫn có thể lưu.</p><div className={styles.presetButtons}><button type="button" className={styles.outline} onClick={foodTemplate}>Dùng mẫu đồ ăn</button><button type="button" className={styles.outline} onClick={beverageTemplate}>Dùng mẫu đồ uống</button></div></div>}
                   {original?.optionGroups?.filter(g => !groups.some(current => current.id === g.id)).map(g => <button key={g.id} type="button" className={styles.outline} onClick={() => {
                     if (groups.length >= 20) { setError("Tối đa 20 nhóm."); return; }
                     setGroupsChanged(true); setGroups(current => [...current, {id:g.id,name:g.name,is_multiple:g.is_multiple,is_required:g.is_required,options:g.options.filter(o=>o.is_active).map(o=>({id:o.id,option_name:o.option_name,additional_price:o.additional_price}))}]);
@@ -1219,7 +1259,6 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
                   { label: "Tạo nhóm tùy chọn", text: "Thêm topping, mức đường, mức đá nếu có.", done: groups.length > 0 },
                   { label: "Kiểm tra giá bán", text: "Đảm bảo giá phù hợp và chính xác.", done: price.trim() !== "" && (Number.isFinite(basePrice) && Number(basePrice.toFixed(2)) === basePrice) && basePrice >= 0 && basePrice <= 10000000 },
                 ].map((tip) => <div className={styles.tip} key={tip.label}><span data-done={tip.done}>{tip.done && <Check size={16} />}</span><div><strong>{tip.label}</strong><small>{tip.text}</small></div></div>)}</section>
-                <div className={styles.bottomActions}><button type="button" className={styles.outline} onClick={cancel}>Hủy</button>{saveButton}</div>
               </aside></div>
             </form>
           </div>
@@ -1434,13 +1473,22 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
                     {!groups.length && (
                       <div className={styles.empty}>
                         <p>Món không có tùy chọn vẫn có thể lưu.</p>
-                        <button
-                          type="button"
-                          className={styles.outline}
-                          onClick={beverageTemplate}
-                        >
-                          Dùng mẫu đồ uống
-                        </button>
+                        <div className={styles.presetButtons}>
+                          <button
+                            type="button"
+                            className={styles.outline}
+                            onClick={foodTemplate}
+                          >
+                            Dùng mẫu đồ ăn
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.outline}
+                            onClick={beverageTemplate}
+                          >
+                            Dùng mẫu đồ uống
+                          </button>
+                        </div>
                       </div>
                     )}
                     <div className={styles.groups}>

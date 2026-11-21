@@ -280,6 +280,7 @@ export default function SellerOverviewView() {
       badge: "Xem danh sách món",
       text: "Tạo món ăn, đặt giá và hình ảnh hấp dẫn để thu hút sinh viên.",
       action: "Thêm món",
+      href: "/seller/menu",
     },
     {
       icon: Wallet,
@@ -287,6 +288,7 @@ export default function SellerOverviewView() {
       badge: "Thiết lập phương thức thanh toán",
       text: "Cấu hình các phương thức thanh toán cho cửa hàng.",
       action: "Thiết lập",
+      href: "/seller/payments",
     },
     {
       icon: Store,
@@ -296,6 +298,7 @@ export default function SellerOverviewView() {
         : "Chưa có ảnh đại diện",
       text: "Cập nhật thông tin cửa hàng để khách hàng dễ tìm thấy bạn.",
       action: "Chỉnh sửa",
+      href: "/seller/shop",
     },
   ];
   if (loading && !restaurant) return <p role="status">Đang tải cửa hàng…</p>;
@@ -389,7 +392,7 @@ export default function SellerOverviewView() {
                   </div>
                   <div className={styles.setupGrid}>
                     {setup.map(
-                      ({ icon: Icon, title, badge, text, action }, index) => (
+                      ({ icon: Icon, title, badge, text, action, href }, index) => (
                         <article className={styles.setupCard} key={title}>
                           <div className={styles.setupHeading}>
                             <span className={styles.icon}>
@@ -420,13 +423,13 @@ export default function SellerOverviewView() {
                             </small>
                           )}
                           <p>{text}</p>
-                          <button
+                          <Link
+                            href={href}
                             className={styles.primary}
-                            onClick={() => unavailable(title)}
                           >
                             {action}
                             <ArrowRight size={16} />
-                          </button>
+                          </Link>
                         </article>
                       ),
                     )}
