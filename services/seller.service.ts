@@ -667,7 +667,8 @@ export const SellerServices = {
     const cash = booleanValue(input.cash, "cash");
     const bank = booleanValue(input.bank, "bank");
     if (!cash && !bank) invalid("payment", "Phải chọn ít nhất một phương thức thanh toán.");
-    if (typeof input.appLockPin !== "string" || !/^[0-9]{4}$/.test(input.appLockPin)) {
+    const appLockPin = input.appLockPin === undefined ? "0000" : input.appLockPin;
+    if (typeof appLockPin !== "string" || !/^[0-9]{4}$/.test(appLockPin)) {
       invalid("appLockPin", "PIN phải là chuỗi đúng 4 chữ số.");
     }
 
@@ -675,7 +676,7 @@ export const SellerServices = {
     // theo quy tắc server; client không được quyết định trạng thái ban đầu.
     if (input.startClosed !== undefined) booleanValue(input.startClosed, "startClosed");
     const schedule = validateSchedule(input);
-    return { name, description, location, cash, bank, appLockPin: input.appLockPin, schedule, ...(Object.hasOwn(input, "avatar_url") ? { avatar_url: avatarUrl(input.avatar_url) } : {}) };
+    return { name, description, location, cash, bank, appLockPin, schedule, ...(Object.hasOwn(input, "avatar_url") ? { avatar_url: avatarUrl(input.avatar_url) } : {}) };
   },
 
   // register_seller đã được quản lý DB cung cấp định nghĩa đang triển khai:
