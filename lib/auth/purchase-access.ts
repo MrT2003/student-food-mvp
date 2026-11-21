@@ -1,4 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AuthProfile } from "@/types/auth.types";
+
+export function purchaseSyncUserId(state: {
+  status: string;
+  user: Pick<AuthProfile, "id" | "role" | "status"> | null;
+}): string | null {
+  const { status, user } = state;
+  if (status !== "ready" || user?.status !== "active" ||
+      (user.role !== "student" && user.role !== "staff")) return null;
+  return user.id || null;
+}
 
 // Application guard; không thay thế quyền sở hữu/RLS hoặc điều kiện bên trong RPC.
 export async function assertPurchaseAccess(client: SupabaseClient, expectedUserId?: string): Promise<string> {

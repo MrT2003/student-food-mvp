@@ -1,5 +1,6 @@
 "use client";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { startStudentAccountScope } from "@/store/useStudentMockStore";
 import {SellerAccessProvider} from "@/components/features/seller/SellerAccessProvider";
 import AuthProvider from "@/components/features/auth/AuthProvider";
 import ForegroundNotifications from "../features/notifications/ForegroundNotifications";
@@ -8,6 +9,7 @@ import ForegroundNotifications from "../features/notifications/ForegroundNotific
 // Feed ở ngoài route tree nên chuyển trang không đăng ký listener lần nữa.
 // Component tự ẩn và gỡ listener ngay khi logout hoặc đổi account.
 export default function AppProviders({ children }: { children: ReactNode }) {
+  useEffect(startStudentAccountScope, []);
   return (
     <>
       <AuthProvider><SellerAccessProvider>{children}</SellerAccessProvider></AuthProvider>

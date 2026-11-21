@@ -11,7 +11,7 @@ function hookHarness(file,mocks={},globals={}) {
 }
 
 test("merged providers retain Auth -> SellerAccess children and one independent foreground feed",()=>{
- const f=load("../components/layout/AppProviders.tsx",{"react/jsx-runtime":{jsx,jsxs:jsx},"@/components/features/auth/AuthProvider":{default:"auth"},"@/components/features/seller/SellerAccessProvider":{SellerAccessProvider:"seller"},"../features/notifications/ForegroundNotifications":{default:"feed"}});
+ const f=load("../components/layout/AppProviders.tsx",{react:{useEffect(){}}, "@/store/useStudentMockStore":{startStudentAccountScope(){}}, "react/jsx-runtime":{jsx,jsxs:jsx},"@/components/features/auth/AuthProvider":{default:"auth"},"@/components/features/seller/SellerAccessProvider":{SellerAccessProvider:"seller"},"../features/notifications/ForegroundNotifications":{default:"feed"}});
  const tree=f.default({children:"routes"});const auth=nodes(tree).find(n=>n.type==="auth");assert.equal(auth.props.children.type,"seller");assert.equal(auth.props.children.props.children,"routes");assert.equal(nodes(tree).filter(n=>n.type==="feed").length,1);
 });
 test("merged account retains store-join, security and notifications sections",()=>{
