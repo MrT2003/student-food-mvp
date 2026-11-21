@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type SVGProps } from "react";
 import {
   Banknote,
   Check,
   ChevronDown,
   CreditCard,
+  FileText,
   List,
   MapPin,
   Package,
@@ -34,6 +35,17 @@ export type DeliveryOrder = {
   items: string[];
   status: "delivering" | "delivered";
 };
+
+export type DeliveryDormFilter = "all" | "KTX A" | "KTX B";
+
+export const deliveryDormFilterOptions: readonly {
+  value: DeliveryDormFilter;
+  label: string;
+}[] = [
+  { value: "all", label: "Tất cả" },
+  { value: "KTX A", label: "KTX A" },
+  { value: "KTX B", label: "KTX B" },
+] as const;
 
 export const initialMockDeliveryOrders: DeliveryOrder[] = [
   {
@@ -132,37 +144,72 @@ export const initialMockDeliveryOrders: DeliveryOrder[] = [
   },
 ];
 
-function ScooterIcon() {
+export function shouldShowDeliveryQrButton(
+  orderOrMethod: Pick<DeliveryOrder, "paymentMethod"> | DeliveryOrder["paymentMethod"],
+): boolean {
+  const method =
+    typeof orderOrMethod === "string"
+      ? orderOrMethod
+      : orderOrMethod.paymentMethod;
+  return method === "transfer";
+}
+
+export function getDeliveryOrderCounts(
+  orders: readonly DeliveryOrder[],
+  initialCompletedBaseCount = 10,
+): {
+  deliveringCount: number;
+  deliveredCount: number;
+} {
+  const deliveringCount = orders.filter(
+    (order) => order.status === "delivering",
+  ).length;
+  const deliveredCount =
+    initialCompletedBaseCount +
+    orders.filter((order) => order.status === "delivered").length;
+  return { deliveringCount, deliveredCount };
+}
+
+export function filterDeliveryOrders(
+  orders: readonly DeliveryOrder[],
+  options: {
+    status: "delivering" | "delivered";
+    dorm: DeliveryDormFilter;
+  },
+): DeliveryOrder[] {
+  return orders.filter((order) => {
+    if (order.status !== options.status) return false;
+    if (options.dorm !== "all" && order.dorm !== options.dorm) return false;
+    return true;
+  });
+}
+
+export function getDeliveryBadgeLabel(
+  badgeState: DeliveryOrder["badgeState"],
+): string {
+  if (badgeState === "new") return "Mới";
+  if (badgeState === "waiting") return "Đang chờ";
+  return "Đã giao";
+}
+
+export function DeliveryScooterIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
-      width="34"
-      height="34"
-      viewBox="0 0 36 36"
+      width="25"
+      height="25"
+      viewBox="0 0 25 25"
       fill="none"
+      xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
+      {...props}
     >
-      <circle cx="9.5" cy="26.5" r="4" stroke="currentColor" strokeWidth="2.5" />
-      <circle cx="26.5" cy="26.5" r="4" stroke="currentColor" strokeWidth="2.5" />
       <path
-        d="M5.5 22.5H15L18.5 14H24.5L27.5 22.5H30.5"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d="M14.8438 7.03125H17.1875C17.6019 7.03125 17.9993 7.19587 18.2924 7.4889C18.5854 7.78192 18.75 8.17935 18.75 8.59375V15.7891C16.9414 16.3078 15.625 17.9938 15.625 19.9539C15.625 20.457 15.9563 20.8961 16.4219 21.0422L16.4281 21.0938H9.63125C10.1967 20.6368 10.6066 20.0158 10.8044 19.3163C11.0023 18.6168 10.9785 17.8731 10.7362 17.1877C10.4939 16.5022 10.045 15.9088 9.45149 15.489C8.85794 15.0693 8.14886 14.8438 7.42188 14.8438H4.22969C3.84297 14.8438 3.47188 14.907 3.125 15.0242V14.8438C3.125 14.2221 3.37193 13.626 3.81147 13.1865C4.25101 12.7469 4.84715 12.5 5.46875 12.5H13.6719C13.7755 12.5 13.8748 12.5412 13.9481 12.6144C14.0213 12.6877 14.0625 12.787 14.0625 12.8906V14.0625C14.0625 14.4769 13.8979 14.8743 13.6049 15.1674C13.3118 15.4604 12.9144 15.625 12.5 15.625H12.1094C11.7986 15.625 11.5005 15.7485 11.2807 15.9682C11.061 16.188 10.9375 16.4861 10.9375 16.7969C10.9375 17.1077 11.061 17.4057 11.2807 17.6255C11.5005 17.8453 11.7986 17.9688 12.1094 17.9688H15.1039C15.2421 17.9688 15.3747 17.9138 15.4724 17.8161C15.5701 17.7184 15.625 17.5859 15.625 17.4477V8.59375H14.8438C14.6365 8.59375 14.4378 8.51144 14.2913 8.36493C14.1448 8.21841 14.0625 8.0197 14.0625 7.8125C14.0625 7.6053 14.1448 7.40659 14.2913 7.26007C14.4378 7.11356 14.6365 7.03125 14.8438 7.03125Z"
+        fill="#F24822"
       />
       <path
-        d="M21 10.5H25.5"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <rect
-        x="6.5"
-        y="13"
-        width="7.5"
-        height="6"
-        rx="1.5"
-        fill="currentColor"
+        d="M12.7602 10.1562C13.4789 10.1562 14.0625 10.7391 14.0625 11.4586C14.0625 11.6023 13.9453 11.7188 13.8023 11.7188H7.29141C7.14766 11.7188 7.03125 11.6016 7.03125 11.4586C7.03125 10.7398 7.61406 10.1562 8.33359 10.1562H12.7602ZM17.1875 20.7031C17.1882 21.0783 17.266 21.4493 17.4163 21.7931C17.5665 22.1369 17.7858 22.446 18.0607 22.7014C18.3355 22.9568 18.66 23.1528 19.0139 23.2774C19.3677 23.402 19.7435 23.4524 20.1177 23.4256C20.4919 23.3987 20.8565 23.2951 21.189 23.1213C21.5214 22.9474 21.8146 22.707 22.0501 22.415C22.2857 22.123 22.4586 21.7857 22.5582 21.424C22.6577 21.0622 22.6818 20.6839 22.6289 20.3125H23.082C23.1765 20.3115 23.2668 20.2733 23.3334 20.2061C23.3999 20.139 23.4373 20.0484 23.4375 19.9539C23.4375 18.0125 21.8633 16.4062 19.9219 16.4062C17.9805 16.4062 16.4062 18.0125 16.4062 19.9539C16.4064 20.0483 16.4438 20.1388 16.5101 20.2059C16.5765 20.273 16.6666 20.3113 16.7609 20.3125H17.2148C17.1966 20.4401 17.1875 20.5703 17.1875 20.7031ZM21.0273 20.3125C21.0895 20.4892 21.1084 20.6782 21.0824 20.8638C21.0565 21.0493 20.9864 21.2259 20.8782 21.3787C20.7699 21.5316 20.6266 21.6563 20.4602 21.7423C20.2938 21.8284 20.1092 21.8733 19.9219 21.8733C19.7346 21.8733 19.55 21.8284 19.3836 21.7423C19.2172 21.6563 19.0738 21.5316 18.9656 21.3787C18.8573 21.2259 18.7873 21.0493 18.7613 20.8638C18.7353 20.6782 18.7542 20.4892 18.8164 20.3125H21.0273ZM2.37109 21.0938C2.46566 21.7465 2.79292 22.3431 3.29258 22.7736C3.79225 23.2042 4.43066 23.4397 5.09022 23.4367C5.74977 23.4338 6.38605 23.1926 6.88185 22.7576C7.37764 22.3226 7.69955 21.7231 7.78828 21.0695C8.47612 20.9774 9.10319 20.6271 9.54237 20.0898C9.98154 19.5524 10.2 18.8682 10.1534 18.1758C10.1068 17.4833 9.79864 16.8346 9.29142 16.3609C8.7842 15.8872 8.11586 15.6242 7.42188 15.625H4.22969C3.5223 15.625 2.84389 15.906 2.3437 16.4062C1.84351 16.9064 1.5625 17.5848 1.5625 18.2922V20.3125C1.5625 20.5197 1.64481 20.7184 1.79132 20.8649C1.93784 21.0114 2.13655 21.0938 2.34375 21.0938H2.37109ZM6.18359 21.0938C6.10307 21.3227 5.95348 21.5209 5.75546 21.6612C5.55745 21.8014 5.32078 21.8767 5.07812 21.8767C4.83547 21.8767 4.5988 21.8014 4.40079 21.6612C4.20277 21.5209 4.05318 21.3227 3.97266 21.0938H6.18359Z"
+        fill="#F24822"
       />
     </svg>
   );
@@ -211,23 +258,19 @@ export default function DeliveryDashboard({
   const [activeTab, setActiveTab] = useState<"delivering" | "delivered">(
     "delivering",
   );
-  const [dormFilter, setDormFilter] = useState<"all" | "KTX A" | "KTX B">(
-    "all",
-  );
+  const [dormFilter, setDormFilter] = useState<DeliveryDormFilter>("all");
   const [toast, setToast] = useState("");
   const [qrOrder, setQrOrder] = useState<DeliveryOrder | null>(null);
+  const [detailOrder, setDetailOrder] = useState<DeliveryOrder | null>(null);
 
-  const deliveringCount = orders.filter(
-    (order) => order.status === "delivering",
-  ).length;
-  const deliveredCount =
-    initialCompletedBaseCount +
-    orders.filter((order) => order.status === "delivered").length;
+  const { deliveringCount, deliveredCount } = getDeliveryOrderCounts(
+    orders,
+    initialCompletedBaseCount,
+  );
 
-  const visibleOrders = orders.filter((order) => {
-    if (order.status !== activeTab) return false;
-    if (dormFilter !== "all" && order.dorm !== dormFilter) return false;
-    return true;
+  const visibleOrders = filterDeliveryOrders(orders, {
+    status: activeTab,
+    dorm: dormFilter,
   });
 
   function handleMarkDelivered(orderId: string, orderCode: string) {
@@ -242,8 +285,8 @@ export default function DeliveryDashboard({
   }
 
   return (
-    <div className={styles.page}>
-      {/* Top Header với đúng Logo của Web hiện tại */}
+    <div className={styles.page} data-testid="seller-delivery-page">
+      {/* Top Header */}
       <header className={styles.header}>
         <div className={`${styles.shell} ${styles.headerInner}`}>
           <Link
@@ -322,13 +365,7 @@ export default function DeliveryDashboard({
           role="group"
           aria-label="Lọc theo khu KTX"
         >
-          {(
-            [
-              { value: "all", label: "Tất cả" },
-              { value: "KTX A", label: "KTX A" },
-              { value: "KTX B", label: "KTX B" },
-            ] as const
-          ).map((chip) => (
+          {deliveryDormFilterOptions.map((chip) => (
             <button
               key={chip.value}
               type="button"
@@ -345,8 +382,8 @@ export default function DeliveryDashboard({
 
         {/* Banner tóm tắt */}
         <section className={styles.banner} aria-label="Tóm tắt đơn giao hôm nay">
-          <div className={styles.bannerIconBox}>
-            <ScooterIcon />
+          <div className={styles.bannerIconBox} data-testid="delivery-scooter-box">
+            <DeliveryScooterIcon />
           </div>
           <div className={styles.bannerCopy}>
             <span>Hôm nay</span>
@@ -382,21 +419,22 @@ export default function DeliveryDashboard({
         {visibleOrders.length > 0 ? (
           <div className={styles.orderList}>
             {visibleOrders.map((order) => {
-              const badgeLabel =
-                order.badgeState === "new"
-                  ? "Mới"
-                  : order.badgeState === "waiting"
-                    ? "Đang chờ"
-                    : "Đã giao";
+              const badgeLabel = getDeliveryBadgeLabel(order.badgeState);
               const badgeClass =
                 order.badgeState === "new"
                   ? styles.stateNew
                   : order.badgeState === "waiting"
                     ? styles.stateWaiting
                     : styles.stateDone;
+              const showQrButton = shouldShowDeliveryQrButton(order);
 
               return (
-                <article key={order.id} className={styles.orderCard}>
+                <article
+                  key={order.id}
+                  className={styles.orderCard}
+                  data-testid={`delivery-order-card-${order.orderCode.replace("#", "")}`}
+                  data-payment-method={order.paymentMethod}
+                >
                   <div className={styles.orderHeader}>
                     <div className={styles.orderCodeWrap}>
                       <strong className={styles.orderCode}>
@@ -485,6 +523,7 @@ export default function DeliveryDashboard({
                     </span>
                   </div>
 
+                  {/* Hàng nút 1: Gọi khách | Xem chi tiết */}
                   <div className={styles.actionsGrid}>
                     <a
                       href={`tel:${order.phone.replace(/\s+/g, "")}`}
@@ -493,6 +532,36 @@ export default function DeliveryDashboard({
                       <Phone size={15} aria-hidden="true" />
                       Gọi khách
                     </a>
+
+                    <button
+                      type="button"
+                      className={styles.detailBtn}
+                      onClick={() => setDetailOrder(order)}
+                    >
+                      <FileText size={15} aria-hidden="true" />
+                      Xem chi tiết
+                    </button>
+                  </div>
+
+                  {/* Hàng nút 2: Nếu Chuyển khoản -> Mã QR | Đánh dấu đã giao; Nếu Tiền mặt -> chỉ hiển thị Đánh dấu đã giao full width */}
+                  <div
+                    className={
+                      showQrButton
+                        ? styles.secondaryActionsGrid
+                        : styles.secondaryActionsSingle
+                    }
+                    data-has-qr={showQrButton ? "true" : "false"}
+                  >
+                    {showQrButton && (
+                      <button
+                        type="button"
+                        className={styles.qrBtn}
+                        onClick={() => setQrOrder(order)}
+                      >
+                        <QrCode size={15} aria-hidden="true" />
+                        Mã QR
+                      </button>
+                    )}
 
                     {order.status === "delivering" ? (
                       <button
@@ -516,15 +585,6 @@ export default function DeliveryDashboard({
                       </button>
                     )}
                   </div>
-
-                  <button
-                    type="button"
-                    className={styles.qrBtn}
-                    onClick={() => setQrOrder(order)}
-                  >
-                    <QrCode size={15} aria-hidden="true" />
-                    Mã QR
-                  </button>
                 </article>
               );
             })}
@@ -540,6 +600,80 @@ export default function DeliveryDashboard({
           </div>
         )}
       </main>
+
+      {/* Popup xem chi tiết đơn hàng */}
+      {detailOrder && (
+        <div
+          className={styles.modalBackdrop}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delivery-detail-title"
+          onClick={() => setDetailOrder(null)}
+        >
+          <div
+            className={styles.modalCard}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h3 id="delivery-detail-title">
+                Chi tiết đơn {detailOrder.orderCode}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setDetailOrder(null)}
+                aria-label="Đóng chi tiết đơn"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={styles.detailModalBody}>
+              <div className={styles.detailModalRow}>
+                <span>Khách hàng</span>
+                <strong>{detailOrder.customerName}</strong>
+              </div>
+              <div className={styles.detailModalRow}>
+                <span>Số điện thoại</span>
+                <strong>{detailOrder.phone}</strong>
+              </div>
+              <div className={styles.detailModalRow}>
+                <span>Địa chỉ giao</span>
+                <strong>
+                  {detailOrder.dorm} • {detailOrder.addressDetail}
+                </strong>
+              </div>
+              <div className={styles.detailModalRow}>
+                <span>Thanh toán</span>
+                <strong>
+                  {detailOrder.paymentMethod === "transfer"
+                    ? "Chuyển khoản"
+                    : "Tiền mặt"}
+                </strong>
+              </div>
+              <div className={styles.detailModalItems}>
+                <span>Danh sách món ({detailOrder.itemCount} món)</span>
+                <ul>
+                  {detailOrder.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className={styles.detailModalTotal}>
+                <span>Tổng tiền</span>
+                <strong>{formatMoney(detailOrder.total)}</strong>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className={styles.modalCloseBtn}
+              onClick={() => setDetailOrder(null)}
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Popup hiển thị mã QR của đơn hàng */}
       {qrOrder && (
