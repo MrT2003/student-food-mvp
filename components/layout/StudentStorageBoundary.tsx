@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { purchaseSyncUserId } from "@/lib/auth/purchase-access";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { startStudentPersistence, useStudentMockStore } from "@/store/useStudentMockStore";
@@ -11,7 +12,8 @@ export default function StudentStorageBoundary({ children }: { children: ReactNo
   const ready = useStudentMockStore((state) => state.hasHydrated);
   const warning = useStudentMockStore((state) => state.storageWarning);
   const syncFromDatabase = useStudentMockStore((state) => state.syncFromDatabase);
-  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const userId = useAuthStore(purchaseSyncUserId);
+  const role = useAuthStore((state) => state.user?.role);
 
   useEffect(() => {
     // Accessing localStorage itself can throw when browser storage is disabled.
@@ -22,10 +24,14 @@ export default function StudentStorageBoundary({ children }: { children: ReactNo
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
-    void syncFromDatabase(userId);
-
-    if (!userId) return;
+    if (!ready || !userId) return;
+    let active = true;
+    const sync = () => {
+      const auth = useAuthStore.getState();
+      if (active && purchaseSyncUserId(auth) === userId && auth.user?.role === role)
+        void syncFromDatabase(userId);
+    };
+    sync();
 
     const supabase = createClient();
     const channel = supabase
@@ -38,15 +44,13 @@ export default function StudentStorageBoundary({ children }: { children: ReactNo
           table: "orders",
           filter: `student_id=eq.${userId}`,
         },
-        () => {
-          void syncFromDatabase(userId);
-        },
+        sync,
       )
       .subscribe();
 
     const refreshIfVisible = () => {
       if (document.visibilityState !== "hidden" && navigator.onLine !== false) {
-        void syncFromDatabase(userId);
+        sync();
       }
     };
 
@@ -56,13 +60,14 @@ export default function StudentStorageBoundary({ children }: { children: ReactNo
     document.addEventListener("visibilitychange", refreshIfVisible);
 
     return () => {
+      active = false;
       window.clearInterval(intervalId);
       window.removeEventListener("focus", refreshIfVisible);
       window.removeEventListener("online", refreshIfVisible);
       document.removeEventListener("visibilitychange", refreshIfVisible);
       void supabase.removeChannel(channel);
     };
-  }, [ready, userId, syncFromDatabase]);
+  }, [ready, userId, role, syncFromDatabase]);
 
   if (!ready) return <p role="status" style={{ padding: 24 }}>Đang khôi phục giỏ hàng và đơn hàng…</p>;
 
