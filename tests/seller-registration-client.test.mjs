@@ -61,7 +61,7 @@ function formHarness(helper, uploadImage = async () => ({ secureUrl: "https://re
   const render = () => { stateCursor = 0; refCursor = 0; return Component(); };
   function nodes(node) { if (!node || typeof node !== "object") return []; return [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)]; }
   let tree = render();
-  for (const [id, value] of [["shop-name", "TEST"], ["shop-description", "TEST ONLY"], ["shop-location", "KTX TEST"], ["seller-app-lock-pin", testPin()]]) {
+  for (const [id, value] of [["shop-name", "TEST"], ["shop-description", "TEST ONLY"], ["shop-location", "KTX TEST"]]) {
     nodes(tree).find((node) => node.props?.id === id).props.onChange({ target: { value } }); tree = render();
   }
   return { render, navigation, nodes, submit: () => nodes(render()).find((node) => node.type === "form").props.onSubmit({ preventDefault() {} }) };
@@ -78,7 +78,7 @@ test("actual form waits for API, prevents duplicate submit, displays failure and
   const tree = ui.render();
   assert.ok(ui.nodes(tree).some((node) => node.props?.role === "alert"));
   assert.equal(ui.nodes(tree).find((node) => node.props?.type === "submit").props.disabled, false);
-  assert.equal(ui.nodes(tree).find((node) => node.props?.id === "seller-app-lock-pin").props.value === "", true);
+  assert.equal(ui.nodes(tree).find((node) => node.props?.id === "seller-app-lock-pin"), undefined);
 });
 test("actual form navigates only after successful API and confirmed seller profile (mock HTTP)", async () => {
   const f = client(); const ui = formHarness(f); await ui.submit();
