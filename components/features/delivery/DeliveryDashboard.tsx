@@ -604,13 +604,138 @@ function DeliveryOrderCardItem({
   );
 }
 
+function VietQrBrandLogo() {
+  return (
+    <div className={styles.qrVietQrBrand} aria-label="VietQR">
+      <svg width="24" height="22" viewBox="0 0 26 24" fill="none" aria-hidden="true">
+        <path
+          d="M2.5 3.5L11.2 20.5L15 20.5L23.5 3.5L18.6 3.5L13.1 14.8L7.6 3.5H2.5Z"
+          fill="#e11d25"
+        />
+        <path
+          d="M11.6 3.5L14.2 8.7L16.8 3.5H11.6Z"
+          fill="#ffffff"
+        />
+      </svg>
+      <span
+        style={{
+          fontSize: 19,
+          fontWeight: 900,
+          letterSpacing: "-0.5px",
+          lineHeight: 1,
+          color: "#e11d25",
+        }}
+      >
+        IET
+      </span>
+      <span
+        style={{
+          fontSize: 19,
+          fontWeight: 900,
+          letterSpacing: "-0.5px",
+          lineHeight: 1,
+          color: "#0e2b5c",
+        }}
+      >
+        QR
+      </span>
+    </div>
+  );
+}
+
+function DeliveryVietQrGraphic({ seed }: { seed: string }) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+
+  const finders: [number, number][] = [
+    [0, 0],
+    [22, 0],
+    [0, 22],
+  ];
+
+  const dots: { x: number; y: number }[] = [];
+  for (let y = 0; y < 29; y++) {
+    for (let x = 0; x < 29; x++) {
+      const inFinder = finders.some(
+        ([fx, fy]) => x >= fx - 1 && x <= fx + 7 && y >= fy - 1 && y <= fy + 7,
+      );
+      const inCenter = x >= 10 && x <= 18 && y >= 10 && y <= 18;
+      if (inFinder || inCenter) continue;
+      const isTiming =
+        (x === 6 && y >= 8 && y <= 20 && y % 2 === 0) ||
+        (y === 6 && x >= 8 && x <= 20 && x % 2 === 0);
+      const pseudo =
+        ((x + 3) * 19 + (y + 5) * 13 + x * y * 7 + hash) % 11 < 6;
+      if (isTiming || pseudo) {
+        dots.push({ x, y });
+      }
+    }
+  }
+
+  return (
+    <svg viewBox="0 0 29 29" aria-hidden="true" focusable="false">
+      <rect x={0} y={0} width={29} height={29} fill="#ffffff" />
+      {dots.map(({ x, y }) => (
+        <rect
+          key={`${x}-${y}`}
+          x={x}
+          y={y}
+          width={1}
+          height={1}
+          fill="#0a0f1c"
+        />
+      ))}
+      {finders.map(([x, y]) => (
+        <g key={`${x}-${y}`}>
+          <rect x={x} y={y} width={7} height={7} fill="#0a0f1c" />
+          <rect x={x + 1} y={y + 1} width={5} height={5} fill="#ffffff" />
+          <rect x={x + 2} y={y + 2} width={3} height={3} fill="#0a0f1c" />
+        </g>
+      ))}
+      <rect x={11} y={11} width={7} height={7} rx={1.4} fill="#ffffff" />
+      <rect
+        x={11.35}
+        y={11.35}
+        width={6.3}
+        height={6.3}
+        rx={1.2}
+        fill="#ffffff"
+        stroke="#e6edf5"
+        strokeWidth={0.35}
+      />
+      <path
+        d="M12.35 13.05C12.1 12.65 12.4 12.15 12.88 12.15H16.12C16.6 12.15 16.9 12.65 16.65 13.05L15.05 15.85C14.8 16.28 14.2 16.28 13.95 15.85L12.35 13.05Z"
+        fill="#00854a"
+      />
+      <path
+        d="M13.3 12.75H15.7L14.5 14.85L13.3 12.75Z"
+        fill="#ffffff"
+      />
+    </svg>
+  );
+}
+
+export type DeliveryBankInfo = {
+  bankName: string;
+  accountNo: string;
+  accountName: string;
+};
+
 export default function DeliveryDashboard({
   shopName = "Cơm Cô Ba",
+  bankInfo = {
+    bankName: "Vietcombank",
+    accountNo: "0901234567",
+    accountName: "NGUYEN VAN A",
+  },
   initialOrders = initialMockDeliveryOrders,
   initialCompletedBaseCount = 10,
   initialDetailOrderId = null,
 }: {
   shopName?: string;
+  bankInfo?: DeliveryBankInfo;
   initialOrders?: DeliveryOrder[];
   initialCompletedBaseCount?: number;
   initialDetailOrderId?: string | null;
@@ -1234,7 +1359,7 @@ export default function DeliveryDashboard({
         />
       )}
 
-      {/* Popup hiển thị mã QR của đơn hàng */}
+      {/* Popup hiển thị mã QR thanh toán của đơn hàng */}
       {qrOrder && (
         <div
           className={styles.modalBackdrop}
@@ -1244,13 +1369,20 @@ export default function DeliveryDashboard({
           onClick={() => setQrOrder(null)}
         >
           <div
-            className={styles.modalCard}
+            className={styles.qrModalCard}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className={styles.modalHeader}>
-              <h3 id="delivery-qr-title">Mã QR đơn {qrOrder.orderCode}</h3>
+            <div className={styles.qrModalHeader}>
+              <span className={styles.qrModalHeaderIcon} aria-hidden="true">
+                <QrCode size={22} strokeWidth={2.2} />
+              </span>
+              <div className={styles.qrModalHeaderCopy}>
+                <h3 id="delivery-qr-title">Mã QR thanh toán</h3>
+                <p>Dùng mã QR này để khách thanh toán đơn hàng.</p>
+              </div>
               <button
                 type="button"
+                className={styles.qrModalCloseIconBtn}
                 onClick={() => setQrOrder(null)}
                 aria-label="Đóng mã QR"
               >
@@ -1258,23 +1390,73 @@ export default function DeliveryDashboard({
               </button>
             </div>
 
-            <div className={styles.qrBox}>
-              <QrCode size={112} strokeWidth={1.5} />
+            <div className={styles.qrInnerCard}>
+              <VietQrBrandLogo />
+              <div
+                className={styles.qrGraphicFrame}
+                role="img"
+                aria-label={`Mã QR thanh toán đơn ${qrOrder.orderCode}`}
+              >
+                <DeliveryVietQrGraphic seed={qrOrder.orderCode} />
+              </div>
+
+              <strong className={styles.qrShopName}>{shopName}</strong>
+              <p className={styles.qrBankMeta}>
+                {bankInfo.bankName}
+                <br />
+                {bankInfo.accountNo}
+                <br />
+                {bankInfo.accountName}
+              </p>
+
+              <div className={styles.qrAmountPill}>
+                {formatMoney(qrOrder.total)}
+              </div>
+
+              <button
+                type="button"
+                className={styles.qrContentPill}
+                onClick={() => {
+                  const text = `${shopName} - ${qrOrder.orderCode.replace(/^#/, "")}`;
+                  void navigator.clipboard?.writeText(text);
+                  setToast(`Đã sao chép nội dung: ${text}`);
+                }}
+              >
+                Nội dung:{" "}
+                <strong>
+                  {shopName} - {qrOrder.orderCode.replace(/^#/, "")}
+                </strong>
+              </button>
             </div>
 
-            <strong>{qrOrder.customerName}</strong>
-            <p className={styles.modalSub}>
-              {qrOrder.dorm} • {qrOrder.addressDetail} •{" "}
-              {formatMoney(qrOrder.total)}
-            </p>
+            <div className={styles.qrInfoBar}>
+              <span className={styles.qrInfoIcon} aria-hidden="true">
+                i
+              </span>
+              <span>QR được tạo tự động theo từng đơn hàng.</span>
+            </div>
 
-            <button
-              type="button"
-              className={styles.modalCloseBtn}
-              onClick={() => setQrOrder(null)}
-            >
-              Đóng
-            </button>
+            <div className={styles.qrModalFooter}>
+              <button
+                type="button"
+                className={styles.qrDismissBtn}
+                onClick={() => setQrOrder(null)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className={styles.qrConfirmBtn}
+                onClick={() => {
+                  const code = qrOrder.orderCode;
+                  setQrOrder(null);
+                  setToast(`Đã xác nhận hiển thị mã QR cho đơn ${code}.`);
+                }}
+              >
+                <Check size={17} strokeWidth={2.6} aria-hidden="true" />
+                <span>Xác nhận đã xem</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
