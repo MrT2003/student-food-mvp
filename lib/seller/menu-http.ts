@@ -11,7 +11,9 @@ export async function menuRequest(request: Request, params: Promise<{ restaurant
     if (auth.error || !auth.data.user) throw new MenuError("UNAUTHORIZED", 401);
     const { restaurantId, itemId } = await params;
     let result;
-    if (write) {
+    if (write && request.method === "DELETE") {
+      result = await SellerMenuServices.remove(client, restaurantId, itemId);
+    } else if (write) {
       // Enforce byte limit while streaming, not only the untrusted Content-Length header.
       const reader = request.body?.getReader();
       let size = 0, raw = ""; const decoder = new TextDecoder();

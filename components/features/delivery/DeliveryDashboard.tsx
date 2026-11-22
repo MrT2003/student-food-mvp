@@ -16,7 +16,9 @@ import {
   Utensils,
   X,
 } from "lucide-react";
+import TransferContent from "@/components/ui/TransferContent";
 import { formatMoney } from "@/lib/format";
+import { formatTransferContent } from "@/lib/orders/order-code";
 import styles from "@/styles/delivery.module.css";
 
 export type DeliveryOrder = {
@@ -574,6 +576,15 @@ export default function DeliveryDashboard({
               {qrOrder.dorm} • {qrOrder.addressDetail} •{" "}
               {formatMoney(qrOrder.total)}
             </p>
+
+            <div style={{ width: "100%", marginBottom: 14, textAlign: "left" }}>
+              <TransferContent
+                value={formatTransferContent(
+                  qrOrder.orderCode.replace(/^#/, ""),
+                  shopName,
+                )}
+              />
+            </div>
 
             <button
               type="button"
