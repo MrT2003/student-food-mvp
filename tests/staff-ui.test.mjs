@@ -15,3 +15,30 @@ test('actual QR modal countdown follows server expiresAt and cleans its interval
  const ui=harness('../components/features/seller/StaffRecruitment.tsx',{'@/lib/supabase/client':{createClient:()=>({auth:{getUser:async()=>({data:{user:{id:'actor'}},error:null})},from:()=>({select(){return this;},eq(){return this;},order:async()=>({data:[{id:'owned-shop',name:'Owned'}],error:null})})})},'@/lib/seller/staff-client':{staffRequest:async()=>result}},{Date:Clock,setInterval:fn=>{tick=fn;return 1;},clearInterval:()=>cleared++});
  ui.nodes(ui.render()).find(n=>n.type==='button').props.onClick();await new Promise(r=>setImmediate(r));let tree=ui.render();const cleanup=ui.effects.at(-1)();assert.equal(ui.nodes(tree).some(n=>n.props?.role==='status'&&n.props.children==='Còn 300 giây'),true);time+=301000;tick();tree=ui.render();assert.equal(ui.nodes(tree).some(n=>n.props?.children==='Mã QR đã hết hạn'),true);cleanup();assert.equal(cleared,1);
 });
+
+test("account leave dialog cancels without a write and blocks duplicate confirmation", async () => {
+ let user = {id:'actor', role:'staff', work_for_restaurant_id:'shop'};
+ let finish;
+ const calls=[];
+ const ui=harness('../components/features/account/AccountStoreJoin.tsx',{
+  '@/styles/account.module.css':{default:{}},
+  '@/store/useAuthStore':{useAuthStore:select=>select({user})},
+  '@/components/features/seller/SellerAccessProvider':{useSellerAccess:()=>({data:{user:{id:'actor'},restaurant:{id:'shop',name:'Quán A'}}})},
+  '@/lib/seller/staff-client':{leaveStaffRestaurant:async(...args)=>{calls.push(args);await new Promise(resolve=>{finish=resolve;});user={...user,role:'student',work_for_restaurant_id:null};}},
+ });
+ const find=text=>ui.nodes(ui.render()).find(node=>node.type==='button'&&node.props.children===text);
+ const open=()=>ui.nodes(ui.render()).find(node=>node.type==='button'&&ui.nodes(node).some(child=>child.props?.children==='Rời khỏi cửa hàng')).props.onClick();
+ open();
+ assert.ok(ui.nodes(ui.render()).some(node=>node.props?.children==='Quán A'));
+ find('Ở lại').props.onClick();
+ assert.equal(find('Rời cửa hàng'),undefined);
+ assert.equal(calls.length,0);
+ open();
+ const confirm=find('Rời cửa hàng').props.onClick;
+ const pending=confirm(); await confirm();
+ assert.equal(find('Đang rời…').props.disabled,true);
+ assert.deepEqual(calls,[['actor','shop']]);
+ finish();
+ await pending;
+ assert.ok(ui.nodes(ui.render()).some(node=>node.props?.children==='Quét QR xin việc'));
+});

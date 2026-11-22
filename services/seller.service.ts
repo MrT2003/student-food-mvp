@@ -67,6 +67,7 @@ export class SellerBankError extends Error {
 
 export type SellerStaffErrorCode =
   | "PROFILE_NOT_FOUND" | "ACCOUNT_INACTIVE" | "SELLER_REQUIRED" | "RESTAURANT_NOT_FOUND"
+  | "STAFF_LEAVE_CONFLICT" | "STAFF_LEAVE_RPC_UNAVAILABLE" | "STAFF_LEAVE_RESULT_UNKNOWN" | "STAFF_LEAVE_REJECTED"
   | "ISSUER_NOT_ALLOWED" | "STAFF_ROLE_CONFLICT" | "STAFF_MEMBERSHIP_CONFLICT"
   | "STAFF_TOKEN_CONFIGURATION_MISSING" | "INVALID_STAFF_TOKEN" | "STAFF_TOKEN_EXPIRED"
   | "DATABASE_CONFIGURATION_MISSING" | "DATABASE_CONFIGURATION_INVALID" | "STAFF_OPERATION_FAILED" | "STAFF_JOIN_ATOMICITY_UNAVAILABLE" | "STAFF_JOIN_RPC_UNAVAILABLE" | "STAFF_JOIN_RESULT_UNKNOWN" | "UNAUTHORIZED" | "DATABASE_ACCESS_DENIED";
@@ -438,6 +439,37 @@ export const SellerServices = {
       const qrImageDataUrl = await toDataURL(qrPayload, { type: "image/png", errorCorrectionLevel: "M", width: 512, margin: 4 });
       return { restaurantId: id, ...issued, qrPayload, qrImageDataUrl };
     } catch { throw new SellerStaffError("STAFF_OPERATION_FAILED"); }
+  },
+
+  async leaveStaff(userId: string, input: unknown, client: SupabaseClient) {
+    if (!isRecord(input)) invalid("payload", "Phải là object JSON.");
+    assertFields(input, ["restaurantId"], "payload");
+    const restaurantId = uuidValue(input.restaurantId);
+    let result;
+    try {
+      result = await client.rpc("leave_staff_restaurant", { p_restaurant_id: restaurantId });
+    } catch {
+      throw new SellerStaffError("STAFF_LEAVE_RESULT_UNKNOWN");
+    }
+    if (result?.error) {
+      const { code, message } = result.error;
+      if (code === "P0001" && message === "STAFF_LEAVE_CONFLICT")
+        throw new SellerStaffError("STAFF_LEAVE_CONFLICT");
+      if (code === "P0001" && message === "UNAUTHORIZED")
+        throw new SellerStaffError("UNAUTHORIZED");
+      if (["PGRST106", "PGRST202", "PGRST203", "42883"].includes(code))
+        throw new SellerStaffError("STAFF_LEAVE_RPC_UNAVAILABLE");
+      if (code === "42501") throw new SellerStaffError("DATABASE_ACCESS_DENIED");
+      // Definite PostgreSQL rejection: syntax/data/constraint/transaction errors
+      // and explicit PL/pgSQL exceptions roll back the RPC statement.
+      if (/^(22|23|40|42)[0-9A-Z]{3}$/.test(code) || code === "P0001" || code === "PGRST102")
+        throw new SellerStaffError("STAFF_LEAVE_REJECTED");
+      throw new SellerStaffError("STAFF_LEAVE_RESULT_UNKNOWN");
+    }
+    if (!isRecord(result?.data) || result.data.id !== userId ||
+        result.data.role !== "student" || result.data.work_for_restaurant_id !== null)
+      throw new SellerStaffError("STAFF_LEAVE_RESULT_UNKNOWN");
+    return { profile: { id: userId, role: "student", work_for_restaurant_id: null } };
   },
 
   async joinStaff(userId: string, input: unknown, supplied?: SupabaseClient): Promise<StaffJoinResult> {

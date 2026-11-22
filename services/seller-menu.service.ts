@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { MenuError, menuUuid, validateMenu, parseMenuIssue } from "@/lib/seller/menu-contract";
 const fields = "id,restaurant_id,name,slug,description,price,image_url,category,is_active,is_available,created_at,updated_at,option_groups:menu_item_option_groups(id,menu_item_id,name,is_multiple,is_required,is_active,created_at,updated_at,options:menu_item_options(id,group_id,option_name,additional_price,is_active,created_at,updated_at))";
 function menuResult(value: Record<string, unknown>): Record<string, unknown> {
@@ -67,5 +68,45 @@ export const SellerMenuServices = {
     const row = response.data?.item;
     if (!row || row.restaurant_id !== id || (itemId && row.id !== itemId) || typeof row.updated_at !== "string") throw new MenuError("MENU_RESULT_UNKNOWN", 503);
     return { item: menuResult(row) };
+  },
+  async remove(client: SupabaseClient, restaurant: unknown, item: unknown) {
+    const id = await access(client, restaurant);
+    const itemId = menuUuid(item);
+    const existing = await client.from("menu_items").select("id").eq("id", itemId).eq("restaurant_id", id).maybeSingle();
+    if (existing.error) throw new MenuError("MENU_READ_FAILED", 503);
+    if (!existing.data) throw new MenuError("MENU_NOT_FOUND", 404);
+
+    let writer: SupabaseClient = client;
+    try {
+      writer = createAdminClient();
+    } catch {
+      /* fallback to session client if service key is absent */
+    }
+
+    const ordered = await writer.from("order_items").select("id").eq("menu_item_id", itemId).limit(1).maybeSingle();
+    if (ordered.error) throw new MenuError("MENU_RESULT_UNKNOWN", 503);
+    if (ordered.data) throw new MenuError("MENU_IN_USE", 409);
+
+    const delCart = await writer.from("cart_items").delete().eq("menu_item_id", itemId);
+    if (delCart.error) throw new MenuError("MENU_RESULT_UNKNOWN", 503);
+
+    const groupsRes = await writer.from("menu_item_option_groups").select("id").eq("menu_item_id", itemId);
+    if (groupsRes.error) throw new MenuError("MENU_RESULT_UNKNOWN", 503);
+    if (groupsRes.data?.length) {
+      const groupIds = groupsRes.data.map((g) => g.id);
+      const delOpts = await writer.from("menu_item_options").delete().in("group_id", groupIds);
+      if (delOpts.error) throw new MenuError("MENU_RESULT_UNKNOWN", 503);
+      const delGroups = await writer.from("menu_item_option_groups").delete().eq("menu_item_id", itemId);
+      if (delGroups.error) throw new MenuError("MENU_RESULT_UNKNOWN", 503);
+    }
+
+    const delItem = await writer.from("menu_items").delete().eq("id", itemId).eq("restaurant_id", id);
+    if (delItem.error) {
+      if (delItem.error.code === "23503") throw new MenuError("MENU_IN_USE", 409);
+      if (delItem.error.code === "42501") throw new MenuError("MENU_FORBIDDEN", 403);
+      throw new MenuError("MENU_RESULT_UNKNOWN", 503);
+    }
+
+    return { deleted: true, itemId };
   },
 };

@@ -22,7 +22,9 @@ import {
   Utensils,
   X,
 } from "lucide-react";
+import TransferContent from "@/components/ui/TransferContent";
 import { formatMoney } from "@/lib/format";
+import { formatTransferContent } from "@/lib/orders/order-code";
 import styles from "@/styles/delivery.module.css";
 import DeliveryOrderDetailModal, {
   DEFAULT_DELIVERY_ORDER_NOTE,

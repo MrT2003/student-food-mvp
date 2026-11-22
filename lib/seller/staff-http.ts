@@ -6,6 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { SellerStaffError, SellerValidationError } from "@/services/seller.service";
 
 const errors = {
+  STAFF_LEAVE_CONFLICT: [409, "Bạn không còn là nhân viên đang hoạt động của cửa hàng này."],
+  STAFF_LEAVE_RPC_UNAVAILABLE: [503, "API chưa gọi được RPC rời cửa hàng. Cần kiểm tra triển khai, chữ ký và schema cache."],
+  STAFF_LEAVE_REJECTED: [422, "Database từ chối cập nhật quan hệ nhân viên. Vui lòng liên hệ hỗ trợ."],
+  STAFF_LEAVE_RESULT_UNKNOWN: [503, "Chưa xác định được kết quả rời cửa hàng."],
   STAFF_JOIN_RPC_UNAVAILABLE: [503, "Chức năng gia nhập chưa được triển khai đầy đủ. Vui lòng thử lại sau."],
   STAFF_JOIN_RESULT_UNKNOWN: [503, "Chưa xác định được kết quả gia nhập. Kiểm tra hồ sơ trước khi gửi lại."],
   UNAUTHORIZED: [401, "Vui lòng đăng nhập lại."], DATABASE_ACCESS_DENIED: [403, "Không có quyền thực hiện thao tác."],
