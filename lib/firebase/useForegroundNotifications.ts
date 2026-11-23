@@ -1,5 +1,6 @@
 "use client";
 
+import { notificationArrived } from "@/store/useNotificationInbox";
 import { useEffect, useState } from "react";
 import type { MessagePayload } from "firebase/messaging";
 import { FirebaseService } from "@/services/firebase.service";
@@ -62,6 +63,7 @@ export function useForegroundNotifications(userId: string) {
         if (!id || id.length > 256) return false;
         if (seen.has(id)) return true;
         seen.add(id);
+        if (data.notificationId && UUID.test(data.notificationId)) notificationArrived(data.notificationId);
         if (seen.size > 200) seen.delete(seen.values().next().value!);
         const notification: ForegroundNotification = {
           id,
@@ -107,3 +109,4 @@ export function useForegroundNotifications(userId: string) {
     dismiss: (id: string) => setNotifications((current) => current.filter((item) => item.id !== id)),
     dismissError: () => setError(null) };
 }
+

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -1031,3 +1031,4 @@ export default function SellerMenuView() {
     </div>
   );
 }
+

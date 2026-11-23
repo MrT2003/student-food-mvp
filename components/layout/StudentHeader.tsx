@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, ShoppingCart, Utensils } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { AccountDropdown, NotificationDropdown } from "./HeaderDropdowns";
-import {
-  headerNotifications,
-  type HeaderNotification,
-} from "./header-preview-data";
+import { AccountDropdown } from "./HeaderDropdowns";
+import NotificationInboxDropdown from "../features/notifications/NotificationInboxDropdown";
+import { useNotificationInbox } from "@/store/useNotificationInbox";
 import styles from "@/styles/home.module.css";
 import sellerStyles from "@/styles/seller-header.module.css";
 import mobileStyles from "@/styles/student-mobile-navigation.module.css";
@@ -58,10 +56,7 @@ export default function StudentHeader({
     pathname: string;
   } | null>(null);
   const panel = panelState?.pathname === pathname ? panelState.panel : null;
-  const [notifications, setNotifications] = useState<HeaderNotification[]>(() =>
-    headerNotifications.map((item) => ({ ...item })),
-  );
-  const unreadCount = notifications.filter((item) => item.unread).length;
+  const unreadCount = useNotificationInbox(state => state.userId === user?.id ? state.unreadCount : 0);
   const actions = useRef<HTMLDivElement>(null);
   useEffect(() => {
     function outside(event: PointerEvent) {
@@ -227,21 +222,7 @@ export default function StudentHeader({
             </Link>
           )}
           {panel === "notifications" && (
-            <NotificationDropdown
-              notifications={notifications}
-              onReadAll={() =>
-                setNotifications((items) =>
-                  items.map((item) => ({ ...item, unread: false })),
-                )
-              }
-              onRead={(id) =>
-                setNotifications((items) =>
-                  items.map((item) =>
-                    item.id === id ? { ...item, unread: false } : item,
-                  ),
-                )
-              }
-            />
+            <NotificationInboxDropdown />
           )}
           {panel === "account" && effectiveUser && (
             <AccountDropdown
@@ -257,3 +238,5 @@ export default function StudentHeader({
     </header>
   );
 }
+
+

@@ -1,4 +1,5 @@
 "use client";
+import { cloudinaryDeliveryUrl } from "@/lib/cloudinary/delivery";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -151,7 +152,7 @@ export default function SellerRegistrationView() {
     setIsUploadingImage(true);
     try {
       const uploaded = await CloudinaryService.uploadImage(file, {
-        folder: "student-food/restaurants",
+        purpose: "restaurant_registration",
       });
       if (uploadRequestIdRef.current === requestId) {
         setImagePreview(uploaded.secureUrl);
@@ -499,7 +500,7 @@ export default function SellerRegistrationView() {
                       <>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={imagePreview}
+                          src={cloudinaryDeliveryUrl(imagePreview)}
                           alt="Ảnh đại diện quán đã chọn"
                           className={styles.imagePreview}
                           onError={() => {
@@ -922,3 +923,5 @@ export default function SellerRegistrationView() {
     </div>
   );
 }
+
+

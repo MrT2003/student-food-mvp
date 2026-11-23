@@ -28,7 +28,13 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   // Tự động trích xuất mã đơn hàng  và tạo ra đường link URL tương ứng
   const messageData = ownNotification ? data : firebaseMessage.data;
-  const url = orderUrl(messageData?.orderId, messageData?.destination);
+  const target = new URL(orderUrl(messageData?.orderId, messageData?.destination));
+  // Trang đích có session mới được đánh dấu đọc; worker không giữ auth token.
+  if (/^[0-9a-f-]{36}$/i.test(messageData?.notificationId || "") && /^[0-9a-f-]{36}$/i.test(messageData?.recipientUserId || "")) {
+    target.searchParams.set("readNotification", messageData.notificationId);
+    target.searchParams.set("notificationRecipient", messageData.recipientUserId);
+  }
+  const url = target.href;
   event.waitUntil((async () => {
     // Scan toàn bộ các cửa sổ đang mở ứng dụng student-
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
@@ -78,9 +84,11 @@ messaging.onBackgroundMessage(async (payload) => {
     body: typeof data.body === "string" ? data.body.slice(0, 500) : "Bạn có cập nhật mới về đơn hàng.",
     // Cùng notificationId thay thế thông báo cũ khi backend retry; không gộp mọi đơn vào một tag.
     ...(data.notificationId ? { tag: `student-food:${data.notificationId}` } : {}),
-    data: { source: "student-food", orderId: data.orderId || null, destination: data.destination || null },
+    requireInteraction: false,
+    data: { source: "student-food", orderId: data.orderId || null, destination: data.destination || null, notificationId: data.notificationId || null, recipientUserId: data.recipientUserId || null },
   });
 });
 
 // Không skipWaiting/claim cưỡng bức: để browser quản lý cập nhật worker theo lifecycle mặc định.
 // Bước tiếp theo sẽ đăng ký worker và truyền registration active cho getRegistrationToken().
+

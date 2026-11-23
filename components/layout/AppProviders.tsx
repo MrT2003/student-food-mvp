@@ -4,6 +4,7 @@ import {SellerAccessProvider} from "@/components/features/seller/SellerAccessPro
 import AuthProvider from "@/components/features/auth/AuthProvider";
 import ForegroundNotifications from "../features/notifications/ForegroundNotifications";
 import PushPermissionPrompt from "../features/notifications/PushPermissionPrompt";
+import NotificationInboxLifecycle from "../features/notifications/NotificationInboxLifecycle";
 import CancellationFeedback from "../features/orders/CancellationFeedback";
 
 // Luôn luôn bọc AuthProvider để đồng bộ dữ liệu User toàn hệ thống
@@ -13,9 +14,11 @@ export default function AppProviders({ children }: { children: ReactNode }) {
   return (
     <>
       <AuthProvider><SellerAccessProvider>{children}</SellerAccessProvider></AuthProvider>
+      <NotificationInboxLifecycle />
       <ForegroundNotifications />
       <CancellationFeedback />
       <PushPermissionPrompt />
     </>
   );
 }
+
