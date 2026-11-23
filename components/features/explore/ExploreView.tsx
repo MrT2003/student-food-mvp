@@ -19,7 +19,7 @@ export default function ExploreView({
   initialRestaurants?: ExploreRestaurant[];
   initialPopularDishes?: PopularDishCard[];
 }) {
-  const explore = useExplore(initialRestaurants);
+  const explore = useExplore(initialRestaurants, initialPopularDishes);
 
   return (
     <div className={styles.explorePage}>
@@ -43,7 +43,7 @@ export default function ExploreView({
       </section>
 
       <ExploreResultsSection
-        restaurants={explore.restaurants}
+        dishes={explore.dishes}
         sortBy={explore.sortBy}
         onSortChange={explore.setSortBy}
         onResetFilters={explore.resetFilters}
