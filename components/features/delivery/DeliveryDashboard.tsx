@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type SVGProps } from "react";
+import { useEffect, useRef, useState, type SVGProps } from "react";
 import {
   ArrowLeft,
   Banknote,
@@ -22,9 +22,13 @@ import {
   Utensils,
   X,
 } from "lucide-react";
-import TransferContent from "@/components/ui/TransferContent";
 import { formatMoney } from "@/lib/format";
-import { formatTransferContent } from "@/lib/orders/order-code";
+import {
+  buildVietQrImageUrl,
+  normalizeVietQrBankInfo,
+  type VietQrBankSource,
+} from "@/lib/payment/vietqr";
+import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/delivery.module.css";
 import DeliveryOrderDetailModal, {
   DEFAULT_DELIVERY_ORDER_NOTE,
@@ -719,23 +723,26 @@ function DeliveryVietQrGraphic({ seed }: { seed: string }) {
   );
 }
 
-export type DeliveryBankInfo = {
-  bankName: string;
-  accountNo: string;
-  accountName: string;
+export type DeliveryBankInfo = VietQrBankSource;
+
+const DEFAULT_DELIVERY_BANK_INFO: DeliveryBankInfo = {
+  bank_id: "VCB",
+  bankName: "Vietcombank",
+  bank_account_no: "0901234567",
+  accountNo: "0901234567",
+  bank_account_name: "NGUYEN VAN A",
+  accountName: "NGUYEN VAN A",
 };
 
 export default function DeliveryDashboard({
+  deliveryToken,
   shopName = "Cơm Cô Ba",
-  bankInfo = {
-    bankName: "Vietcombank",
-    accountNo: "0901234567",
-    accountName: "NGUYEN VAN A",
-  },
+  bankInfo = DEFAULT_DELIVERY_BANK_INFO,
   initialOrders = initialMockDeliveryOrders,
   initialCompletedBaseCount = 10,
   initialDetailOrderId = null,
 }: {
+  deliveryToken?: string;
   shopName?: string;
   bankInfo?: DeliveryBankInfo;
   initialOrders?: DeliveryOrder[];
@@ -749,9 +756,104 @@ export default function DeliveryDashboard({
   const [dormFilter, setDormFilter] = useState<DeliveryDormFilter>("all");
   const [toast, setToast] = useState("");
   const [qrOrder, setQrOrder] = useState<DeliveryOrder | null>(null);
+  const [qrImageErrorOrder, setQrImageErrorOrder] = useState<string | null>(
+    null,
+  );
+  const [dbBankInfo, setDbBankInfo] = useState<DeliveryBankInfo | null>(null);
   const [detailOrderId, setDetailOrderId] = useState<string | null>(
     initialDetailOrderId,
   );
+  const completingIds = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!deliveryToken) return;
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const res = await fetch(
+          `/api/delivery/${encodeURIComponent(deliveryToken)}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok || cancelled) return;
+        const payload = (await res.json()) as {
+          orders?: DeliveryOrder[];
+          bank?: DeliveryBankInfo | null;
+        };
+        if (cancelled) return;
+        if (Array.isArray(payload.orders)) {
+          setOrders(payload.orders);
+        }
+        if (payload.bank) {
+          setDbBankInfo(payload.bank);
+        }
+      } catch {
+        // Giữ nguyên danh sách hiện tại nếu mất mạng tạm thời
+      }
+    };
+    const timer = setInterval(() => {
+      void refresh();
+    }, 20000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [deliveryToken]);
+
+  useEffect(() => {
+    if (deliveryToken || bankInfo !== DEFAULT_DELIVERY_BANK_INFO) return;
+    let cancelled = false;
+    try {
+      const supabase = createClient();
+      void supabase.auth.getUser().then(async ({ data }) => {
+        if (cancelled || !data?.user) return;
+        const { data: shops } = await supabase
+          .from("restaurants")
+          .select("*")
+          .eq("owner_id", data.user.id)
+          .limit(1);
+        const shopRow = (shops?.[0] ?? null) as Record<string, unknown> | null;
+        if (!shopRow || cancelled) return;
+        if (
+          typeof shopRow.bank_id === "string" &&
+          typeof shopRow.bank_account_no === "string" &&
+          shopRow.bank_id.trim() &&
+          shopRow.bank_account_no.trim()
+        ) {
+          setDbBankInfo({
+            bank_id: shopRow.bank_id,
+            bank_account_no: shopRow.bank_account_no,
+            bank_account_name:
+              typeof shopRow.bank_account_name === "string"
+                ? shopRow.bank_account_name
+                : "",
+          });
+          return;
+        }
+        if (typeof shopRow.id === "string") {
+          const { data: banks } = await supabase
+            .from("restaurant_banks")
+            .select("bank_name, account_no, account_name, is_default")
+            .eq("restaurant_id", shopRow.id);
+          if (cancelled || !Array.isArray(banks) || banks.length === 0) return;
+          const chosen =
+            banks.find((b) => b.is_default) ?? banks[0];
+          setDbBankInfo({
+            bank_id: chosen.bank_name,
+            bank_name: chosen.bank_name,
+            bank_account_no: chosen.account_no,
+            bank_account_name: chosen.account_name,
+          });
+        }
+      });
+    } catch {
+      // Fallback to default bankInfo in offline/test environments
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [bankInfo]);
+
+  const resolvedBank = normalizeVietQrBankInfo(dbBankInfo ?? bankInfo);
 
   const detailOrder = resolveDeliveryOrderForDetail(orders, detailOrderId);
 
@@ -779,7 +881,27 @@ export default function DeliveryDashboard({
     dorm: dormFilter,
   });
 
-  function handleMarkDelivered(orderId: string, orderCode: string) {
+  async function handleMarkDelivered(orderId: string, orderCode: string) {
+    if (completingIds.current.has(orderId)) return;
+    if (deliveryToken) {
+      completingIds.current.add(orderId);
+      try {
+        const res = await fetch(
+          `/api/delivery/${encodeURIComponent(deliveryToken)}/orders/${encodeURIComponent(orderId)}/complete`,
+          { method: "POST" },
+        );
+        if (!res.ok) {
+          setToast("Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.");
+          return;
+        }
+      } catch {
+        setToast("Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.");
+        return;
+      } finally {
+        completingIds.current.delete(orderId);
+      }
+    }
+
     setOrders((current) =>
       current.map((entry) =>
         entry.id === orderId
@@ -1362,106 +1484,134 @@ export default function DeliveryDashboard({
       )}
 
       {/* Popup hiển thị mã QR thanh toán của đơn hàng */}
-      {qrOrder && (
-        <div
-          className={styles.modalBackdrop}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delivery-qr-title"
-          onClick={() => setQrOrder(null)}
-        >
+      {qrOrder && (() => {
+        const cleanOrderCode = qrOrder.orderCode.replace(/^#/, "");
+        const transferText = `${shopName} - ${cleanOrderCode}`;
+        const vietQrUrl = buildVietQrImageUrl({
+          bank_id: resolvedBank.bank_id,
+          bank_name: resolvedBank.bank_name,
+          bank_account_no: resolvedBank.bank_account_no,
+          bank_account_name: resolvedBank.bank_account_name,
+          amount: qrOrder.total,
+          addInfo: transferText,
+          template: "qr_only",
+        });
+        const showRealQr =
+          Boolean(vietQrUrl) && qrImageErrorOrder !== qrOrder.id;
+
+        return (
           <div
-            className={styles.qrModalCard}
-            onClick={(event) => event.stopPropagation()}
+            className={styles.modalBackdrop}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delivery-qr-title"
+            onClick={() => setQrOrder(null)}
           >
-            <div className={styles.qrModalHeader}>
-              <span className={styles.qrModalHeaderIcon} aria-hidden="true">
-                <QrCode size={22} strokeWidth={2.2} />
-              </span>
-              <div className={styles.qrModalHeaderCopy}>
-                <h3 id="delivery-qr-title">Mã QR thanh toán</h3>
-                <p>Dùng mã QR này để khách thanh toán đơn hàng.</p>
-              </div>
-              <button
-                type="button"
-                className={styles.qrModalCloseIconBtn}
-                onClick={() => setQrOrder(null)}
-                aria-label="Đóng mã QR"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className={styles.qrInnerCard}>
-              <VietQrBrandLogo />
-              <div
-                className={styles.qrGraphicFrame}
-                role="img"
-                aria-label={`Mã QR thanh toán đơn ${qrOrder.orderCode}`}
-              >
-                <DeliveryVietQrGraphic seed={qrOrder.orderCode} />
+            <div
+              className={styles.qrModalCard}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.qrModalHeader}>
+                <span className={styles.qrModalHeaderIcon} aria-hidden="true">
+                  <QrCode size={22} strokeWidth={2.2} />
+                </span>
+                <div className={styles.qrModalHeaderCopy}>
+                  <h3 id="delivery-qr-title">Mã QR thanh toán</h3>
+                  <p>Dùng mã QR này để khách thanh toán đơn hàng.</p>
+                </div>
+                <button
+                  type="button"
+                  className={styles.qrModalCloseIconBtn}
+                  onClick={() => setQrOrder(null)}
+                  aria-label="Đóng mã QR"
+                >
+                  <X size={18} />
+                </button>
               </div>
 
-              <strong className={styles.qrShopName}>{shopName}</strong>
-              <p className={styles.qrBankMeta}>
-                {bankInfo.bankName}
-                <br />
-                {bankInfo.accountNo}
-                <br />
-                {bankInfo.accountName}
-              </p>
+              <div className={styles.qrInnerCard}>
+                <VietQrBrandLogo />
+                <div
+                  className={styles.qrGraphicFrame}
+                  role="img"
+                  aria-label={`Mã QR thanh toán đơn ${qrOrder.orderCode}`}
+                >
+                  {showRealQr && vietQrUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={vietQrUrl}
+                      alt={`Mã VietQR đơn ${qrOrder.orderCode}`}
+                      width={176}
+                      height={176}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
+                      }}
+                      onError={() => setQrImageErrorOrder(qrOrder.id)}
+                    />
+                  ) : (
+                    <DeliveryVietQrGraphic seed={qrOrder.orderCode} />
+                  )}
+                </div>
 
-              <div className={styles.qrAmountPill}>
-                {formatMoney(qrOrder.total)}
+                <strong className={styles.qrShopName}>{shopName}</strong>
+                <p className={styles.qrBankMeta}>
+                  {resolvedBank.bank_name}
+                  <br />
+                  {resolvedBank.bank_account_no}
+                  <br />
+                  {resolvedBank.bank_account_name}
+                </p>
+
+                <div className={styles.qrAmountPill}>
+                  {formatMoney(qrOrder.total)}
+                </div>
+
+                <button
+                  type="button"
+                  className={styles.qrContentPill}
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(transferText);
+                    setToast(`Đã sao chép nội dung: ${transferText}`);
+                  }}
+                >
+                  Nội dung: <strong>{transferText}</strong>
+                </button>
               </div>
 
-              <button
-                type="button"
-                className={styles.qrContentPill}
-                onClick={() => {
-                  const text = `${shopName} - ${qrOrder.orderCode.replace(/^#/, "")}`;
-                  void navigator.clipboard?.writeText(text);
-                  setToast(`Đã sao chép nội dung: ${text}`);
-                }}
-              >
-                Nội dung:{" "}
-                <strong>
-                  {shopName} - {qrOrder.orderCode.replace(/^#/, "")}
-                </strong>
-              </button>
-            </div>
+              <div className={styles.qrInfoBar}>
+                <span className={styles.qrInfoIcon} aria-hidden="true">
+                  i
+                </span>
+                <span>QR được tạo tự động theo từng đơn hàng.</span>
+              </div>
 
-            <div className={styles.qrInfoBar}>
-              <span className={styles.qrInfoIcon} aria-hidden="true">
-                i
-              </span>
-              <span>QR được tạo tự động theo từng đơn hàng.</span>
-            </div>
-
-            <div className={styles.qrModalFooter}>
-              <button
-                type="button"
-                className={styles.qrDismissBtn}
-                onClick={() => setQrOrder(null)}
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                className={styles.qrConfirmBtn}
-                onClick={() => {
-                  const code = qrOrder.orderCode;
-                  setQrOrder(null);
-                  setToast(`Đã xác nhận hiển thị mã QR cho đơn ${code}.`);
-                }}
-              >
-                <Check size={17} strokeWidth={2.6} aria-hidden="true" />
-                <span>Xác nhận đã xem</span>
-              </button>
+              <div className={styles.qrModalFooter}>
+                <button
+                  type="button"
+                  className={styles.qrDismissBtn}
+                  onClick={() => setQrOrder(null)}
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  className={styles.qrConfirmBtn}
+                  onClick={() => {
+                    const code = qrOrder.orderCode;
+                    setQrOrder(null);
+                    setToast(`Đã xác nhận hiển thị mã QR cho đơn ${code}.`);
+                  }}
+                >
+                  <Check size={17} strokeWidth={2.6} aria-hidden="true" />
+                  <span>Xác nhận đã xem</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

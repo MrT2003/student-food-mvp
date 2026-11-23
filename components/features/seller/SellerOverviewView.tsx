@@ -273,8 +273,15 @@ export default function SellerOverviewView() {
   }
   const unavailable = (feature: string) =>
     setNotice(`${feature} chưa sẵn sàng.`);
+  const allowedTabs =
+    Array.isArray(data?.allowed_tabs) && data.allowed_tabs.length > 0
+      ? data.allowed_tabs
+      : data?.user.role === "staff"
+        ? (["overview", "orders", "shop"] as const)
+        : (["overview", "orders", "menu", "shop", "payments"] as const);
   const setup = [
     {
+      tab: "menu",
       icon: Utensils,
       title: "Thêm món đầu tiên",
       badge: "Xem danh sách món",
@@ -283,6 +290,7 @@ export default function SellerOverviewView() {
       href: "/seller/menu",
     },
     {
+      tab: "payments",
       icon: Wallet,
       title: "Thiết lập thanh toán",
       badge: "Thiết lập phương thức thanh toán",
@@ -291,6 +299,7 @@ export default function SellerOverviewView() {
       href: "/seller/payments",
     },
     {
+      tab: "shop",
       icon: Store,
       title: "Hoàn thiện thông tin cửa hàng",
       badge: restaurant?.avatar_url
@@ -300,7 +309,7 @@ export default function SellerOverviewView() {
       action: "Chỉnh sửa",
       href: "/seller/shop",
     },
-  ];
+  ].filter((item) => (allowedTabs as readonly string[]).includes(item.tab));
   if (loading && !restaurant) return <p role="status">Đang tải cửa hàng…</p>;
   if (!restaurant) return <SellerAccessProblem />;
 
@@ -392,7 +401,7 @@ export default function SellerOverviewView() {
                   </div>
                   <div className={styles.setupGrid}>
                     {setup.map(
-                      ({ icon: Icon, title, badge, text, action, href }, index) => (
+                      ({ tab, icon: Icon, title, badge, text, action, href }) => (
                         <article className={styles.setupCard} key={title}>
                           <div className={styles.setupHeading}>
                             <span className={styles.icon}>
@@ -402,7 +411,7 @@ export default function SellerOverviewView() {
                               <h4>{title}</h4>
                               <span
                                 className={
-                                  index === 2 && !!restaurant.avatar_url
+                                  tab === "shop" && !!restaurant.avatar_url
                                     ? styles.greenBadge
                                     : styles.redBadge
                                 }
@@ -411,12 +420,12 @@ export default function SellerOverviewView() {
                               </span>
                             </div>
                           </div>
-                          {index === 1 && (
+                          {tab === "payments" && (
                             <small>
                               {"Phương thức thanh toán chưa được xác nhận tại đây"}
                             </small>
                           )}
-                          {index === 2 && (
+                          {tab === "shop" && (
                             <small>
                               <Clock3 size={13} />{" "}
                               {restaurant.location || "Chưa có địa điểm"}
