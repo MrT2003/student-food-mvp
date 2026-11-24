@@ -1,6 +1,6 @@
 // middleware.ts
-import { updateSession } from '@/lib/supabase/proxy'
-import { NextResponse, type NextRequest } from 'next/server'
+import { updateSession } from "@/lib/supabase/proxy";
+import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
   // Worker có thể được browser cập nhật khi không còn session: phải trả JS, không redirect login.
@@ -9,12 +9,16 @@ export async function proxy(request: NextRequest) {
   // Khi đó trình duyệt đang tải file JS của Service Worker sẽ nhận lại một trang HTML đăng nhập ---> Làm
   // hỏng hoàn toàn Service Worker ---> TÍNH NĂNG THÔNG BÁO NGẦM BỊ CHẾT
   // Chỉ bypass đúng hai tài nguyên công khai, không bỏ kiểm tra Auth cho các route khác.
-  if (request.nextUrl.pathname === '/firebase-messaging-sw.js'
-    || request.nextUrl.pathname === '/manifest.webmanifest'
-    || request.nextUrl.pathname === '/api/firebase/worker-config') {
+  if (
+    request.nextUrl.pathname === "/firebase-messaging-sw.js" ||
+    request.nextUrl.pathname === "/manifest.webmanifest" ||
+    request.nextUrl.pathname === "/api/firebase/worker-config" ||
+    request.nextUrl.pathname ===
+      "/zalo_verifierRSNc4xJ3PXf4_TSYhl94BaJ0uWcejZbNE3Gu.html"
+  ) {
     return NextResponse.next();
   }
-  return await updateSession(request)
+  return await updateSession(request);
 }
 
 export const config = {
@@ -22,6 +26,6 @@ export const config = {
     /*
      * Ignore static files , images and favicon to avoid running unnecessary middleware
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
-}
+};
