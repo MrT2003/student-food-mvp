@@ -1,0 +1,12 @@
+.box { margin: 12px 0; padding: 10px 12px; border: 1px solid #ffe0c6; border-radius: 10px; background: #fff8f0; min-width: 0; }
+.label { display: block; color: #5875a3; font-size: 12px; margin-bottom: 5px; }
+.row { display: flex; align-items: center; gap: 10px; }
+.row code { flex: 1; min-width: 0; color: #10234f; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; user-select: text; }
+.row button { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border: 1px solid #ffd0af; border-radius: 7px; background: white; color: #ff571f; cursor: pointer; }
+.row button:focus-visible { outline: 2px solid #ff571f; outline-offset: 2px; }
+.box small { display: block; color: #5875a3; margin-top: 5px; }
+.field { padding: 0; margin: 0; border: 0; background: transparent; }
+.field .label { color: #091a48; font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+.field .row { min-height: 37px; padding-left: 12px; border: 1px solid #d3dfef; border-radius: 7px; background: #fff; }
+.field .row code { font-family: inherit; font-size: 14px; font-weight: 400; }
+.field .row button { border: 0; background: transparent; color: #315d95; }

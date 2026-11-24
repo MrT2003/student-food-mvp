@@ -1,0 +1,61 @@
+import { NextResponse } from "next/server";
+import { isSameOrigin } from "@/lib/http/request-origin";
+import { createClient } from "@/lib/supabase/server";
+import { SellerBankError, SellerServices, SellerValidationError } from "@/services/seller.service";
+
+const bankErrors = {
+  PROFILE_NOT_FOUND: { status: 403, message: "Chưa có hồ sơ tài khoản hợp lệ." },
+  ACCOUNT_INACTIVE: { status: 403, message: "Tài khoản hiện không hoạt động." },
+  SELLER_REQUIRED: { status: 403, message: "Chỉ seller được quản lý tài khoản ngân hàng của cửa hàng." },
+  RESTAURANT_NOT_FOUND: { status: 404, message: "Không tìm thấy cửa hàng." },
+  BANK_NOT_FOUND: { status: 404, message: "Không tìm thấy tài khoản ngân hàng." },
+  BANK_ACCOUNT_CONFLICT: { status: 409, message: "Số tài khoản đã tồn tại trong cửa hàng này." },
+  BANK_WRITE_FAILED: { status: 500, message: "Không thể lưu tài khoản ngân hàng. Vui lòng thử lại." },
+  BANK_READ_FAILED: { status: 500, message: "Không thể tải tài khoản ngân hàng. Vui lòng thử lại." },
+  UNAUTHORIZED: { status: 401, message: "Vui lòng đăng nhập lại." },
+  DATABASE_ACCESS_DENIED: { status: 403, message: "Không có quyền lưu tài khoản ngân hàng." },
+  BANK_DEFAULT_ATOMICITY_UNAVAILABLE: { status: 503, message: "Chưa có cơ chế chuyển ngân hàng mặc định nguyên tử được xác minh. Không thay đổi mặc định hiện tại." },
+} as const;
+
+function failure(code: string, message: string, status: number) {
+  return NextResponse.json({ error: { code, message } }, { status, headers: { "Cache-Control": "no-store" } });
+}
+
+// Dùng chung Auth/Origin/error mapping cho hai endpoint; nghiệp vụ vẫn trong SellerServices.
+export async function handleBankRequest(
+  request: Request,
+  params: Promise<{ restaurantId: string; bankId?: string }>,
+  mode: "create" | "update" | "read",
+) {
+  if (mode !== "read" && !isSameOrigin(request)) {
+    return failure("FORBIDDEN", "Yêu cầu không hợp lệ.", 403);
+  }
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) return failure("UNAUTHORIZED", "Vui lòng đăng nhập lại.", 401);
+    const { restaurantId, bankId } = await params;
+    if (mode === "read") {
+      const result = await SellerServices.listRestaurantBanks(data.user.id, restaurantId, supabase);
+      return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
+    }
+    let input: unknown;
+    try {
+      input = await request.json();
+    } catch {
+      return failure("INVALID_JSON", "Nội dung JSON không hợp lệ.", 400);
+    }
+    const result = mode === "create"
+      ? await SellerServices.createRestaurantBank(data.user.id, restaurantId, input, supabase)
+      : await SellerServices.updateRestaurantBank(data.user.id, restaurantId, bankId, input, supabase);
+    return NextResponse.json(result, { status: mode === "create" ? 201 : 200, headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    if (error instanceof SellerValidationError) return failure("VALIDATION_ERROR", error.message, 400);
+    if (error instanceof SellerBankError) {
+      const detail = bankErrors[error.code];
+      return failure(error.code, detail.message, detail.status);
+    }
+    const code = mode === "read" ? "BANK_READ_FAILED" : "BANK_WRITE_FAILED";
+    return failure(code, bankErrors[code].message, 500);
+  }
+}

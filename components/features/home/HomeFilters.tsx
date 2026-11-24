@@ -1,0 +1,61 @@
+import { MapPin } from "lucide-react";
+import { CATEGORY_EMOJI, MASTER_CATEGORIES } from "@/lib/categories";
+import type { HomeFilters as Filters } from "@/types/home.types";
+import type { Dispatch, SetStateAction } from "react";
+import styles from "@/styles/home.module.css";
+type Props = {
+  filters: Filters;
+  onChange: Dispatch<SetStateAction<Filters>>;
+  onReset: () => void;
+};
+export default function HomeFilters({ filters, onChange, onReset }: Props) {
+  const isAll =
+    !filters.query.trim() &&
+    !filters.openOnly &&
+    filters.location === "all" &&
+    filters.category === "all";
+  return (
+    <div
+      className={styles.filters}
+      role="group"
+      aria-label="Lọc quán ăn"
+      tabIndex={0}
+    >
+      <button type="button" aria-pressed={isAll} onClick={onReset}>
+        Tất cả
+      </button>
+      {(["KTX A", "KTX B"] as const).map((location) => (
+        <button
+          key={location}
+          type="button"
+          aria-pressed={filters.location === location}
+          onClick={() =>
+            onChange((value) => ({
+              ...value,
+              location: value.location === location ? "all" : location,
+            }))
+          }
+        >
+          <MapPin size={22} aria-hidden="true" />
+          {location}
+        </button>
+      ))}
+      {MASTER_CATEGORIES.map((category) => (
+        <button
+          key={category}
+          type="button"
+          aria-pressed={filters.category === category}
+          onClick={() =>
+            onChange((value) => ({
+              ...value,
+              category: value.category === category ? "all" : category,
+            }))
+          }
+        >
+          <span aria-hidden="true">{CATEGORY_EMOJI[category]}</span>
+          {category}
+        </button>
+      ))}
+    </div>
+  );
+}

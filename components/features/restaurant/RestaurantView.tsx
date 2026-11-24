@@ -1,0 +1,329 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Banknote,
+  Clock3,
+  CookingPot,
+  CreditCard,
+  CupSoda,
+  Drumstick,
+  MapPin,
+  Sandwich,
+  Search,
+  Settings,
+  Soup,
+  Utensils,
+} from "lucide-react";
+import { CATEGORY_EMOJI } from "@/lib/categories";
+import {
+  menuCategories,
+  type MenuCategory,
+  type RestaurantDetail,
+} from "@/lib/restaurant/view-model";
+import styles from "@/styles/restaurant.module.css";
+import { formatMoney as formatPrice } from "@/lib/format";
+import { normalizeSearchText as normalize } from "@/lib/format";
+
+const categoryIcons: Record<MenuCategory, typeof CookingPot> = {
+  "Cơm": CookingPot,
+  "Bún/Phở/Mì": Soup,
+  "Ăn vặt": Drumstick,
+  "Trà sữa & Nước": CupSoda,
+  "Bánh mì / Ăn nhẹ": Sandwich,
+  "Khác": Utensils,
+};
+
+function FoodPlaceholder({
+  category = "Cơm",
+  imageUrl,
+  alt = "",
+}: {
+  category?: MenuCategory;
+  imageUrl?: string | null;
+  alt?: string;
+}) {
+  const Icon = categoryIcons[category];
+
+  return (
+    <div className={styles.placeholder} aria-hidden={!imageUrl}>
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={alt}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      ) : (
+        <span>
+          <Icon size={38} strokeWidth={1.4} />
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default function RestaurantView({
+  restaurant,
+}: {
+  restaurant: RestaurantDetail;
+}) {
+  const [input, setInput] = useState("");
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<MenuCategory | null>(null);
+
+  const availableCount = restaurant.menu.filter(
+    (item) => item.available,
+  ).length;
+
+  const filteredMenu = restaurant.menu.filter((item) => {
+    const matchesCategory = category === null || item.category === category;
+    const matchesQuery = normalize(`${item.name} ${item.description}`).includes(
+      normalize(query),
+    );
+
+    return matchesCategory && matchesQuery;
+  });
+
+  function resetFilters() {
+    setInput("");
+    setQuery("");
+    setCategory(null);
+  }
+
+  return (
+    <div className={styles.restaurantPage}>
+      <div className={styles.topContent}>
+        <Link href="/explore" className={styles.backLink}>
+          <ArrowLeft size={21} aria-hidden="true" />
+          Khám phá
+        </Link>
+
+        <section className={styles.summary} aria-labelledby="restaurant-title">
+          <div className={styles.cover}>
+            <FoodPlaceholder
+              imageUrl={restaurant.avatar_url}
+              alt={restaurant.name}
+            />
+          </div>
+
+          <div className={styles.summaryContent}>
+            <div className={styles.titleRow}>
+              <h1 id="restaurant-title">{restaurant.name}</h1>
+
+              <span
+                className={`${styles.status} ${
+                  !restaurant.isOpen ? styles.closed : ""
+                }`}
+              >
+                <span aria-hidden="true" />
+                {restaurant.isOpen ? "Đang nhận đơn" : "Tạm đóng cửa"}
+              </span>
+            </div>
+
+            <div className={styles.restaurantMeta}>
+              <span>
+                <MapPin size={23} aria-hidden="true" />
+                {restaurant.location}
+              </span>
+
+              {restaurant.hours && (
+                <span>
+                  <Clock3 size={22} aria-hidden="true" />
+                  {restaurant.hours}
+                </span>
+              )}
+
+              <span>
+                <Utensils size={22} aria-hidden="true" />
+                {restaurant.isOpen
+                  ? `${availableCount} món đang bán`
+                  : `${restaurant.menu.length} món (Tạm ngưng nhận đơn)`}
+              </span>
+            </div>
+
+            <p className={styles.description}>{restaurant.description}</p>
+
+            {restaurant.payments.length > 0 && (
+              <div className={styles.payments}>
+                <span>Chấp nhận thanh toán:</span>
+
+                {restaurant.payments.map((payment) => (
+                  <span key={payment} className={styles.paymentChip}>
+                    {payment === "Tiền mặt" ? (
+                      <Banknote size={22} aria-hidden="true" />
+                    ) : (
+                      <CreditCard size={22} aria-hidden="true" />
+                    )}
+                    {payment}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <form
+          role="search"
+          className={styles.search}
+          onSubmit={(event) => {
+            event.preventDefault();
+            setQuery(input);
+          }}
+        >
+          <Search size={28} strokeWidth={1.7} aria-hidden="true" />
+
+          <input
+            type="search"
+            aria-label={`Tìm món tại ${restaurant.name}`}
+            placeholder={`Tìm món tại ${restaurant.name}...`}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+          />
+
+          <button type="submit" className={styles.primaryButton}>
+            Tìm kiếm
+          </button>
+        </form>
+
+        <div
+          className={styles.filters}
+          role="group"
+          aria-label="Danh mục món ăn"
+        >
+          <button
+            type="button"
+            aria-pressed={category === null}
+            onClick={resetFilters}
+          >
+            Tất cả
+          </button>
+
+          {menuCategories.map((item) => (
+            <button
+              type="button"
+              key={item}
+              aria-pressed={category === item}
+              onClick={() => setCategory(category === item ? null : item)}
+            >
+              <span aria-hidden="true">{CATEGORY_EMOJI[item]}</span>
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <section className={styles.menuSection} aria-labelledby="menu-title">
+        {!restaurant.isOpen && (
+          <div className={styles.closedBanner} role="status">
+            <AlertCircle size={20} aria-hidden="true" />
+            <span>
+              Quán hiện đang tạm đóng cửa nên chưa thể nhận đơn. Bạn vẫn có thể xem trước thực đơn bên dưới.
+            </span>
+          </div>
+        )}
+
+        <div className={styles.menuHeading}>
+          <span className={styles.headingIcon}>
+            <Utensils size={25} aria-hidden="true" />
+          </span>
+          <h2 id="menu-title">Menu của quán</h2>
+          <span className={styles.menuCount}>
+            {restaurant.isOpen
+              ? `${availableCount} món đang bán`
+              : "Quán tạm đóng cửa"}
+          </span>
+        </div>
+
+        <p role="status" className={styles.srOnly}>
+          Hiển thị {filteredMenu.length} món.
+        </p>
+
+        {filteredMenu.length > 0 ? (
+          <div className={styles.menuGrid}>
+            {filteredMenu.map((item) => {
+              const isItemOrderable = restaurant.isOpen && item.available;
+              const badgeLabel = !restaurant.isOpen
+                ? "Tạm đóng cửa"
+                : item.available
+                  ? "Đang bán"
+                  : "Hết món";
+
+              return (
+                <article
+                  key={item.id}
+                  className={`${styles.menuCard} ${
+                    !isItemOrderable ? styles.menuCardInactive : ""
+                  }`}
+                >
+                  <div className={styles.itemMedia}>
+                    <FoodPlaceholder
+                      category={item.category}
+                      imageUrl={item.image_url}
+                      alt={item.name}
+                    />
+
+                    <span
+                      className={`${styles.itemBadge} ${
+                        !isItemOrderable ? styles.closed : ""
+                      }`}
+                    >
+                      <span aria-hidden="true" />
+                      {badgeLabel}
+                    </span>
+                  </div>
+
+                  <h3>{item.name}</h3>
+                  <p className={styles.itemDescription}>{item.description}</p>
+                  <p className={styles.price}>{formatPrice(item.price)}</p>
+
+                  <div className={styles.itemFooter}>
+                    {item.hasOptions && (
+                      <span className={styles.options}>
+                        <Settings size={16} aria-hidden="true" />
+                        Có tùy chọn thêm
+                      </span>
+                    )}
+
+                    <Link
+                      href={`/restaurants/${encodeURIComponent(restaurant.slug)}/menu/${encodeURIComponent(item.slug)}`}
+                      className={`${styles.primaryButton} ${
+                        !isItemOrderable ? styles.secondaryViewButton : ""
+                      }`}
+                      aria-label={`Xem món ${item.name}`}
+                    >
+                      {isItemOrderable ? "Xem món" : "Xem chi tiết"}
+                      <ArrowRight size={17} aria-hidden="true" />
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className={styles.empty}>
+            <p>
+              {restaurant.menu.length === 0
+                ? "Quán này chưa có menu mẫu."
+                : "Không tìm thấy món phù hợp."}
+            </p>
+
+            {restaurant.menu.length > 0 && (
+              <button type="button" onClick={resetFilters}>
+                Xóa bộ lọc
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

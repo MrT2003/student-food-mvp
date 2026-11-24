@@ -1,0 +1,933 @@
+.main { min-width:0; font-family:var(--font-body); }
+.desktopView { display:block; }
+.mobileView { display:none; }
+.heading { display:flex; justify-content:space-between; gap:20px; align-items:center; margin-bottom:20px; }
+.heading h1 { margin:0 0 5px; font-family:var(--font-display); font-size:36px; font-weight:800; line-height:1.15; letter-spacing:-1px; }
+.heading p { margin:0; color:#5475a6; font-size:18px; }
+.buttons { display:flex; gap:14px; flex-shrink:0; }
+.primary,.outline { display:flex; gap:10px; justify-content:center; align-items:center; border-radius:9px; padding:12px 22px; min-height:44px; font-weight:600!important; }
+.primary { border:1px solid #ff6425; background:linear-gradient(110deg,#ff831f,#ff381e); color:white; }
+.outline { border:1px solid #ff6333; background:white; color:#fd5425; }
+.primary:disabled { opacity:.55; cursor:wait; }
+.columns { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:20px; align-items:start; }
+.left,.right { display:grid; gap:16px; min-width:0; }
+.card { background:#fff; border:1px solid #f1ece5; border-radius:13px; padding:18px; box-shadow:0 4px 18px #88634405; min-width:0; }
+.card h2 { margin:0 0 14px; font-family:var(--font-display); font-size:22px; font-weight:700; line-height:1.3; }
+.basic { display:grid; grid-template-columns:220px minmax(0,1fr); gap:22px; }
+.uploadField>span { display:block; margin-bottom:9px; font-weight:600; }
+.basic b { color:#ff492b; }
+.upload { width:100%; min-height:196px; border:2px dashed #d5dfed; border-radius:10px; background:#fafbfd; color:#567aa9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; overflow:hidden; padding:0; }
+.upload strong { color:#173258; }.upload small { color:#7791b0; }
+.upload img { width:100%; height:196px; object-fit:cover; }
+.textButton { border:0; background:none; color:#fa542c; padding:6px 0; }
+.fields { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:20px; align-content:start; }
+.fields label { display:block; font-weight:600; min-width:0; }
+.fields :is(input,select,textarea),.dialog :is(input:not([type=checkbox]),select) { margin-top:7px; width:100%; box-sizing:border-box; padding:11px 12px; border:1px solid #dce4ef; border-radius:8px; background:#fff; color:#1c355b; font-weight:400; min-width:0; }
+.fields :is(input,textarea)::placeholder { color:#8b9db7; }
+.priceInput { display:flex; align-items:center; margin-top:7px; border:1px solid #dce4ef; border-radius:8px; overflow:hidden; }
+.priceInput input { margin:0; border:0; border-radius:0; }.priceInput span { padding:10px 16px; background:#f5f7fa; }
+.description { position:relative; }.description textarea { min-height:90px; resize:vertical; padding-bottom:27px; }.description small { position:absolute; bottom:10px; right:12px; color:#7b93b7; font-weight:400; }
+.sectionHeading { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:14px; }.sectionHeading h2 { margin:0; font-family:var(--font-display); font-weight:700; }.sectionHeading p { font-size:12px; color:#7a90ae; margin:0; }
+.groups { display:grid; gap:10px; }
+.group { border:1px solid #e8edf4; background:#fff; border-radius:10px; padding:11px 13px; }
+.group header { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:8px; }.group header>span { color:#ff602e; background:#fff1e8; border-radius:20px; padding:3px 10px; font-size:11px; }
+.groupActions { margin-left:auto; display:flex; gap:6px; }.groupActions button { display:grid; place-items:center; width:30px; height:30px; border:1px solid #e0e7f1; border-radius:7px; color:#416da6; background:#fff; }.groupActions button:last-child { color:#ff452a; }
+.chips { display:flex; flex-wrap:wrap; gap:8px; }
+.chip { display:flex; align-items:center; background:#f1f4f8; border-radius:20px; overflow:hidden; }.chip button { border:0; background:none; color:#405e89; padding:7px 9px; display:flex; align-items:center; gap:7px; text-align:left; }.chip b { color:#ff5426; font-size:12px; }.chip button:last-child { padding-left:0; }
+.addChoice { border:1px dashed #bacbdf; background:white; color:#5378ab; border-radius:22px; display:flex; gap:6px; align-items:center; padding:6px 12px; }
+.addGroup { width:100%; border:1px dashed #ff602c; background:#fffaf7; border-radius:8px; padding:9px; color:#ff5425; margin-top:12px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600; }
+.empty { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; }.empty p { color:#7890b0; margin:0; }.empty button { font-size:12px; padding:7px 12px; }
+.switches { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.switchLabel { display:flex; gap:10px; align-items:start; cursor:pointer; border-right:1px solid #edf0f5; padding-right:10px; }.switchLabel:last-child { border:0; }
+.switchLabel input { appearance:none; width:42px; height:24px; background:#adb9cc; border-radius:20px; flex-shrink:0; position:relative; margin:1px 0 0; cursor:pointer; transition:background .15s; }
+.switchLabel input::after { content:""; position:absolute; width:18px; height:18px; border-radius:50%; background:white; top:3px; left:3px; box-shadow:0 1px 3px #0002; transition:transform .15s; }
+.switchLabel input:checked { background:#13b35c; }.switchLabel input:checked::after { transform:translateX(18px); }
+.switchLabel strong { font-size:13px; }.switchLabel small { display:block; font-size:11px; line-height:1.4; color:#7a90af; margin-top:4px; }
+.preview { display:flex; gap:12px; border:1px solid #edf0f5; border-radius:10px; padding:10px; }
+.previewImage { width:100px; height:130px; flex-shrink:0; border-radius:8px; overflow:hidden; background:#f6ebdf; color:#ba9677; display:grid; place-items:center; }
+.previewImage img { width:100%; height:100%; object-fit:cover; }.previewImage svg { width:40px; height:40px; }
+.previewCopy { min-width:0; flex:1; }.previewCopy>div { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; }.previewCopy h3 { margin:0; font-family:var(--font-display); font-size:15px; font-weight:700; overflow-wrap:anywhere; }.money { color:#ff4020; font-size:17px; white-space:nowrap; }
+.previewCopy p { display:flex; gap:6px; align-items:center; color:#7b94b7; font-size:12px; margin:10px 0; }.previewCopy svg { flex-shrink:0; }.previewCopy footer { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; }.previewCopy footer button { font-size:12px; min-height:32px; padding:5px 10px; }
+.badge { background:#fff0eb; color:#ff5629; border-radius:20px; font-size:11px; padding:6px 10px; white-space:nowrap; }.badge[data-selling=true] { background:#e7fbef; color:#13a65b; }.previewDescription { color:#728aac; font-size:12px; margin:10px 0 0; overflow-wrap:anywhere; }
+.summary { margin:0; }.summary>div { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #eef1f5; color:#6281ad; }.summary>div:last-child { border:0; }.summary dt { display:flex; align-items:center; gap:10px; }.summary dd { margin:0; text-align:right; }
+.tipsHeading { display:flex; align-items:center; gap:10px; }.tipsHeading svg { color:#ff6825; }
+.tip { display:flex; gap:12px; margin-top:14px; }.tip>span { width:20px; height:20px; display:grid; place-items:center; border:1px solid #839cbe; border-radius:5px; flex-shrink:0; margin-top:2px; }.tip>span[data-done=true] { background:#e9faef; color:#1caa59; border-color:#1caa59; }.tip strong { font-size:14px; }.tip small { display:block; color:#7c91ae; margin-top:3px; font-size:12px; }
+.bottomActions { display:grid; grid-template-columns:1fr 1.3fr; gap:12px; }.demo { font-size:11px; color:#8d9db4; margin:0; }
+.error { border:1px solid #f5c9c1; background:#fff2ef; color:#bd3829; border-radius:8px; padding:10px 14px; margin:0 0 14px; }
+.dialog { position:fixed; inset:0; margin:auto; width:min(440px,calc(100vw - 32px)); height:fit-content; box-sizing:border-box; border:1px solid #f0e2d6; border-radius:16px; padding:22px; background:#fff; color:#193055; max-height:85dvh; overflow:auto; font:14px/1.5 var(--font-body); }.dialog::backdrop { background:#08153566; }
+.dialog header { display:flex; justify-content:space-between; align-items:center; gap:12px; }.dialog h2 { font-family:var(--font-display); font-size:20px; font-weight:700; margin:0 0 15px; }.dialog header button { border:0; background:none; color:#6c85a9; cursor:pointer; }.dialog label { display:block; margin-bottom:15px; }.dialog input,.dialog select,.dialog button { font:inherit; }.dialog .checkLabel { display:flex; gap:10px; align-items:center; }.dialog input[type=checkbox] { accent-color:#ff6825; }.dialog footer { display:flex; gap:12px; justify-content:flex-end; }.dialog button { cursor:pointer; }
+@media(max-width:1600px) { .columns { grid-template-columns:minmax(0,1fr) 320px; gap:16px; }.basic { grid-template-columns:180px minmax(0,1fr); gap:16px; }.fields { gap:14px; }.card { padding:16px; }.previewImage { width:78px; height:112px; }.heading p { font-size:16px; }.switches { gap:10px; }.switchLabel { flex-wrap:wrap; } }
+@media(max-width:1250px) { .columns { grid-template-columns:minmax(0,1fr); }.right { grid-template-columns:repeat(2,minmax(0,1fr)); }.bottomActions { align-self:start; }.basic { grid-template-columns:200px minmax(0,1fr); }.heading { flex-wrap:wrap; }.heading h1 { font-size:32px; } }
+@media(max-width:700px) { .basic,.fields,.right { grid-template-columns:minmax(0,1fr); }.upload { min-height:160px; }.upload img { height:180px; }.switches { grid-template-columns:1fr; }.switchLabel { border:0; flex-wrap:nowrap; }.buttons { width:100%; }.buttons button { flex:1; padding:10px; }.heading h1 { font-size:28px; }.card h2 { font-size:20px; }.empty { flex-wrap:wrap; }.group header { gap:6px; }.groupActions { margin-left:auto; }.bottomActions { grid-template-columns:1fr 1fr; }.previewImage { width:90px; }.dialog button:focus-visible { outline:3px solid #3983cd; outline-offset:2px; } }
+.fields [aria-invalid="true"], .upload[aria-invalid="true"], .group[data-invalid="true"] {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
+/* Phiên bản Mobile (<= 760px) trùng khớp 100% với ảnh mẫu "Thêm món mới" */
+@media (max-width: 760px) {
+  .page {
+    background:
+      radial-gradient(ellipse 220px 260px at 100% 8%, #ffefde 0%, transparent 65%),
+      radial-gradient(ellipse 220px 260px at 0% 88%, #ffefe0 0%, transparent 65%),
+      #fbf7f2;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .page > header {
+    display: none;
+  }
+
+  .workspace {
+    display: block;
+    padding: 0;
+    margin: 0;
+  }
+
+  .workspace > aside {
+    display: none;
+  }
+
+  .main {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    padding-top: 0;
+    display: block;
+  }
+
+  .desktopView {
+    display: none;
+  }
+
+  .mobileView {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  /* Thanh tiêu đề trên cùng: ← Thêm món mới | 👁 Xem trước */
+  .mobileTopBar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr) 88px;
+    align-items: center;
+    min-height: 50px;
+    padding: calc(6px + env(safe-area-inset-top, 0px)) 14px 6px;
+    background: rgba(251, 247, 242, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-sizing: border-box;
+  }
+
+  .mobileBackBtn {
+    justify-self: start;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #0d2f7a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .mobileTopTitle {
+    margin: 0;
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 19px;
+    line-height: 1.25;
+    font-weight: 800;
+    letter-spacing: -0.35px;
+    color: #08184c;
+    white-space: nowrap;
+  }
+
+  .mobilePreviewBtn {
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 0;
+    border: 0;
+    background: transparent;
+    color: #ea4e1b;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .mobilePreviewBtn svg {
+    flex-shrink: 0;
+    color: #ea4e1b;
+  }
+
+  .mobileForm {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px 14px 18px;
+    box-sizing: border-box;
+  }
+
+  .mobileError {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #f8d2ca;
+    background: #fff1ee;
+    color: #b43827;
+    font-size: 13px;
+    line-height: 1.38;
+  }
+
+  .mobileError button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    padding: 2px;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  /* Khung thẻ trắng chung */
+  .mobileCard {
+    background: #ffffff;
+    border: 1px solid #f0ece5;
+    border-radius: 16px;
+    padding: 14px 14px 14px;
+    box-shadow: 0 4px 16px rgba(15, 28, 63, 0.035);
+    box-sizing: border-box;
+  }
+
+  .mobileCardTitle {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 18px;
+    line-height: 1.26;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    color: #08184c;
+  }
+
+  .mobileOptionalTag {
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 400;
+    color: #5b769e;
+    letter-spacing: 0;
+  }
+
+  .mobileCardSubtitle {
+    margin: 3px 0 0;
+    font-size: 13px;
+    line-height: 1.36;
+    color: #5b769e;
+    font-weight: 400;
+  }
+
+  /* Card 1: Thông tin cơ bản */
+  .mobileFieldStack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .mobileField {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .mobileFieldLabelText {
+    font-size: 13.5px;
+    line-height: 1.3;
+    font-weight: 600;
+    color: #163168;
+  }
+
+  .mobileFieldLabelText b {
+    color: #ef4423;
+    font-weight: 700;
+  }
+
+  .mobilePhotoRow {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+  }
+
+  .mobilePhotoThumb {
+    width: 94px;
+    height: 96px;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #f4eae0;
+    box-shadow: 0 2px 8px rgba(15, 28, 63, 0.06);
+  }
+
+  .mobilePhotoImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .mobilePhotoRight {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .mobileChangePhotoBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 36px;
+    padding: 7px 14px;
+    border: 1px solid #d1ddef;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #0e2a66;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .mobileChangePhotoBtn svg {
+    color: #18479e;
+    flex-shrink: 0;
+  }
+
+  .mobilePhotoHint {
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: #5b769e;
+    font-weight: 400;
+  }
+
+  .mobileInput {
+    width: 100%;
+    height: 41px;
+    padding: 8px 13px;
+    border: 1px solid #d7e1ef;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #08184c;
+    font-size: 14.5px;
+    line-height: 1.3;
+    font-weight: 500;
+    box-sizing: border-box;
+  }
+
+  .mobileInput::placeholder,
+  .mobilePriceField::placeholder,
+  .mobileTextarea::placeholder {
+    color: #8499b8;
+    font-weight: 400;
+  }
+
+  .mobileTwoCols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 11px;
+    align-items: start;
+  }
+
+  .mobilePriceBox {
+    display: flex;
+    align-items: stretch;
+    height: 41px;
+    border: 1px solid #d7e1ef;
+    border-radius: 10px;
+    background: #ffffff;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .mobilePriceField {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    padding: 8px 12px;
+    background: transparent;
+    color: #08184c;
+    font-size: 14.5px;
+    line-height: 1.3;
+    font-weight: 500;
+    box-sizing: border-box;
+  }
+
+  .mobilePriceSuffix {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 11px;
+    border-left: 1px solid #e2eaf4;
+    background: #f3f6fb;
+    color: #08184c;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .mobileCategoryBox {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 41px;
+    border: 1px solid #d7e1ef;
+    border-radius: 10px;
+    background: #ffffff;
+    box-sizing: border-box;
+  }
+
+  .mobileCategoryIconWrap {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ef5322;
+    pointer-events: none;
+  }
+
+  .mobileCategorySelect {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    padding: 0 30px 0 36px;
+    background: transparent;
+    color: #08184c;
+    font-size: 14.5px;
+    line-height: 1.3;
+    font-weight: 500;
+    box-sizing: border-box;
+    text-overflow: ellipsis;
+  }
+
+  .mobileCategoryChevron {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #1c4285;
+    pointer-events: none;
+  }
+
+  .mobileTextarea {
+    width: 100%;
+    min-height: 74px;
+    padding: 9px 13px;
+    border: 1px solid #d7e1ef;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #08184c;
+    font-size: 14.5px;
+    line-height: 1.42;
+    font-weight: 500;
+    resize: vertical;
+    box-sizing: border-box;
+  }
+
+  /* Card 2: Tùy chọn món */
+  .mobileOptionHeader {
+    margin-bottom: 11px;
+  }
+
+  .mobileOptionList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mobileOptionItem {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto 18px;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #ebf0f6;
+    border-radius: 12px;
+    background: #fcfdff;
+    text-align: left;
+    box-sizing: border-box;
+  }
+
+  .mobileOptionIcon {
+    width: 30px;
+    height: 30px;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .mobileOptionCopy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobileOptionCopy strong {
+    font-family: var(--font-display);
+    font-size: 14.5px;
+    line-height: 1.26;
+    font-weight: 700;
+    color: #08184c;
+  }
+
+  .mobileOptionCopy small {
+    font-size: 12.5px;
+    line-height: 1.32;
+    color: #5b769e;
+    font-weight: 400;
+  }
+
+  .mobileOptionPricePill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #fff0e7;
+    color: #df4a1e;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .mobileOptionArrow {
+    color: #42628f;
+    flex-shrink: 0;
+    justify-self: end;
+  }
+
+  .mobileAddGroupBtn {
+    width: 100%;
+    margin-top: 10px;
+    min-height: 41px;
+    padding: 8px 14px;
+    border: 1.5px dashed #ef6537;
+    border-radius: 10px;
+    background: #fffaf6;
+    color: #e24819;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    box-sizing: border-box;
+  }
+
+  /* Card 3: Hiển thị & tình trạng bán */
+  .mobileDisplayList {
+    display: flex;
+    flex-direction: column;
+    margin-top: 6px;
+  }
+
+  .mobileDisplayRow {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 0;
+    border-bottom: 1px solid #eef2f7;
+  }
+
+  .mobileDisplayRow:last-child {
+    border-bottom: 0;
+    padding-bottom: 2px;
+  }
+
+  .mobileDisplayIcon {
+    width: 30px;
+    height: 30px;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .mobileDisplayCopy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobileDisplayCopy strong {
+    font-family: var(--font-display);
+    font-size: 14.5px;
+    line-height: 1.28;
+    font-weight: 700;
+    color: #08184c;
+  }
+
+  .mobileDisplayCopy span {
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: #5b769e;
+    font-weight: 400;
+  }
+
+  .mobileToggle {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .mobileToggle input {
+    appearance: none;
+    -webkit-appearance: none;
+    display: block;
+    width: 48px;
+    height: 27px;
+    margin: 0;
+    border-radius: 999px;
+    background: #b8c4d4;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.16s ease;
+  }
+
+  .mobileToggle input::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(8, 24, 76, 0.18);
+    transition: transform 0.16s ease;
+  }
+
+  .mobileToggle input:checked {
+    background: #17a354;
+  }
+
+  .mobileToggle input:checked::after {
+    transform: translateX(21px);
+  }
+
+  .mobileSellingSelectBox {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 0 0 11px;
+    border: 1px solid #d5e0ee;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #08184c;
+    box-sizing: border-box;
+  }
+
+  .mobileSellingDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: #17a354;
+    box-shadow: 0 0 0 3px #dcf7e6;
+    margin-right: 8px;
+  }
+
+  .mobileSellingSelectBox[data-status="unavailable"] .mobileSellingDot {
+    background: #ff8706;
+    box-shadow: 0 0 0 3px #fff0db;
+  }
+
+  .mobileSellingSelectBox[data-status="hidden"] .mobileSellingDot {
+    background: #7385a1;
+    box-shadow: 0 0 0 3px #edf1f6;
+  }
+
+  .mobileSellingSelect {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: #08184c;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 6px 34px 6px 0;
+  }
+
+  .mobileSellingChevronWrap {
+    position: absolute;
+    right: 0;
+    top: 5px;
+    bottom: 5px;
+    width: 28px;
+    border-left: 1px solid #e7edf5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #1c4285;
+    pointer-events: none;
+  }
+
+  /* Thanh nút hành động cố định dưới cùng: Hủy | Lưu món */
+  .mobileBottomBar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 45;
+    background: rgba(252, 249, 245, 0.98);
+    border-top: 1px solid #eee8df;
+    box-shadow: 0 -4px 18px rgba(8, 20, 71, 0.05);
+    padding: 10px max(14px, env(safe-area-inset-right, 0px))
+      calc(10px + env(safe-area-inset-bottom, 0px))
+      max(14px, env(safe-area-inset-left, 0px));
+    box-sizing: border-box;
+  }
+
+  .mobileBottomInner {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 0.56fr 1fr;
+    gap: 10px;
+  }
+
+  .mobileCancelBtn,
+  .mobileSaveBtn {
+    width: 100%;
+    min-height: 45px;
+    padding: 10px 14px;
+    border-radius: 11px;
+    font-family: var(--font-display);
+    font-size: 15px;
+    line-height: 1.2;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+    white-space: nowrap;
+  }
+
+  .mobileCancelBtn {
+    border: 1.5px solid #ed6b3e;
+    background: #ffffff;
+    color: #e24617;
+  }
+
+  .mobileSaveBtn {
+    border: 1.5px solid transparent;
+    background: linear-gradient(90deg, #ff6816 0%, #ef3e13 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(239, 62, 19, 0.25);
+  }
+
+  .mobileSaveBtn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+
+  /* Modal Xem trước trên Mobile */
+  .mobileModalBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    background: rgba(8, 20, 53, 0.48);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  .mobileModalCard {
+    width: min(380px, 100%);
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 14px 36px rgba(8, 20, 53, 0.2);
+    box-sizing: border-box;
+  }
+
+  .mobileModalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .mobileModalHeader h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 800;
+    color: #08184c;
+  }
+
+  .mobileModalHeader button {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 8px;
+    background: #f3f6fa;
+    color: #47648f;
+    display: inline-grid;
+    place-items: center;
+  }
+}
+
+/* iPhone 16 Pro Max / Pixel 9/10 Pro XL / Galaxy A55 (<= 440px) */
+@media (max-width: 440px) {
+  .mobileForm {
+    padding: 4px 13px 18px;
+  }
+
+  .mobileBottomBar {
+    padding-inline: max(13px, env(safe-area-inset-left, 0px))
+      max(13px, env(safe-area-inset-right, 0px));
+  }
+}
+
+/* iPhone 16 / iPhone 16 Pro / Pixel 9 / Pixel 10 (<= 393px) */
+@media (max-width: 393px) {
+  .mobileTopBar {
+    padding-inline: 12px;
+  }
+
+  .mobileForm {
+    padding: 3px 12px 16px;
+    gap: 11px;
+  }
+
+  .mobileCard {
+    padding: 13px 13px;
+  }
+
+  .mobileCardTitle {
+    font-size: 17.5px;
+  }
+
+  .mobileInput,
+  .mobilePriceBox,
+  .mobileCategoryBox {
+    height: 40px;
+  }
+
+  .mobileBottomBar {
+    padding-inline: max(12px, env(safe-area-inset-left, 0px))
+      max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  .mobileCancelBtn,
+  .mobileSaveBtn {
+    min-height: 44px;
+    font-size: 14.5px;
+  }
+}
+
+/* iPhone SE / Compact Mobile Screens (<= 360px) */
+@media (max-width: 360px) {
+  .mobileTopBar {
+    grid-template-columns: 78px minmax(0, 1fr) 78px;
+    min-height: 48px;
+    padding-inline: 10px;
+  }
+
+  .mobileTopTitle {
+    font-size: 17.5px;
+  }
+
+  .mobilePreviewBtn {
+    font-size: 13px;
+  }
+
+  .mobileForm {
+    padding: 2px 10px 14px;
+    gap: 10px;
+  }
+
+  .mobileCard {
+    padding: 12px 11px;
+  }
+
+  .mobilePhotoThumb {
+    width: 84px;
+    height: 86px;
+  }
+
+  .mobileTwoCols {
+    gap: 8px;
+  }
+
+  .mobileOptionItem {
+    padding: 9px 10px;
+    gap: 8px;
+  }
+
+  .mobileOptionPricePill {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  .mobileBottomBar {
+    padding: 9px 10px calc(9px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobileBottomInner {
+    gap: 8px;
+  }
+
+  .mobileCancelBtn,
+  .mobileSaveBtn {
+    min-height: 42px;
+    font-size: 14px;
+    padding-inline: 10px;
+  }
+}
+
+@media (max-width: 760px) {
+  .mobileOptionsCard .sectionHeading { gap: 5px; margin-bottom: 14px; }
+  .mobileOptionsCard .sectionHeading h2 { font-size: 20px; line-height: 1.35; }
+  .mobileOptionsCard .sectionHeading p { font-size: 12px; line-height: 1.5; }
+  .mobileOptionsCard .group { padding: 12px; min-width: 0; }
+  .mobileOptionsCard .group header { gap: 7px; }
+  .mobileOptionsCard .group header strong { font-size: 14px; overflow-wrap: anywhere; }
+  .mobileOptionsCard .group header > span { font-size: 11px; }
+  .mobileOptionsCard .groupActions button { width: 36px; height: 36px; }
+  .mobileOptionsCard .chip { max-width: 100%; }
+  .mobileOptionsCard .chip button { min-height: 36px; font-size: 12px; flex-wrap: wrap; overflow-wrap: anywhere; }
+  .mobileOptionsCard .chip button:last-child { flex-shrink: 0; padding-right: 10px; }
+  .mobileOptionsCard .addChoice { min-height: 36px; font-size: 12px; }
+  .mobileOptionsCard .addGroup { min-height: 42px; font-size: 13px; }
+}
+@media(prefers-reduced-motion:reduce) { .switchLabel input,.switchLabel input::after,.mobileToggle input,.mobileToggle input::after { transition:none; } }

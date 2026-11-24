@@ -1,0 +1,774 @@
+.page { min-height:100dvh; color:#071344; font:14px/1.4 var(--font-body); color-scheme:light; background:radial-gradient(ellipse 210px 270px at 0 83%,#fff0e0 0 60%,transparent 61%),radial-gradient(ellipse 280px 350px at 100% 30%,#fff2e4 0 60%,transparent 61%),#fffbf6; font-family:var(--font-body); }
+.page :is(button,input,select) { font-family:inherit; }
+.page :is(h1,h2,h3) { font-family:var(--font-display); font-weight:700; }
+.page strong { font-weight:700; }
+.page button { cursor:pointer; }
+.page :is(button,input,select,a):focus-visible { outline:3px solid #3680cf; outline-offset:3px; }
+.workspace { display:grid; grid-template-columns:247px minmax(0,1fr); gap:36px; max-width:1920px; margin:auto; padding:8px 24px 28px 20px; align-items:start; }
+.workspace>aside { top:8px; min-height:calc(100dvh - 79px); border-radius:12px; padding:18px 12px; }
+.workspace>aside nav { font-family:var(--font-display); }
+.workspace>aside nav :is(a,button) { font-family:var(--font-display); font-size:15px; font-weight:500; min-height:49px; }
+.main { min-width:0; display:grid; gap:14px; padding-top:14px; }
+.desktopView { min-width:0; display:grid; gap:14px; }
+.mobileView { display:none; }
+.heading { display:flex; align-items:center; justify-content:space-between; gap:22px; min-height:68px; margin-bottom:2px; }
+.heading h1 { margin:0 0 5px; font-family:var(--font-display); font-size:38px; font-weight:800; line-height:1.12; letter-spacing:-1px; }
+.heading p { margin:0; font-size:17px; line-height:1.45; color:#376799; }
+.card { min-width:0; background:#fff; border:1px solid #f0ebe5; border-radius:13px; padding:15px 18px; box-shadow:0 5px 20px #78542a05; }
+.card h2 { margin:0 0 10px; font-family:var(--font-display); font-size:23px; font-weight:700; line-height:1.3; letter-spacing:-.5px; }
+.card h3 { font-family:var(--font-display); font-size:16px; font-weight:700; margin:0; line-height:1.35; }
+.card p { color:#6483ad; }
+.stats { display:grid; grid-template-columns:1fr 1fr 1.04fr; gap:16px; }
+.stats>article { display:flex; gap:18px; align-items:center; min-height:98px; box-sizing:border-box; padding:13px 18px; }
+.stats>article>div { flex:1; min-width:0; }
+.stats h3 { margin:0 0 4px; font-family:var(--font-display); font-size:17px; font-weight:700; letter-spacing:-.4px; }
+.stats p { margin:3px 0 0; font-size:14px; line-height:1.4; }
+.statIcon { width:58px; height:58px; border-radius:19px; display:grid; place-items:center; flex-shrink:0; }
+.statIcon[data-tone=blue],.methodIcon[data-tone=blue] { background:#e9f2ff; color:#0450dc; }
+.statIcon[data-tone=green],.methodIcon[data-tone=green] { background:#e2f8eb; color:#02944a; }
+.count { font-size:25px; line-height:1.1; }
+.statTitle { display:flex; gap:10px; justify-content:space-between; align-items:start; flex-wrap:wrap; }
+.badge { display:inline-flex; align-items:center; gap:5px; font-size:12.5px; border-radius:20px; padding:4px 11px; line-height:1.45; white-space:nowrap; background:#fff0e7; color:#b35f2e; font-weight:600; }
+.badge[data-on=true] { background:#dcf8e8; color:#008843; }
+.content { display:grid; grid-template-columns:minmax(0,1.82fr) minmax(320px,1fr); gap:16px; align-items:start; }
+.left { display:grid; gap:14px; min-width:0; }
+.left>.card { box-sizing:border-box; }
+.right { display:flex; flex-direction:column; gap:14px; min-width:0; }
+.right>.card { padding:15px 18px; box-sizing:border-box; }
+.right>.card h2 { font-size:21px; margin-bottom:10px; }
+.methods { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.method { min-width:0; display:flex; align-items:center; gap:18px; padding:14px 16px; min-height:102px; box-sizing:border-box; border:1px solid #e2e7ef; border-radius:11px; background:#f8f9fb; position:relative; }
+.method[data-enabled=true] { background:linear-gradient(120deg,#f2fcf8,#effaf5); border-color:#c8efdf; }
+.method>div { min-width:0; flex:1; }
+.method h3 { font-family:var(--font-display); font-size:17.5px; font-weight:700; padding-right:44px; }
+.method p { font-size:14px; line-height:1.38; margin:4px 0 7px; }
+.method .badge { position:static; }
+.methodIcon { width:64px; height:64px; border-radius:20px; display:grid; place-items:center; flex-shrink:0; }
+.switch { position:absolute; right:16px; top:18px; }.switch input { appearance:none; display:block; width:42px; height:24px; margin:0; border-radius:20px; background:#b9c4d2; position:relative; cursor:pointer; }.switch input::after { content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; background:#fff; border-radius:50%; box-shadow:0 1px 3px #0002; transition:transform .15s; }.switch input:checked { background:linear-gradient(110deg,#ff8b23,#ff5721); }.switch input:checked::after { transform:translateX(18px); }
+.info { display:flex; gap:8px; align-items:center; background:#f1f5fa; border-radius:9px; color:#416a9c!important; font-size:13.5px; line-height:1.45; padding:8px 12px; margin:10px 0 0; }
+.info svg { flex-shrink:0; color:#248eea; }
+.bankColumns { display:grid; grid-template-columns:minmax(0,2.15fr) minmax(240px,1fr); gap:14px; align-items:stretch; }
+.bankColumns>.card { box-sizing:border-box; display:flex; flex-direction:column; }
+.subtitle { margin:-4px 0 12px; font-size:14px; }
+.bankFields { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.15fr); column-gap:16px; row-gap:12px; }
+.bankFields label { font-size:14px; font-weight:600; color:#091a48; min-width:0; }
+.bankFields b { color:#ff4c2b; }
+.bankFields label>span { font-weight:400; }
+.bankFields :is(input:not([type=checkbox]),select) { display:block; width:100%; box-sizing:border-box; min-width:0; border:1px solid #d1dced; border-radius:8px; padding:9px 14px; height:42px; margin-top:6px; color:#122953; background-color:#fff; font-size:14px; font-weight:400; }
+.bankFields select { appearance:none; padding-right:35px; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23285182' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-position:right 14px center; background-repeat:no-repeat; }
+.full { grid-column:1 / -1; }
+.full>small { display:block; font-size:12.5px; color:#708bb0; line-height:1.45; font-weight:400; margin-top:5px; }
+.bankSelect { position:relative; }
+.bankSelect>svg { position:absolute; left:13px; top:10px; color:#008d58; fill:#ddf4e8; pointer-events:none; }
+.bankFields .bankSelect select { padding-left:44px; }
+.bankFields .defaultOption { display:flex; align-items:center; gap:9px; margin-top:2px; font-size:14px; cursor:pointer; }
+.bankFields .defaultOption input { display:inline-block; width:18px; height:18px; margin:0; padding:0; accent-color:#ff642e; }
+.qrCard { padding:15px 18px; display:flex; flex-direction:column; justify-content:space-between; }
+.qrCard>h3 { margin:0 0 8px; font-family:var(--font-display); font-size:18px; font-weight:700; }
+.qrPreview { background:linear-gradient(145deg,#fff,#f6f9fc); border:1px solid #e9eef5; border-radius:10px; text-align:center; display:flex; flex-direction:column; align-items:center; padding:8px 12px 10px; font-size:13px; line-height:1.35; min-width:0; }
+.qrBrand { font-family:var(--font-display); font-size:23px; font-weight:800; line-height:1.15; }
+.qrBrand>span { color:#e91632; font-style:italic; }
+.qrBrand small { font-family:var(--font-body); font-size:9.5px; font-weight:400; color:#788eac; }
+.qrImage { margin:5px 0 6px; width:88px; height:88px; }
+.qrImage>svg { display:block; width:100%; height:100%; shape-rendering:crispEdges; }
+.qrPreview>span { max-width:100%; overflow-wrap:anywhere; }
+.qrPreview>.amount { width:100%; margin:5px 0 3px; padding:4px 0; color:#ff4c24; background:#fff1e6; border-radius:8px; font-size:15px; }
+.qrPreview>small { font-size:11px; color:#6683ae; overflow-wrap:anywhere; }
+.qrCard .info { padding:7px 9px; font-size:11.5px; }
+.checks { display:grid; gap:16px; padding:4px 2px; }
+.checks article { display:flex; align-items:start; gap:14px; }
+.checks article>span { width:34px; height:34px; flex-shrink:0; display:grid; place-items:center; border-radius:50%; background:#fff1e6; color:#b77c3c; }
+.checks article>span[data-done=true] { background:linear-gradient(120deg,#0ab760,#009349); color:#fff; }
+.checks h3 { font-family:var(--font-display); font-size:16px; font-weight:700; margin:0 0 2px; }
+.checks p { font-size:14px; line-height:1.42; margin:0; }
+.supportHeading { display:flex; gap:14px; align-items:start; }
+.supportHeading>span { width:56px; height:56px; flex-shrink:0; display:grid; place-items:center; color:#ff611e; background:#fff3e7; border-radius:50%; }
+.supportHeading h2 { margin:0 0 4px; font-family:var(--font-display); font-weight:700; }
+.supportHeading p { font-size:14px; line-height:1.45; margin:0; }
+.supportActions { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+.primary,.outline { display:flex; justify-content:center; align-items:center; gap:10px; box-sizing:border-box; border-radius:9px; height:43px; padding:9px 20px; font-size:14px; white-space:nowrap; font-weight:600; }
+.primary { background:linear-gradient(110deg,#ff8523,#ff391b); border:1px solid #ff6b24; color:#fff; min-width:170px; }
+.outline { border:1px solid #ff622f; background:#fff; color:#ff5123; }
+.supportActions button { height:42px; padding:8px 12px; font-size:14px; }
+.actions { margin-top:12px; display:flex; justify-content:flex-end; gap:14px; padding-top:6px; }
+.actions>button { min-width:155px; }
+.notice,.error { margin:0; padding:11px 15px; border-radius:9px; background:#ecf7ef; color:#216d46; font-size:14px; }
+.error { background:#fff1ee; color:#b43827; }
+.demo { margin:0; font-size:11px; color:#8a9ab1; }
+.guide { position:relative; border:1px solid #d3dfef; border-radius:12px; background:#fff; padding:15px 40px 15px 18px; }
+.guide h3 { margin:0 0 5px; font-family:var(--font-display); font-weight:700; }
+.guide p { margin:0; color:#597ba8; font-size:14px; }
+.guide>button { position:absolute; top:12px; right:12px; border:0; background:none; color:#6981a3; }
+@media(max-width:1450px) { .workspace { grid-template-columns:220px minmax(0,1fr); gap:26px; padding-right:20px; } .heading p { font-size:15px; } .stats>article { gap:14px; } .statIcon { width:52px; height:52px; border-radius:17px; } .stats h3 { font-size:15px; } .stats p { font-size:13px; } .method { padding:12px 14px; gap:12px; } .methodIcon { width:54px; height:54px; border-radius:18px; } .method h3 { font-size:15.5px; } .method p { font-size:13px; } .bankFields { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
+@media(max-width:1150px) { .content { grid-template-columns:1fr; } .right { display:grid; grid-template-columns:1fr 1fr; align-items:start; } .bankColumns { grid-template-columns:minmax(0,1.8fr) minmax(230px,1fr); } .main { padding-top:8px; } }
+@media(max-width:950px) { .workspace { grid-template-columns:minmax(0,1fr); gap:20px; padding:14px 16px; } .workspace>aside { min-height:auto; position:static; } .workspace>aside nav { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); } .workspace>aside nav :is(a,button) { min-height:40px; padding:8px; font-size:12px; gap:6px; } .main { padding-top:0; } }
+
+/* Phiên bản Mobile (<= 760px) khớp 100% ảnh mẫu */
+@media (max-width: 760px) {
+  .page {
+    background:
+      radial-gradient(ellipse 220px 260px at 100% 10%, #ffefde 0%, transparent 65%),
+      radial-gradient(ellipse 220px 260px at 0% 85%, #ffefe0 0%, transparent 65%),
+      #faf6f0;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .page > header {
+    display: none;
+  }
+
+  .workspace {
+    display: block;
+    padding: 0;
+    margin: 0;
+  }
+
+  .workspace > aside {
+    display: none;
+  }
+
+  .main {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    padding-top: 0;
+    display: block;
+  }
+
+  .desktopView {
+    display: none;
+  }
+
+  .mobileView {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  /* Thanh tiêu đề trên cùng: < Thanh toán */
+  .mobileTopBar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    align-items: center;
+    min-height: 52px;
+    padding: calc(6px + env(safe-area-inset-top, 0px)) 12px 6px;
+    background: rgba(250, 246, 240, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-sizing: border-box;
+  }
+
+  .mobileBackBtn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #0b57d0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobileTopTitle {
+    margin: 0;
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 20px;
+    line-height: 1.25;
+    font-weight: 800;
+    letter-spacing: -0.35px;
+    color: #08184c;
+  }
+
+  .mobileTopSpacer {
+    width: 36px;
+    height: 36px;
+  }
+
+  .mobileForm {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    padding: 2px 15px 18px;
+    box-sizing: border-box;
+  }
+
+  .mobileIntro {
+    margin: 0 0 1px;
+    font-size: 14.5px;
+    line-height: 1.4;
+    font-weight: 400;
+    color: #4a6b96;
+  }
+
+  .mobileNotice,
+  .mobileError {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #ccebd5;
+    background: #effaf3;
+    color: #156d3b;
+    font-size: 13px;
+    line-height: 1.38;
+  }
+
+  .mobileError {
+    border-color: #f8d2ca;
+    background: #fff1ee;
+    color: #b43827;
+  }
+
+  .mobileNotice button,
+  .mobileError button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    padding: 2px;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  /* Khung thẻ trắng chung */
+  .mobileCard {
+    background: #ffffff;
+    border: 1px solid #f0ece5;
+    border-radius: 16px;
+    padding: 15px 15px 14px;
+    box-shadow: 0 4px 16px rgba(15, 28, 63, 0.035);
+    box-sizing: border-box;
+  }
+
+  .mobileCardTitle {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 18px;
+    line-height: 1.26;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    color: #08184c;
+  }
+
+  .mobileCardSubtitle {
+    margin: 4px 0 13px;
+    font-size: 13.5px;
+    line-height: 1.38;
+    color: #54729b;
+  }
+
+  /* Card 1: Phương thức thanh toán */
+  .mobileMethodList {
+    display: flex;
+    flex-direction: column;
+    margin-top: 8px;
+  }
+
+  .mobileMethodRow {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 13px;
+    padding: 11px 0;
+    border-bottom: 1px solid #eef1f6;
+  }
+
+  .mobileMethodRow:last-child {
+    border-bottom: 1px solid #eef1f6;
+  }
+
+  .mobileMethodIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .mobileMethodIcon[data-tone="green"] {
+    background: #e6f7ed;
+    color: #059649;
+  }
+
+  .mobileMethodIcon[data-tone="blue"] {
+    background: #e8f1ff;
+    color: #0b57d0;
+  }
+
+  .mobileMethodCopy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobileMethodCopy strong {
+    font-family: var(--font-display);
+    font-size: 15.5px;
+    line-height: 1.28;
+    font-weight: 800;
+    color: #08184c;
+  }
+
+  .mobileMethodCopy span {
+    font-size: 13.5px;
+    line-height: 1.36;
+    color: #54729b;
+  }
+
+  /* Công tắc gạt màu xanh lá theo ảnh mẫu */
+  .mobileSwitch {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .mobileSwitch input {
+    appearance: none;
+    display: block;
+    width: 48px;
+    height: 28px;
+    margin: 0;
+    border-radius: 999px;
+    background: #c5d0de;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.16s ease;
+  }
+
+  .mobileSwitch input::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(8, 24, 76, 0.18);
+    transition: transform 0.16s ease;
+  }
+
+  .mobileSwitch input:checked {
+    background: #149a4f;
+  }
+
+  .mobileSwitch input:checked::after {
+    transform: translateX(20px);
+  }
+
+  .mobileMethodFootnote {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 11px 0 0;
+    font-size: 13px;
+    line-height: 1.38;
+    color: #58759e;
+  }
+
+  .mobileMethodFootnote svg {
+    flex-shrink: 0;
+  }
+
+  /* Card 2: Thông tin ngân hàng */
+  .mobileFieldStack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mobileFieldLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .mobileLabelText {
+    font-size: 14px;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #08184c;
+  }
+
+  .mobileLabelText b {
+    color: #ef4423;
+    font-weight: 700;
+  }
+
+  .mobileOptionalTag {
+    font-weight: 400;
+    color: #58759e;
+  }
+
+  .mobileSelectWrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .mobileBankEmblem {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .mobileSelect {
+    appearance: none;
+    width: 100%;
+    height: 44px;
+    padding: 8px 36px 8px 43px;
+    border: 1px solid #d5e0ee;
+    border-radius: 11px;
+    background: #ffffff;
+    color: #08184c;
+    font-size: 15px;
+    line-height: 1.3;
+    font-weight: 500;
+    box-sizing: border-box;
+  }
+
+  .mobileSelectChevron {
+    position: absolute;
+    right: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #163263;
+    pointer-events: none;
+  }
+
+  .mobileInput {
+    width: 100%;
+    height: 44px;
+    padding: 8px 14px;
+    border: 1px solid #d5e0ee;
+    border-radius: 11px;
+    background: #ffffff;
+    color: #08184c;
+    font-size: 15px;
+    line-height: 1.3;
+    font-weight: 500;
+    box-sizing: border-box;
+  }
+
+  .mobileFieldHint {
+    margin: 1px 0 0;
+    font-size: 12.5px;
+    line-height: 1.38;
+    font-weight: 400;
+    color: #58759e;
+  }
+
+  /* Card 3: Xem trước mã QR */
+  .mobileQrPreviewCard {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 20px;
+    align-items: center;
+    gap: 13px;
+    padding: 13px 15px;
+    border: 1px solid #f0ece5;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(15, 28, 63, 0.035);
+    text-align: left;
+    box-sizing: border-box;
+  }
+
+  .mobileQrPreviewIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: #fff1e6;
+    color: #f24822;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .mobileQrPreviewText {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobileQrPreviewText strong {
+    font-family: var(--font-display);
+    font-size: 16px;
+    line-height: 1.28;
+    font-weight: 800;
+    color: #08184c;
+  }
+
+  .mobileQrPreviewText span {
+    font-size: 13.5px;
+    line-height: 1.36;
+    font-weight: 400;
+    color: #54729b;
+  }
+
+  .mobileQrPreviewArrow {
+    color: #466692;
+    flex-shrink: 0;
+  }
+
+  /* Link hướng dẫn thiết lập thanh toán */
+  .mobileGuideLink {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 6px 4px;
+    border: 0;
+    background: transparent;
+    color: #0b57d0;
+    font-size: 14px;
+    line-height: 1.35;
+    font-weight: 600;
+  }
+
+  .mobileGuideLink svg {
+    flex-shrink: 0;
+  }
+
+  /* Thanh nút hành động cố định dưới cùng: Hủy thay đổi | Lưu thay đổi */
+  .mobileBottomBar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 45;
+    background: rgba(252, 249, 245, 0.98);
+    border-top: 1px solid #eee8df;
+    box-shadow: 0 -4px 18px rgba(8, 20, 71, 0.05);
+    padding: 11px max(15px, env(safe-area-inset-right, 0px))
+      calc(11px + env(safe-area-inset-bottom, 0px))
+      max(15px, env(safe-area-inset-left, 0px));
+    box-sizing: border-box;
+  }
+
+  .mobileBottomInner {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+  }
+
+  .mobileCancelBtn,
+  .mobileSaveBtn {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-family: var(--font-display);
+    font-size: 15.5px;
+    line-height: 1.2;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    white-space: nowrap;
+  }
+
+  .mobileCancelBtn {
+    border: 1.5px solid #f26835;
+    background: #ffffff;
+    color: #e84615;
+  }
+
+  .mobileSaveBtn {
+    border: 1.5px solid transparent;
+    background: linear-gradient(90deg, #f85f17 0%, #ed4213 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(237, 66, 19, 0.24);
+  }
+
+  /* Modal QR & Hướng dẫn trên Mobile */
+  .mobileModalBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    background: rgba(8, 20, 53, 0.48);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  .mobileModalCard {
+    width: min(380px, 100%);
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 14px 36px rgba(8, 20, 53, 0.2);
+    box-sizing: border-box;
+  }
+
+  .mobileModalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .mobileModalHeader h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 800;
+    color: #08184c;
+  }
+
+  .mobileModalHeader button {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 8px;
+    background: #f3f6fa;
+    color: #47648f;
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .mobileModalBody {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #496995;
+  }
+}
+
+/* iPhone 16 Pro Max / Pixel 9/10 Pro XL / Galaxy A55 (<= 440px) */
+@media (max-width: 440px) {
+  .mobileForm {
+    padding: 2px 14px 18px;
+  }
+
+  .mobileBottomBar {
+    padding-inline: max(14px, env(safe-area-inset-left, 0px))
+      max(14px, env(safe-area-inset-right, 0px));
+  }
+}
+
+/* iPhone 16 / iPhone 16 Pro / Pixel 9 / Pixel 10 (<= 393px) */
+@media (max-width: 393px) {
+  .mobileForm {
+    padding: 2px 12px 16px;
+    gap: 12px;
+  }
+
+  .mobileCard,
+  .mobileQrPreviewCard {
+    padding-inline: 13px;
+  }
+
+  .mobileCardTitle {
+    font-size: 17.5px;
+  }
+
+  .mobileSelect,
+  .mobileInput {
+    height: 42px;
+    font-size: 14.5px;
+  }
+
+  .mobileBottomBar {
+    padding-inline: max(12px, env(safe-area-inset-left, 0px))
+      max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  .mobileCancelBtn,
+  .mobileSaveBtn {
+    min-height: 44px;
+    font-size: 15px;
+  }
+}
+
+/* iPhone SE / Compact Mobile Screens (<= 360px) */
+@media (max-width: 360px) {
+  .mobileTopBar {
+    min-height: 48px;
+    padding-inline: 8px;
+  }
+
+  .mobileTopTitle {
+    font-size: 18.5px;
+  }
+
+  .mobileForm {
+    padding: 2px 10px 14px;
+    gap: 11px;
+  }
+
+  .mobileIntro {
+    font-size: 13.5px;
+  }
+
+  .mobileCard,
+  .mobileQrPreviewCard {
+    padding: 13px 12px;
+  }
+
+  .mobileMethodRow {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .mobileMethodIcon,
+  .mobileQrPreviewIcon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .mobileMethodCopy strong,
+  .mobileQrPreviewText strong {
+    font-size: 14.5px;
+  }
+
+  .mobileMethodCopy span,
+  .mobileQrPreviewText span {
+    font-size: 12.5px;
+  }
+
+  .mobileSelect,
+  .mobileInput {
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .mobileBottomBar {
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobileBottomInner {
+    gap: 8px;
+  }
+
+  .mobileCancelBtn,
+  .mobileSaveBtn {
+    min-height: 42px;
+    font-size: 14px;
+    padding-inline: 10px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce) { .switch input::after, .mobileSwitch input, .mobileSwitch input::after { transition:none; } }

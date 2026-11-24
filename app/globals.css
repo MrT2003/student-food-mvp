@@ -3,13 +3,25 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --sf-page: #f8f4ee;
+  --sf-section: #f5efe8;
+  --sf-card: #ffffff;
+  --sf-decoration: #f3e8dd;
+  --sf-panel: #fafaf8;
+  --sf-border: #e9e3da;
+  --sf-ink: #081447;
+  --sf-muted: #657fb1;
+  --sf-orange: #ff4d12;
+  --font-body: "Be Vietnam Pro", sans-serif;
+  --font-display: "Inter", sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Be Vietnam Pro", sans-serif;
+  --font-display: "Inter", sans-serif;
+  --font-mono: Consolas, "Courier New", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +34,44 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+nav {
+  font-family: var(--font-display);
+}
+
+.sf-auth {
+  color-scheme: light;
+  background: #fffbf6;
+  color: #08184c;
+  font-family: var(--font-body);
+}
+
+.sf-auth :is(h1, h2, h3, h4, h5, h6, nav) {
+  font-family: var(--font-display);
+}
+
+.sf-auth ::selection {
+  background: #ffdfca;
+  color: #08184c;
+}
+
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: none;
 }

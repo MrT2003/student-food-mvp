@@ -1,0 +1,259 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import { Bell, ChevronDown, ShoppingCart, Utensils } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { AccountDropdown, NotificationDropdown } from "./HeaderDropdowns";
+import {
+  headerNotifications,
+  type HeaderNotification,
+} from "./header-preview-data";
+import styles from "@/styles/home.module.css";
+import sellerStyles from "@/styles/seller-header.module.css";
+import mobileStyles from "@/styles/student-mobile-navigation.module.css";
+import { usePathname } from "next/navigation";
+import { useCartStore } from "@/store/useCartStore";
+
+type Panel = "notifications" | "account" | null;
+
+export default function StudentHeader({
+  variant = "student",
+}: {
+  variant?: "student" | "seller";
+}) {
+  const seller = variant === "seller";
+
+  const user = useAuthStore((state) => state.user);
+  const authStatus = useAuthStore((state) => state.status);
+
+  const effectiveUser =
+    user ??
+    (seller
+      ? {
+          id: "seller-preview",
+          name: "Nguyễn Văn A",
+          phone: undefined,
+          avatar_url: null,
+        }
+      : null);
+
+  const name = effectiveUser?.name?.trim() || "Tài khoản";
+  const initial = Array.from(name)[0]?.toUpperCase() || "U";
+
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
+  const avatarUrl = effectiveUser?.avatar_url;
+  const restaurantCount = useCartStore(
+    (state) =>
+      new Set(
+        state.cart_items
+          .filter((item) => item.quantity > 0)
+          .map((item) => item.restaurant_id),
+      ).size,
+  );
+  const pathname = usePathname();
+  const [panelState, setPanelState] = useState<{
+    panel: Exclude<Panel, null>;
+    pathname: string;
+  } | null>(null);
+  const panel = panelState?.pathname === pathname ? panelState.panel : null;
+  const [notifications, setNotifications] = useState<HeaderNotification[]>(() =>
+    headerNotifications.map((item) => ({ ...item })),
+  );
+  const unreadCount = notifications.filter((item) => item.unread).length;
+  const actions = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function outside(event: PointerEvent) {
+      if (
+        event.target instanceof Node &&
+        !actions.current?.contains(event.target)
+      )
+        setPanelState(null);
+    }
+    function escape(event: KeyboardEvent) {
+      if (event.key === "Escape") setPanelState(null);
+    }
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
+  function toggle(next: Exclude<Panel, null>) {
+    setPanelState(panel === next ? null : { panel: next, pathname });
+  }
+
+  return (
+    <header
+      className={`${styles.header} ${seller ? sellerStyles.header : mobileStyles.header}`}
+    >
+      <div
+        className={`${styles.headerInner} ${seller ? sellerStyles.inner : mobileStyles.inner}`}
+      >
+        <Link
+          href="/"
+          className={`${styles.brand} ${seller ? sellerStyles.brand : mobileStyles.brand}`}
+          onClick={() => setPanelState(null)}
+          aria-label="StudentFood - Trang chủ"
+        >
+          <span className={styles.brandIcon}>
+            <Utensils size={31} strokeWidth={2} aria-hidden="true" />
+          </span>
+          <span>
+            <strong>
+              Student<span>Food</span>
+            </strong>
+            <small>Món ngon, gần bạn hơn</small>
+          </span>
+        </Link>
+        <nav
+          aria-label="Điều hướng chính"
+          className={`${styles.navigation} ${seller ? sellerStyles.navigation : mobileStyles.desktopNavigation}`}
+        >
+          <Link
+            href="/"
+            aria-current={pathname === "/" || pathname === "/open-restaurants" ? "page" : undefined}
+            onClick={() => setPanelState(null)}
+          >
+            Trang chủ
+          </Link>
+          <Link
+            href="/explore"
+            aria-current={
+              pathname === "/explore" ||
+              pathname.startsWith("/explore/") ||
+              pathname.startsWith("/restaurants/")
+                ? "page"
+                : undefined
+            }
+            onClick={() => setPanelState(null)}
+          >
+            Khám phá
+          </Link>
+          <Link
+            href="/orders"
+            aria-current={
+              pathname === "/orders" || pathname.startsWith("/orders/")
+                ? "page"
+                : undefined
+            }
+            onClick={() => setPanelState(null)}
+          >
+            Đơn hàng
+          </Link>
+        </nav>
+        <div
+          ref={actions}
+          className={`${styles.headerActions} ${seller ? sellerStyles.actions : mobileStyles.actions}`}
+        >
+          <Link
+            href="/cart"
+            data-cart-target
+            className={`${styles.iconButton} ${seller ? "" : mobileStyles.iconButton}`}
+            aria-label={`Giỏ hàng, ${restaurantCount} quán`}
+            aria-current={
+              pathname === "/cart" || pathname.startsWith("/cart/")
+                ? "page"
+                : undefined
+            }
+            onClick={() => setPanelState(null)}
+          >
+            <ShoppingCart size={28} strokeWidth={1.6} aria-hidden="true" />
+
+            {restaurantCount > 0 && (
+              <span className={styles.cartBadge} aria-hidden="true">
+                {restaurantCount > 99 ? "99+" : restaurantCount}
+              </span>
+            )}
+          </Link>
+          <button
+            type="button"
+            className={`${styles.iconButton} ${seller ? "" : mobileStyles.iconButton}`}
+            aria-label={`Thông báo, ${unreadCount} chưa đọc`}
+            aria-expanded={panel === "notifications"}
+            aria-controls={
+              panel === "notifications" ? "home-header-panel" : undefined
+            }
+            onClick={() => toggle("notifications")}
+          >
+            <Bell size={27} strokeWidth={1.6} aria-hidden="true" />
+            {unreadCount > 0 && (
+              <span className={styles.notificationBadge}>{unreadCount}</span>
+            )}
+          </button>
+          {effectiveUser ? (
+            <button
+              type="button"
+              className={`${styles.accountButton} ${seller ? "" : mobileStyles.accountButton}`}
+              aria-label="Mở menu tài khoản"
+              aria-expanded={panel === "account"}
+              aria-controls={
+                panel === "account" ? "home-header-panel" : undefined
+              }
+              onClick={() => toggle("account")}
+            >
+              <span
+                className={`${styles.avatar} ${seller ? "" : mobileStyles.avatar}`}
+              >
+                {avatarUrl && avatarUrl !== failedAvatar ? (
+                  <Image
+                    src={avatarUrl}
+                    alt=""
+                    fill
+                    sizes="44px"
+                    unoptimized
+                    className={styles.avatarImage}
+                    onError={() => setFailedAvatar(avatarUrl)}
+                  />
+                ) : (
+                  initial
+                )}
+              </span>
+              <span className={styles.accountName} title={name}>
+                {name}
+              </span>
+              <ChevronDown size={21} aria-hidden="true" />
+            </button>
+          ) : authStatus === "loading" ? (
+            <span role="status">Đang tải tài khoản...</span>
+          ) : (
+            <Link
+              href="/auth/login"
+              className={`${styles.accountButton} ${seller ? "" : mobileStyles.accountButton}`}
+            >
+              Đăng nhập
+            </Link>
+          )}
+          {panel === "notifications" && (
+            <NotificationDropdown
+              notifications={notifications}
+              onReadAll={() =>
+                setNotifications((items) =>
+                  items.map((item) => ({ ...item, unread: false })),
+                )
+              }
+              onRead={(id) =>
+                setNotifications((items) =>
+                  items.map((item) =>
+                    item.id === id ? { ...item, unread: false } : item,
+                  ),
+                )
+              }
+            />
+          )}
+          {panel === "account" && effectiveUser && (
+            <AccountDropdown
+              name={name}
+              initial={initial}
+              avatarUrl={avatarUrl}
+              phone={effectiveUser.phone}
+              onNavigate={() => setPanelState(null)}
+            />
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
