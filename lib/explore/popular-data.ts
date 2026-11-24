@@ -13,6 +13,9 @@ export type PopularDishCard = {
   kind: FoodKind;
   imageUrl: string | null;
   categories: string[];
+  category?: string;
+  location?: string;
+  isOpen?: boolean;
   rank: number;
   href: string;
 };
@@ -42,6 +45,9 @@ export const popularDishCards: PopularDishCard[] = popularDishes.flatMap(
         kind: dish.kind,
         imageUrl: dish.imageUrl,
         categories: [...restaurant.categories],
+        category: restaurant.categories[0] ?? "Khác",
+        location: restaurant.location,
+        isOpen: restaurant.isOpen,
 
         // Thứ tự demo, không phải thống kê đơn hôm nay.
         rank: index,

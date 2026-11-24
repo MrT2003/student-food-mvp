@@ -52,6 +52,8 @@ export const SellerAccessServices = {
                     operating_status: staffRow.operating_status,
                     operating_hours: staffRow.operating_hours,
                 },
+                allowed_tabs: ["overview", "orders", "shop"],
+                default_tab: "/seller/orders",
             };
         }
 
@@ -70,6 +72,11 @@ export const SellerAccessServices = {
         if (profile.data.role === "student" && owned.data.length)
             throw new SellerAccessError("PROFILE_RESTAURANT_MISMATCH", 409);
         const row = owned.data[0];
-        return { user: { id, role: profile.data.role, status: "active", work_for_restaurant_id: null }, restaurant: row ? { ...await readContact(client, row.id), id: row.id, name: row.name, slug: row.slug, avatar_url: row.avatar_url, description: row.description, location: row.location, status: row.status, operating_status: row.operating_status, operating_hours: row.operating_hours } : null };
+        return {
+            user: { id, role: profile.data.role, status: "active", work_for_restaurant_id: null },
+            restaurant: row ? { ...await readContact(client, row.id), id: row.id, name: row.name, slug: row.slug, avatar_url: row.avatar_url, description: row.description, location: row.location, status: row.status, operating_status: row.operating_status, operating_hours: row.operating_hours } : null,
+            allowed_tabs: row ? ["overview", "orders", "menu", "shop", "payments"] : [],
+            default_tab: "/seller",
+        };
     }
 };

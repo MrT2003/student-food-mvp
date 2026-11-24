@@ -152,6 +152,11 @@ export function toPopularDishCards(menus: RestaurantCatalog[]): PopularDishCard[
         kind: getDishKind(itemCategory, fallbackKind),
         imageUrl: item.image_url,
         categories,
+        category: itemCategory,
+        location: restaurant.location ?? "",
+        isOpen:
+          restaurant.status === "active" &&
+          restaurant.operating_status === "open",
         rank: rank++,
         href: dishHref(restaurant.slug, item.slug || item.id),
       };

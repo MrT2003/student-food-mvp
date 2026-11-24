@@ -883,12 +883,11 @@
 
 /* Chi tiết đơn hàng: cân đối trên laptop / desktop */
 @media (min-width: 1024px) {
-  /* Bỏ khoảng cách bị cộng hai lần giữa layout và page */
   :global(main):has(> .page) {
-    width: min(1480px, calc(100% - 48px));
-    max-width: none;
+    width: min(1560px, calc(100% - 64px));
+    max-width: 1560px;
     margin-inline: auto;
-    padding: 18px 0;
+    padding: 18px 0 36px;
   }
 
   .page {
@@ -899,69 +898,69 @@
 
   /* Tiêu đề trang */
   .heading {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
 
   .heading h1 {
-    font-size: clamp(30px, 2.2vw, 36px);
+    font-size: 28px;
     line-height: 1.2;
   }
 
   .heading p {
-    margin-top: 6px;
-    font-size: 16px;
-    line-height: 24px;
+    margin-top: 4px;
+    font-size: 14.5px;
+    line-height: 22px;
   }
 
   /* Thẻ tổng quan đơn hàng */
   .summary {
-    grid-template-columns: 96px minmax(0, 1fr) 190px;
-    gap: 20px;
-    padding: 16px 20px;
-    margin-bottom: 16px;
+    grid-template-columns: 84px minmax(0, 1fr) 180px;
+    gap: 16px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
   }
 
   .restaurantImage {
-    width: 96px;
+    width: 84px;
   }
 
   .restaurantTitle {
-    gap: 8px 16px;
+    gap: 8px 14px;
   }
 
   .restaurantTitle h2 {
-    font-size: 24px;
-    line-height: 30px;
+    font-size: 19px;
+    line-height: 25px;
   }
 
   .badge {
     gap: 6px;
-    padding: 6px 10px;
-    font-size: 13px;
-    line-height: 19px;
+    padding: 5px 10px;
+    font-size: 12px;
+    line-height: 18px;
   }
 
   .badge svg {
-    width: 17px;
-    height: 17px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
   }
 
   .orderCode {
-    margin-top: 5px;
-    font-size: 16px;
-    line-height: 22px;
+    margin-top: 4px;
+    font-size: 13.5px;
+    line-height: 20px;
   }
 
   .metadata {
-    margin-top: 12px;
+    margin-top: 8px;
     gap: 8px 0;
-    font-size: 14px;
-    line-height: 21px;
+    font-size: 13px;
+    line-height: 20px;
   }
 
   .metadata > span {
-    gap: 7px;
+    gap: 6px;
   }
 
   .metadata > span + span {
@@ -970,28 +969,28 @@
   }
 
   .metadata svg {
-    width: 19px;
-    height: 19px;
+    width: 17px;
+    height: 17px;
   }
 
   .summaryTotal {
-    gap: 5px;
-    padding-left: 24px;
+    gap: 4px;
+    padding-left: 18px;
   }
 
   .summaryTotal span {
-    font-size: 15px;
+    font-size: 13px;
   }
 
   .summaryTotal strong {
-    font-size: 28px;
-    line-height: 34px;
+    font-size: 22px;
+    line-height: 28px;
   }
 
   /* Hai cột nội dung */
   .columns {
-    grid-template-columns: minmax(0, 1.6fr) minmax(360px, 1fr);
-    gap: 18px;
+    grid-template-columns: minmax(0, 1.6fr) minmax(350px, 1fr);
+    gap: 16px;
   }
 
   .leftColumn,
@@ -1002,20 +1001,20 @@
   .sectionTitle,
   .sideCard .sectionTitle {
     gap: 10px;
-    font-size: 21px;
-    line-height: 28px;
+    font-size: 18px;
+    line-height: 24px;
   }
 
   .sectionIcon,
   .sideCard .sectionIcon {
-    flex: 0 0 34px;
-    width: 34px;
-    height: 34px;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
   }
 
   .sectionIcon svg {
-    width: 20px;
-    height: 20px;
+    width: 17px;
+    height: 17px;
   }
 
   /* Danh sách món */
@@ -1028,38 +1027,38 @@
   }
 
   .item {
-    grid-template-columns: 80px minmax(0, 1fr) 34px 106px;
+    grid-template-columns: 64px minmax(0, 1fr) 32px 96px;
     align-items: start;
-    gap: 16px;
-    padding: 16px 0;
+    gap: 14px;
+    padding: 12px 0;
   }
 
   .itemImage {
-    width: 80px;
+    width: 64px;
   }
 
   .itemContent h3 {
-    margin: 0 0 5px;
-    font-size: 18px;
-    line-height: 25px;
+    margin: 0 0 4px;
+    font-size: 15px;
+    line-height: 20px;
   }
 
   .itemContent p {
-    margin-top: 3px;
-    font-size: 15px;
-    line-height: 21px;
+    margin-top: 2px;
+    font-size: 13px;
+    line-height: 19px;
   }
 
   .quantity {
     padding-top: 2px;
-    font-size: 17px;
-    line-height: 25px;
+    font-size: 14px;
+    line-height: 21px;
   }
 
   .itemPrice {
     padding-top: 2px;
-    font-size: 19px;
-    line-height: 25px;
+    font-size: 15.5px;
+    line-height: 21px;
   }
 
   /* Ghi chú */
@@ -1069,9 +1068,9 @@
 
   .note {
     margin: 10px 0 0;
-    padding: 14px;
-    font-size: 15px;
-    line-height: 23px;
+    padding: 12px;
+    font-size: 13.5px;
+    line-height: 21px;
   }
 
   /* Các thẻ bên phải */
@@ -1086,38 +1085,38 @@
   .detailRow {
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
     gap: 12px;
-    padding: 7px 0;
-    font-size: 15px;
-    line-height: 22px;
+    padding: 6px 0;
+    font-size: 13.5px;
+    line-height: 21px;
   }
 
   .detailRow .badge {
-    padding: 5px 8px;
-    font-size: 13px;
-    line-height: 19px;
+    padding: 4px 8px;
+    font-size: 12px;
+    line-height: 18px;
   }
 
   .grandTotal {
     margin-top: 3px;
     padding-top: 10px;
-    font-size: 18px;
-    line-height: 26px;
+    font-size: 15.5px;
+    line-height: 23px;
   }
 
   .grandTotal dd {
-    font-size: 25px;
-    line-height: 32px;
+    font-size: 21px;
+    line-height: 28px;
   }
 
   .address {
     margin-top: 10px;
-    font-size: 16px;
-    line-height: 23px;
+    font-size: 14px;
+    line-height: 21px;
   }
 
   .address p {
     margin-top: 4px;
-    font-size: 15px;
+    font-size: 13.5px;
   }
 
   /* Hai nút cuối cột trái */
@@ -1128,16 +1127,17 @@
 
   .outlineButton,
   .primaryButton {
-    min-height: 46px;
-    padding: 10px 16px;
-    gap: 10px;
-    font-size: 17px;
-    line-height: 24px;
+    min-height: 40px;
+    padding: 8px 14px;
+    gap: 8px;
+    font-size: 14px;
+    line-height: 20px;
+    border-radius: 9px;
   }
 
   .actions svg {
-    width: 22px;
-    height: 22px;
+    width: 19px;
+    height: 19px;
   }
 }
 
@@ -1172,6 +1172,6 @@
 
   .itemContent h3,
   .itemPrice {
-    font-size: 17px;
+    font-size: 14.5px;
   }
 }
