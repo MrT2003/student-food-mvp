@@ -20,6 +20,7 @@ import {
   Search,
   SlidersHorizontal,
   User,
+  UserX,
   Utensils,
   Wallet,
   X,
@@ -114,9 +115,7 @@ export function getMobileOrderNoteBadge(order: {
   customer_notes: string | null;
 }): "Có tùy chọn món" | "Có ghi chú" | null {
   if (
-    order.order_items.some(
-      (item) => (item.selected_options?.length ?? 0) > 0,
-    )
+    order.order_items.some((item) => (item.selected_options?.length ?? 0) > 0)
   ) {
     return "Có tùy chọn món";
   }
@@ -492,17 +491,26 @@ export function createSellerMobileOrderFixtures(): SellerOrder[] {
   ];
 }
 
+function getSellerOrderStatusLabel(status: OrderStatus): string {
+  if (status === "pending") return "Chờ xác nhận";
+  if (status === "cancelled") return "Sinh viên hủy";
+  if (status === "rejected") return "Quán từ chối";
+  return orderStatusLabels[status];
+}
+
 function Badge({ status }: { status: OrderStatus }) {
   const Icon =
     status === "pending"
       ? Clock3
-      : status === "rejected" || status === "cancelled"
-        ? XCircle
-        : CheckCircle2;
+      : status === "cancelled"
+        ? UserX
+        : status === "rejected"
+          ? XCircle
+          : CheckCircle2;
   return (
     <span className={`${styles.badge} ${styles[status]}`}>
       <Icon size={16} />
-      {status === "pending" ? "Chờ xác nhận" : orderStatusLabels[status]}
+      {getSellerOrderStatusLabel(status)}
     </span>
   );
 }
@@ -824,9 +832,7 @@ export function SellerOrdersContent({
                   <div className={styles.empty}>
                     <ClipboardList size={38} />
                     <h3>Không có đơn hàng</h3>
-                    <p>
-                      Thử đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái khác.
-                    </p>
+                    <p>Thử đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái khác.</p>
                   </div>
                 ) : (
                   pageOrders.map((order) => (
@@ -993,10 +999,7 @@ export function SellerOrdersContent({
             >
               <div className={styles.billHeading}>
                 <h2>Chi tiết đơn hàng</h2>
-                <button
-                  onClick={closeBill}
-                  aria-label="Đóng chi tiết đơn hàng"
-                >
+                <button onClick={closeBill} aria-label="Đóng chi tiết đơn hàng">
                   <X />
                 </button>
               </div>
@@ -1012,9 +1015,7 @@ export function SellerOrdersContent({
                   <User />
                   Thông tin khách hàng
                 </h3>
-                <strong>
-                  {selected.customer.name ?? "Chưa có tên khách"}
-                </strong>
+                <strong>{selected.customer.name ?? "Chưa có tên khách"}</strong>
                 <p>
                   <Phone size={16} />
                   {selected.customer.phone ??
@@ -1203,9 +1204,15 @@ export function SellerOrdersContent({
                   >
                     <div className={styles.mobileCardHeader}>
                       <div className={styles.mobileCardCodeWrap}>
-                        <strong className={styles.mobileCardCode}>
-                          #{order.order_code ?? "Chưa có mã đơn"}
-                        </strong>
+                        <div className={styles.mobileCardTitleRow}>
+                          <strong className={styles.mobileCardCode}>
+                            #{order.order_code ?? "Chưa có mã đơn"}
+                          </strong>
+                          {(order.order_status === "cancelled" ||
+                            order.order_status === "rejected") && (
+                            <Badge status={order.order_status} />
+                          )}
+                        </div>
                         <p className={styles.mobileCardSub}>
                           <span>{formatMobileOrderTime(order.created_at)}</span>
                           <span aria-hidden="true"> · </span>
@@ -1270,7 +1277,9 @@ export function SellerOrdersContent({
                             strokeWidth={2}
                             aria-hidden="true"
                           />
-                          <span>{formatOrderPayment(order.payment_method)}</span>
+                          <span>
+                            {formatOrderPayment(order.payment_method)}
+                          </span>
                         </span>
                       </div>
 

@@ -170,7 +170,12 @@
   color: #536480;
 }
 
-.status_cancelled,
+.status_cancelled {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #b45309;
+}
+
 .status_rejected {
   background: #ffeded;
   border: 1px solid #ffd6d6;

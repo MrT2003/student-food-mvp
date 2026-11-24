@@ -355,10 +355,17 @@
   color: #63718a;
   background: #f0f3f7;
 }
-.cancelled,
+.cancelled {
+  color: #b45309;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  font-weight: 600;
+}
 .rejected {
   color: #d84444;
   background: #ffeded;
+  border: 1px solid #ffd6d6;
+  font-weight: 600;
 }
 .orderBody {
   display: contents;
@@ -966,6 +973,16 @@
   }
   .mobileCardCodeWrap {
     min-width: 0;
+  }
+  .mobileCardTitleRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .mobileCardTitleRow .badge {
+    padding: 4px 8px;
+    font-size: 11.5px;
   }
   .mobileCardCode {
     display: block;
