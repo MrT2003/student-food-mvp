@@ -174,9 +174,6 @@ export const ZaloProviderService = {
   // Generate Authorization URL
   getAuthorizationUrl(codeChallenge: string, state: string): string {
     const appID = process.env.ZALO_APP_ID?.trim();
-    const origin = window.location.origin;
-    const devCallback = origin.concat("/api/auth/zalo/callback");
-    console.log(devCallback)
     // npm run dev vẫn dùng callback DEV khi truy cập qua ngrok.
     // URL cấu hình phải cùng origin với trang bắt đầu login để callback nhận cookie sf_zalo_flow.
     // Giữ URL do server cấu hình, không lấy tùy ý từ Host header của request.
