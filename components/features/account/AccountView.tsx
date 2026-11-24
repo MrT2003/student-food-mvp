@@ -7,7 +7,7 @@ import { CloudinaryService } from "@/services/cloudinary.service";
 import type { AuthProfile } from "@/types/auth.types";
 import styles from "@/styles/account.module.css";
 import { Camera, Info, LogOut, Settings, UserRound } from "lucide-react";
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import {
   useRef,
   useState,
@@ -15,8 +15,8 @@ import {
   type FormEvent,
 } from "react";
 import AccountSecurity from "./AccountSecurity";
-import AccountStoreJoin from "./AccountStoreJoin";
 import AccountNotifications from "./AccountNotifications";
+import AccountStoreJoin from "./AccountStoreJoin";
 import AccountSuccessModal from "./AccountSuccessModal";
 
 export default function AccountView() {
@@ -64,7 +64,7 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
     try {
       setUploadingAvatar(true);
       const uploaded = await CloudinaryService.uploadImage(file, {
-        folder: "student-food/avatars",
+        purpose: "avatar",
       });
       setAvatarUrl(uploaded.secureUrl);
       setMessage(
@@ -312,3 +312,5 @@ function AccountProfile({ profile }: { profile: AuthProfile }) {
     </div>
   );
 }
+
+

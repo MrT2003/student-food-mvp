@@ -158,6 +158,10 @@ export const FirebaseService = {
       throw new Error("Thông báo cần browser hỗ trợ và HTTPS (hoặc localhost).");
     }
     if (Notification.permission !== "default") return Notification.permission;
+    // Chỉ gọi prompt từ tương tác thực, trước mọi await; không auto-prompt khi mount.
+    if (navigator.userActivation && !navigator.userActivation.isActive) {
+      throw new Error("Hãy bấm Bật thông báo để cấp quyền.");
+    }
     return Notification.requestPermission();
   },
 

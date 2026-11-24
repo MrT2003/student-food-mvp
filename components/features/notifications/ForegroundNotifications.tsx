@@ -2,6 +2,8 @@
 
 import { useForegroundNotifications } from "@/lib/firebase/useForegroundNotifications";
 import { useAuthStore } from "@/store/useAuthStore";
+import TimedNotification from "./TimedNotification";
+import { markNotificationRead } from "@/store/useNotificationInbox";
 import { Bell, X } from "lucide-react";
 import Link from "next/link";
 
@@ -15,19 +17,19 @@ function NotificationFeed({ userId }: { userId: string }) {
         <p>{error}</p><button type="button" onClick={dismissError} className="mt-2 underline">Đóng</button>
       </div>}
       {notifications.map((item) => (
-        <article key={item.id} className="pointer-events-auto flex items-start gap-3 rounded-2xl border border-orange-200 bg-white p-4 text-gray-900 shadow-xl">
+        <TimedNotification key={item.id} onExpire={() => dismiss(item.id)}><article className="pointer-events-auto flex items-start gap-3 rounded-2xl border border-orange-200 bg-white p-4 text-gray-900 shadow-xl">
           <Bell size={22} className="mt-1 shrink-0 text-orange-600" aria-hidden="true" />
           <div className="min-w-0 flex-1 break-words">
             {/* React render text an toàn; không render HTML từ nội dung push. */}
             <p className="font-semibold">{item.title}</p>
             <p className="mt-1 whitespace-pre-line text-sm text-gray-600">{item.body}</p>
-            <Link href={item.href} onClick={() => dismiss(item.id)} className="mt-2 inline-block text-sm font-medium text-orange-700 underline">Xem đơn hàng</Link>
+            <Link href={item.href} onClick={() => { void markNotificationRead(item.id); dismiss(item.id); }} className="mt-2 inline-block text-sm font-medium text-orange-700 underline">Xem đơn hàng</Link>
           </div>
           <button type="button" onClick={() => dismiss(item.id)} aria-label={`Đóng thông báo: ${item.title}`}
             className="shrink-0 rounded-lg p-2 hover:bg-orange-50 focus-visible:outline-2 focus-visible:outline-orange-600">
             <X size={18} aria-hidden="true" />
           </button>
-        </article>
+        </article></TimedNotification>
       ))}
     </aside>
   );

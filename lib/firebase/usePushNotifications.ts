@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FirebaseService } from "@/services/firebase.service";
+import { needsIOSInstall } from "./install-state";
 import { useAuthStore } from "@/store/useAuthStore";
 import { disablePush, enablePush, PUSH_CHANGED, PUSH_STORAGE_KEY, readPushRegistration } from "./pushLifecycle";
 
@@ -14,8 +15,10 @@ export function usePushNotifications() {
   const [error, setError] = useState("");
   const [hasRegistration, setHasRegistration] = useState(false);
   const busy = useRef(false);
+  const [installRequired, setInstallRequired] = useState(false);
 
   useEffect(() => {
+    setInstallRequired(needsIOSInstall());
     let disposed = false;
     const refresh = () => {
       if (disposed) return;
@@ -45,6 +48,11 @@ export function usePushNotifications() {
 
   async function change(enabled: boolean) {
     if (busy.current || !userId) return;
+    // Không hiện prompt iOS từ tab thường; không coi cài app là đã đồng ý nhận push.
+    if (enabled && needsIOSInstall()) {
+      setError("Hãy thêm StudentFood vào màn hình chính, mở từ icon rồi bấm Bật thông báo.");
+      return;
+    }
     const owner = userId;
     busy.current = true;
     setError("");
@@ -69,7 +77,7 @@ export function usePushNotifications() {
     } finally { busy.current = false; }
   }
 
-  return { status, permission, error, hasRegistration,
+  return { status, permission, error, hasRegistration, installRequired,
     enable: () => change(true), disable: () => change(false),
     pending: status === "checking" || status === "enabling" || status === "disabling" };
 }

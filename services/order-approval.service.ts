@@ -16,6 +16,7 @@ async function decide(client: SupabaseClient, userId: string, orderId: unknown, 
   const { data: profile, error: profileError } = await client.from("users")
     .select("role,status,work_for_restaurant_id").eq("id", userId).maybeSingle();
   check(profileError);
+  // Owner và staff active đúng quán đều được duyệt/từ chối; RPC vẫn kiểm quyền trong transaction.
   if (!profile || profile.status !== "active" || !["seller", "staff"].includes(profile.role)
     || (profile.role === "staff" && !profile.work_for_restaurant_id)) throw new OrderApprovalError("ORDER_FORBIDDEN");
   let query = client.from("orders").select("id,restaurant_id,order_status").eq("id", orderId);

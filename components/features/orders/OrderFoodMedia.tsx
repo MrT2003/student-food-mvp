@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import { useState } from "react";
 import { Milk, Utensils } from "lucide-react";
 import styles from "@/styles/orders.module.css";
@@ -323,3 +323,4 @@ export default function OrderFoodMedia({
     </div>
   );
 }
+

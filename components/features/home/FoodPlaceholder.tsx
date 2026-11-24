@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import { useState } from "react";
 import { CookingPot, CupSoda, Drumstick, Sandwich, Soup } from "lucide-react";
 import type { PreviewRestaurant } from "@/lib/home/mock-data";
@@ -51,3 +51,4 @@ export default function FoodPlaceholder({
     </div>
   );
 }
+

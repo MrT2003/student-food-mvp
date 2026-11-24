@@ -1,4 +1,5 @@
 "use client";
+import { cloudinaryDeliveryUrl } from "@/lib/cloudinary/delivery";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -53,7 +54,7 @@ function FoodPlaceholder({
     <div className={styles.placeholder} aria-hidden={!imageUrl}>
       {imageUrl ? (
         <img
-          src={imageUrl}
+          src={cloudinaryDeliveryUrl(imageUrl)}
           alt={alt}
           style={{
             width: "100%",
@@ -327,3 +328,4 @@ export default function RestaurantView({
     </div>
   );
 }
+

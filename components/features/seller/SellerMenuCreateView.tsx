@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
@@ -828,7 +828,7 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
     setError("");
     try {
       const uploaded = await CloudinaryService.uploadImage(file, {
-        folder: "student-food/menu-items",
+        purpose: "menu", restaurantId,
       });
       if (uploadRequestId.current === requestId) {
         if (target === "mobile") {
@@ -1830,3 +1830,5 @@ function SellerMenuForm({ original: suppliedOriginal }: { original?: SellerMenuR
     </div>
   );
 }
+
+

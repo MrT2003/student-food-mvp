@@ -62,11 +62,29 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/delivery')
 
   // In case user not yet login then immediately redirect them to the login page
- if(!user && !isPublicRoute) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
+  if (!user && !isPublicRoute) {
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https';
+
+    let loginUrl: URL;
+
+    // 1. Kiểm tra xem forwardedHost có thực sự hợp lệ hoặc thuộc về môi trường dev/ngrok không
+    // (Bạn có thể thêm domain chính thức của bạn vào đây)
+    const isSafeHost = forwardedHost && (
+      forwardedHost.endsWith('.ngrok-free.app') || 
+      forwardedHost === 'your-production-domain.com' ||
+      forwardedHost === 'localhost:3000'
+    );
+
+    if (isSafeHost) {
+      // Nếu là host uy tín được phép, mới cho phép dùng
+      loginUrl = new URL(`${forwardedProto}://${forwardedHost}/auth/login`);
+    } else {
+      // Nếu phát hiện host lạ (bị giả mạo), ép về domain mặc định an toàn của app
+      loginUrl = new URL('/auth/login', request.nextUrl.origin);
+    }
+
+    return NextResponse.redirect(loginUrl);
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

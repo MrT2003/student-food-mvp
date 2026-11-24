@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Wallet } from "lucide-react";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import { useSellerAccess } from "./SellerAccessProvider";
 import {
   SellerHomeActiveIcon,
@@ -77,3 +77,4 @@ export default function SellerSidebar({
     </>
   );
 }
+

@@ -1,7 +1,7 @@
 "use client";
 
 import StaffRecruitment from "./StaffRecruitment";
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
@@ -454,7 +454,7 @@ export function ShopForm({
     setError("");
     try {
       const uploaded = await CloudinaryService.uploadImage(file, {
-        folder: "student-food/restaurants",
+        purpose: "restaurant", restaurantId: isBackendRestaurant(initial) ? initial.id : undefined,
       });
       if (mounted.current && uploadRequestId.current === requestId) {
         setAvatar(uploaded.secureUrl);
@@ -1668,3 +1668,6 @@ export function ShopForm({
     </main>
   );
 }
+
+
+

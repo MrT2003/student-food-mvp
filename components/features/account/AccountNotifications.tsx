@@ -16,6 +16,17 @@ export default function AccountNotifications() {
           <p>Nhận cập nhật đơn hàng khi bạn không mở trang.</p>
         </div>
       </div>
+      {push.installRequired && (
+        <div className="my-4 rounded-xl border border-orange-200 p-4 text-sm">
+          <p className="font-semibold">Cài StudentFood trên iPhone/iPad</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5">
+            <li>Mở website bằng Safari, chọn Chia sẻ → Thêm vào Màn hình chính.</li>
+            <li>Mở StudentFood từ icon vừa thêm và đăng nhập nếu được yêu cầu.</li>
+            <li>Quay lại đây, bấm Bật thông báo và chọn Cho phép.</li>
+          </ol>
+          <p className="mt-2">Cần iOS/iPadOS 16.4 trở lên. Cài app không tự cấp quyền thông báo.</p>
+        </div>
+      )}
       <p role="status">
         {push.status === "checking" ? "Đang kiểm tra hỗ trợ thông báo…"
           : push.status === "unsupported" ? "Trình duyệt hiện chưa hỗ trợ. Trên iPhone/iPad, hãy thêm ứng dụng vào màn hình chính rồi mở từ icon."
@@ -29,7 +40,7 @@ export default function AccountNotifications() {
       </p>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <button type="button" className={styles.primaryButton} onClick={() => void push.enable()}
-          disabled={push.pending || blocked || push.status === "unsupported" || push.status === "enabled"}>
+          disabled={push.pending || blocked || push.installRequired || push.status === "unsupported" || push.status === "enabled"}>
           Bật thông báo
         </button>
         {push.hasRegistration && (

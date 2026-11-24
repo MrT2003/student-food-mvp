@@ -8,7 +8,7 @@ import {
   Soup,
   UserRound,
 } from "lucide-react";
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import Link from "next/link";
 import { useState } from "react";
 import type { HeaderNotification } from "./header-preview-data";
@@ -142,3 +142,4 @@ export function AccountDropdown({
     </section>
   );
 }
+

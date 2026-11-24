@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { runNotificationWorker } from "@/services/notification-worker.service";
 import { isSameOrigin } from "@/lib/http/request-origin";
 import { createClient } from "@/lib/supabase/server";
 import { OrderApprovalError, OrderApprovalServices } from "@/services/order-approval.service";
@@ -26,8 +27,12 @@ export async function approveOrder(request: Request, params: Promise<{ orderId: 
     try { input = await request.json(); }
     catch { return failure("INVALID_JSON", "Nội dung JSON không hợp lệ.", 400); }
     const { orderId } = await params;
-    const method = action === "accept" ? "acceptOrder" : action === "reject" ? "rejectOrder" : "completeOrder";
-    const result = await OrderApprovalServices[method](client, data.user.id, orderId, input);
+    const result = await OrderApprovalServices[action === "accept" ? "acceptOrder" : "rejectOrder"](client, data.user.id, orderId, input);
+    // Transaction đã commit event; gửi sớm sau response. Cron phục hồi nếu lượt này lỗi/bận.
+    after(async () => {
+      try { await runNotificationWorker(); }
+      catch { console.error("[notifications] Decision wake failed; cron will retry."); }
+    });
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const code = error instanceof OrderApprovalError ? error.code : "ORDER_APPROVAL_FAILED";

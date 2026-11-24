@@ -1,6 +1,8 @@
 "use client";
 
+import { notificationArrived } from "@/store/useNotificationInbox";
 import { useEffect, useState } from "react";
+import type { MessagePayload } from "firebase/messaging";
 import { FirebaseService } from "@/services/firebase.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PUSH_CHANGED, PUSH_STORAGE_KEY, readPushRegistration } from "./pushLifecycle";
@@ -52,24 +54,41 @@ export function useForegroundNotifications(userId: string) {
       starting = true;
       void (async () => {
       if (!await FirebaseService.isBrowserSupported() || disposed || run !== generation || !canReceive()) return;
-      const stop = await FirebaseService.onForegroundMessage((payload) => {
-        if (disposed || document.visibilityState !== "visible" || !canReceive()) return;
+      const receive = (payload: MessagePayload) => {
+        if (disposed || document.visibilityState !== "visible" || !canReceive()) return false;
         const data = payload.data;
         // Message đang trên đường tới khi đổi account phải bị bỏ qua, không hiện dữ liệu user cũ.
-        if (!data || data.recipientUserId !== userId) return;
+        if (!data || data.recipientUserId !== userId) return false;
         const id = data.notificationId || payload.messageId;
-        if (!id || id.length > 256 || seen.has(id)) return;
+        if (!id || id.length > 256) return false;
+        if (seen.has(id)) return true;
         seen.add(id);
+        if (data.notificationId && UUID.test(data.notificationId)) notificationArrived(data.notificationId);
         if (seen.size > 200) seen.delete(seen.values().next().value!);
         const notification: ForegroundNotification = {
           id,
           title: (data.title?.trim() || payload.notification?.title || "StudentFood").slice(0, 120),
           body: (data.body || payload.notification?.body || "Bạn có thông báo mới.").slice(0, 500),
           // Chỉ tạo đường dẫn nội bộ từ UUID, không điều hướng tới URL tùy ý trong payload.
-          href: data.orderId && UUID.test(data.orderId) ? `/orders/${data.orderId}` : "/orders",
+          href: data.destination === "seller_orders" ? "/seller/orders"
+            : data.orderId && UUID.test(data.orderId) ? `/orders/${data.orderId}` : "/orders",
         };
         setNotifications((current) => [...current, notification].slice(-3));
-      });
+        return true;
+      };
+      const stopFirebase = await FirebaseService.onForegroundMessage(receive);
+      // Cùng đường xử lý/dedupe cho FCM foreground và tin worker chuyển vào cửa sổ visible.
+      const onWorkerMessage = (event: MessageEvent) => {
+        if (event.data?.type !== "STUDENT_FOOD_PUSH") return;
+        const payload = event.data.payload;
+        const accepted = Boolean(payload && typeof payload === "object" && receive(payload));
+        event.ports[0]?.postMessage(accepted);
+      };
+      navigator.serviceWorker.addEventListener("message", onWorkerMessage);
+      const stop = () => {
+        stopFirebase();
+        navigator.serviceWorker.removeEventListener("message", onWorkerMessage);
+      };
       // SDK import bất đồng bộ có thể hoàn tất sau unmount/Strict Mode cleanup.
       if (disposed || run !== generation || !canReceive()) stop(); else unsubscribe = stop;
       })().catch(() => {
@@ -90,3 +109,4 @@ export function useForegroundNotifications(userId: string) {
     dismiss: (id: string) => setNotifications((current) => current.filter((item) => item.id !== id)),
     dismissError: () => setError(null) };
 }
+

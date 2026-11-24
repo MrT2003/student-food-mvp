@@ -75,7 +75,14 @@ export const OrderServices = {
 			}
 			throw new Error('Tạo đơn hàng thất bại.');
 		}
-		return data as CreateOrderResponse
+		const result = data as CreateOrderResponse;
+		// Đơn/outbox đã commit. Wake thất bại không làm checkout báo lỗi; cron phục hồi sau.
+		const firstOrder = result.orders?.[0];
+		if (firstOrder) void fetch('/api/notifications/wake', {
+			method: 'POST', credentials: 'same-origin', keepalive: true,
+			headers: { 'X-Order-Id': firstOrder.orderId },
+		}).catch(() => { /* Outbox vẫn bền vững trong DB. */ });
+		return result;
 	},
 
 	// N là số dòng món, không phải số đơn. Không gộp các lần đặt cùng món.
@@ -103,7 +110,8 @@ export const OrderServices = {
 	},
 
 	async cancelOrder(orderId: string): Promise<void> {
-		if (!orderId || !orderId.trim()) {
+		const trimmed = orderId?.trim();
+		if (!trimmed) {
 			throw new Error("Mã đơn hàng không hợp lệ.");
 		}
 		const client = createClient();
@@ -112,9 +120,38 @@ export const OrderServices = {
 			throw new Error("Vui lòng đăng nhập lại để hủy đơn hàng.");
 		}
 		await assertPurchaseAccess(client);
-		const { error } = await client.rpc("cancel_order", {
-			p_order_id: orderId.trim(),
+
+		if (typeof window !== "undefined" && typeof fetch === "function") {
+			let response: Response;
+			let payload: { success?: boolean; order_status?: string; code?: string; error?: string } | null = null;
+			try {
+				response = await fetch(`/api/orders/${encodeURIComponent(trimmed)}/cancel`, {
+					method: "POST",
+					credentials: "same-origin",
+				});
+				payload = await response.json().catch(() => null);
+			} catch {
+				throw new Error("Chưa xác định được kết quả hủy đơn. Vui lòng tải lại trạng thái trước khi thử lại.");
+			}
+
+			if (response.ok && payload?.success === true && payload.order_status === "cancelled") {
+				return;
+			}
+
+			if (payload?.code !== "CANCEL_RPC_MISSING") {
+				throw new Error(payload?.error || "Không thể hủy đơn hàng lúc này. Vui lòng thử lại.");
+			}
+		}
+
+		let { error } = await client.rpc("cancel_pending_order", {
+			p_order_id: trimmed,
 		});
+		if (error && (error.code === "PGRST202" || error.code === "42883")) {
+			const fallback = await client.rpc("cancel_order", {
+				p_order_id: trimmed,
+			});
+			error = fallback.error;
+		}
 		if (error) {
 			const msg = error.message || "";
 			if (msg.includes("ORDER_NOT_FOUND")) {
