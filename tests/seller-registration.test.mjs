@@ -10,11 +10,10 @@ for (const patch of [{name:" "},{name:123},{owner_id:other},{role:"seller"},{upd
     assert.equal(f.calls.length,0);
   });
 }
-const invalidPins=[undefined,null,Number(testPin()),true,[],{},'',testPin().slice(1),testPin()+'0',' '+testPin(),testPin()+' ',String.fromCharCode(0xff10).repeat(4),'abcd'];
+const invalidPins=[null,Number(testPin()),true,[],{},'',testPin().slice(1),testPin()+'0',' '+testPin(),testPin()+' ',String.fromCharCode(0xff10).repeat(4),'abcd'];
 for(const [index,value] of invalidPins.entries()) {
  test('PIN runtime validation rejects invalid case '+index+' without reflecting its value',async()=>{
   const f=fixture({role:'student'});const input=registration({appLockPin:value});
-  if(value===undefined) delete input.appLockPin;
   await assert.rejects(f.SellerServices.register(userId,input,f.client),error=>error instanceof f.SellerValidationError&&error.message==='SELLER_VALIDATION_ERROR: appLockPin: PIN phải là chuỗi đúng 4 chữ số.');
   assert.equal(f.calls.length,0);
  });
@@ -29,7 +28,7 @@ for (const [options,code] of [[{noUser:true},"UNAUTHORIZED"],[{authError:true},"
 test('registration calls the provided RPC once using session identity, preserves leading zero PIN, maps user.role and response allowlist',async()=>{
  const f=fixture({role:'student'});const result=await f.SellerServices.register(userId,registration(),f.client);
  assert.equal(f.rpcCalls().length,1);const call=f.rpcCalls()[0];assert.equal(call.name,'register_seller');assert.equal(call.pinPreserved,true);
- assert.deepEqual(JSON.parse(JSON.stringify(call.payload)),{p_restaurant_name:'Quán',p_description:'Mô tả',p_location:'KTX',p_operating_hours:null});
+ assert.deepEqual(JSON.parse(JSON.stringify(call.payload)),{p_avatar_url:null,p_restaurant_name:'Quán',p_description:'Mô tả',p_location:'KTX',p_operating_hours:null});
  assert.equal(f.writes().length,0);assert.equal(f.profileRole(),'seller');assert.equal(f.state.registrations.length,1);
  assert.equal(f.state.registrations[0].owner_id,userId);
  assert.equal(f.SellerServices.validateRegistration(registration()).appLockPin===testPin(),true);
@@ -90,11 +89,11 @@ for (const [options,expected] of [[{},201],[{noUser:true},401],[{status:"inactiv
     assert.equal(response.status,expected);assert.equal(response.headers.get('Cache-Control'),'no-store');assertSafe(await response.json());assert.equal(f.writes().length,0);
   });
 }
-test('register API Origin, invalid JSON and missing PIN stop before RPC',async()=>{
+test('register API Origin, invalid JSON and invalid PIN stop before RPC',async()=>{
   const f=fixture({role:"student"});const api=f.api('register');
   assert.equal((await api(registration(),{origin:'https://evil.invalid'})).status,403);assert.equal(f.calls.length,0);
   assert.equal((await api(null,{raw:'bad JSON'})).status,400);
-  const input=registration();delete input.appLockPin;assert.equal((await api(input)).status,400);
+  const input=registration({appLockPin:'invalid'});assert.equal((await api(input)).status,400);
   assert.equal(f.rpcCalls().length,0);assert.equal(f.writes().length,0);
 });
 
@@ -115,4 +114,12 @@ test('installed Supabase SDK sends RPC as POST and does not retry ambiguous netw
   await assert.rejects(f.SellerServices.register(userId,registration(),sdk),/REGISTRATION_RESULT_UNKNOWN/);
   assert.equal(rpcRequests,1);
  }
+});
+
+for(const avatar_url of ['https://example.invalid/shop.png',null])test('registration avatar is passed inside atomic RPC '+String(avatar_url),async()=>{
+ const f=fixture({role:'student'});await f.SellerServices.register(userId,registration({avatar_url}),f.client);
+ assert.equal(f.rpcCalls()[0].payload.p_avatar_url,avatar_url);assert.equal(f.state.registrations[0].avatar_url,avatar_url);assert.equal(f.writes().length,0);
+});
+for(const avatar_url of ['blob:temp','data:image/png;base64,abc','http://example.invalid/a','https://u:p@example.invalid/a','',42,{},[]])test('invalid avatar rejected before registration DB '+JSON.stringify(avatar_url),async()=>{
+ const f=fixture({role:'student'});await assert.rejects(f.SellerServices.register(userId,registration({avatar_url}),f.client),/SELLER_VALIDATION_ERROR/);assert.equal(f.calls.length,0);
 });

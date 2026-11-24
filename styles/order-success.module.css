@@ -698,30 +698,32 @@
 /* Responsive order success */
 @media (min-width: 1024px) {
   :global(main):has(> .page) {
-    width: min(1480px, calc(100% - 48px));
-    max-width: none;
+    width: min(1560px, calc(100% - 64px));
+    max-width: 1560px;
     margin-inline: auto;
-    padding: 18px 0 24px;
+    padding: 18px 0 36px;
   }
 
   .page {
     width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
     padding-bottom: 0;
   }
 
   .hero {
-    padding-top: clamp(4px, 1.2vh, 16px);
+    padding-top: clamp(4px, 1.2vh, 12px);
   }
 
   .successArt {
-    width: 320px;
-    height: clamp(98px, 12vh, 130px);
-    margin: 0 auto 12px;
+    width: 280px;
+    height: clamp(76px, 10vh, 104px);
+    margin: 0 auto 10px;
   }
 
   .checkCircle {
-    width: clamp(90px, 11vh, 116px);
-    height: clamp(90px, 11vh, 116px);
+    width: clamp(72px, 9vh, 92px);
+    height: clamp(72px, 9vh, 92px);
   }
 
   .checkCircle svg {
@@ -730,68 +732,68 @@
   }
 
   .hero h1 {
-    font-size: clamp(32px, 2.5vw, 42px);
+    font-size: 28px;
     line-height: 1.2;
   }
 
   .hero > p {
-    margin-top: 10px;
-    font-size: 17px;
-    line-height: 26px;
+    margin-top: 6px;
+    font-size: 14.5px;
+    line-height: 22px;
   }
 
   .successBanner {
     width: min(860px, 100%);
     box-sizing: border-box;
-    gap: 18px;
-    margin: clamp(16px, 2.4vh, 26px) auto;
-    padding: 16px 24px;
+    gap: 16px;
+    margin: 14px auto 16px;
+    padding: 12px 18px;
   }
 
   .successBanner strong {
-    font-size: 17px;
-    line-height: 25px;
+    font-size: 15px;
+    line-height: 22px;
   }
 
   .successBanner p {
-    margin-top: 4px;
-    font-size: 15px;
-    line-height: 23px;
+    margin-top: 3px;
+    font-size: 13.5px;
+    line-height: 20px;
   }
 
   .contentGrid {
-    grid-template-columns: minmax(0, 1.85fr) minmax(320px, 1fr);
+    grid-template-columns: minmax(0, 1.85fr) minmax(310px, 1fr);
     align-items: start;
-    gap: 18px;
+    gap: 16px;
   }
 
   .orderList,
   .sidebar {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
     min-width: 0;
   }
 
   .orderCard {
-    padding: clamp(18px, 2.3vh, 26px);
+    padding: 16px 18px;
   }
 
   .orderMain {
     display: grid;
-    grid-template-columns: 82px minmax(0, 1fr) 138px;
+    grid-template-columns: 76px minmax(0, 1fr) 132px;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
   }
 
   .restaurantImage {
-    width: 82px;
-    height: 82px;
+    width: 76px;
+    height: 76px;
   }
 
   .placeholder svg {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
   }
 
   .orderHeading {
@@ -799,28 +801,28 @@
   }
 
   .orderHeading h2 {
-    font-size: clamp(20px, 1.55vw, 24px);
+    font-size: 18px;
     line-height: 1.3;
   }
 
   .status {
-    padding: 6px 10px;
-    font-size: 13px;
+    padding: 4px 9px;
+    font-size: 12px;
   }
 
   .orderCode {
-    margin: 7px 0 12px;
-    font-size: 16px;
+    margin: 4px 0 8px;
+    font-size: 13.5px;
   }
 
   .orderMeta {
     gap: 10px;
-    font-size: 14px;
-    line-height: 21px;
+    font-size: 13px;
+    line-height: 20px;
   }
 
   .orderMeta span {
-    gap: 7px;
+    gap: 6px;
   }
 
   .orderMeta span + span {
@@ -832,71 +834,71 @@
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
-    gap: 8px;
+    gap: 4px;
     width: auto;
     min-width: 0;
-    padding: 0 0 0 16px;
+    padding: 0 0 0 14px;
     border-top: 0;
     border-left: 1px solid #e9e3da;
   }
 
   .total span {
-    font-size: 15px;
+    font-size: 13px;
   }
 
   .total strong {
-    font-size: 25px;
-    line-height: 32px;
+    font-size: 20px;
+    line-height: 26px;
     white-space: nowrap;
   }
 
   .details {
-    margin-top: 12px;
+    margin-top: 10px;
   }
 
   .details summary {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .addressCard {
-    gap: 15px;
-    padding: 20px;
+    gap: 14px;
+    padding: 16px 18px;
   }
 
   .locationIcon {
-    width: 54px;
-    height: 54px;
+    width: 44px;
+    height: 44px;
     flex-shrink: 0;
   }
 
   .addressCard h2 {
-    font-size: 21px;
-    line-height: 28px;
-  }
-
-  .addressCard p {
-    margin-top: 6px;
-    font-size: 16px;
+    font-size: 17px;
     line-height: 24px;
   }
 
+  .addressCard p {
+    margin-top: 4px;
+    font-size: 14px;
+    line-height: 21px;
+  }
+
   .timelineCard {
-    padding: 20px;
+    padding: 16px 18px;
   }
 
   .timelineCard > h2 {
-    font-size: 21px;
-    line-height: 28px;
+    font-size: 17px;
+    line-height: 24px;
   }
 
   .timeline {
-    margin-top: 18px;
+    margin-top: 14px;
   }
 
   .timeline li {
-    gap: 15px;
-    min-height: 76px;
-    padding-bottom: 18px;
+    gap: 14px;
+    min-height: 62px;
+    padding-bottom: 14px;
   }
 
   .timeline li:last-child {
@@ -905,46 +907,47 @@
   }
 
   .timeline li:not(:last-child)::after {
-    top: 44px;
+    top: 38px;
     bottom: 3px;
-    left: 20px;
+    left: 16px;
     width: 2px;
   }
 
   .stepIcon {
-    width: 42px;
-    height: 42px;
+    width: 34px;
+    height: 34px;
     flex-shrink: 0;
   }
 
   .timeline h3 {
-    margin: 2px 0 4px;
-    font-size: 16px;
-    line-height: 23px;
-  }
-
-  .timeline p {
-    font-size: 14px;
+    margin: 0 0 3px;
+    font-size: 14.5px;
     line-height: 21px;
   }
 
+  .timeline p {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
   .actions {
-    gap: 16px;
-    margin-top: clamp(20px, 3vh, 34px);
+    gap: 14px;
+    margin-top: 18px;
   }
 
   .primaryButton,
   .secondaryButton {
-    width: 320px;
-    min-height: 50px;
-    padding: 12px 18px;
-    font-size: 17px;
+    width: 260px;
+    min-height: 42px;
+    padding: 8px 16px;
+    font-size: 14.5px;
+    border-radius: 10px;
   }
 
   .demoNote {
     margin-top: 10px;
     font-size: 12px;
-    line-height: 19px;
+    line-height: 18px;
   }
 }
 
@@ -972,30 +975,8 @@
   }
 }
 
-/* Cân đối chiều cao trang thành công trên desktop */
+/* Giữ trang trí gọn trên desktop */
 @media (min-width: 1024px) {
-  :global(main):has(> .page) {
-    padding-top: 14px;
-    padding-bottom: 18px;
-  }
-
-  .hero {
-    padding-top: 0;
-  }
-
-  .successArt {
-    width: 280px;
-    height: clamp(76px, 10dvh, 104px);
-    margin-bottom: 8px;
-  }
-
-  .checkCircle {
-    width: clamp(72px, 9dvh, 92px);
-    height: clamp(72px, 9dvh, 92px);
-  }
-
-  /* Giữ trang trí nằm quanh biểu tượng,
-     không tràn xuống tiêu đề */
   .confettiLeft,
   .confettiRight {
     width: 8px;
@@ -1016,121 +997,6 @@
       24px 25px 0 -2px #57d276,
       -4px 49px 0 -2px #79dd93;
   }
-
-  .hero h1 {
-    font-size: clamp(32px, 2.3vw, 40px);
-    line-height: 1.15;
-  }
-
-  .hero > p {
-    margin-top: 8px;
-    font-size: 16px;
-    line-height: 24px;
-  }
-
-  .successBanner {
-    box-sizing: border-box;
-    margin: 16px auto 18px;
-    padding: 13px 22px;
-    gap: 16px;
-  }
-
-  .successBanner > svg {
-    width: 34px;
-    height: 34px;
-  }
-
-  .successBanner strong {
-    font-size: 17px;
-    line-height: 24px;
-  }
-
-  .successBanner p {
-    margin-top: 3px;
-    font-size: 15px;
-    line-height: 22px;
-  }
-
-  .orderList,
-  .sidebar {
-    gap: 14px;
-  }
-
-  .orderCard {
-    padding: 18px 20px;
-  }
-
-  .addressCard,
-  .timelineCard {
-    padding: 16px 20px;
-  }
-
-  .addressCard h2,
-  .timelineCard > h2 {
-    font-size: 20px;
-    line-height: 26px;
-  }
-
-  .addressCard p {
-    font-size: 15px;
-    line-height: 22px;
-  }
-
-  .timeline {
-    margin-top: 14px;
-  }
-
-  .timeline li {
-    box-sizing: border-box;
-    min-height: 66px;
-    padding-bottom: 12px;
-    gap: 14px;
-  }
-
-  .timeline li:last-child {
-    min-height: 0;
-    padding-bottom: 0;
-  }
-
-  .timeline h3 {
-    margin: 0 0 3px;
-    font-size: 16px;
-    line-height: 22px;
-  }
-
-  .timeline p {
-    font-size: 14px;
-    line-height: 20px;
-  }
-
-  .stepIcon {
-    width: 38px;
-    height: 38px;
-  }
-
-  .timeline li:not(:last-child)::after {
-    top: 42px;
-    bottom: 4px;
-    left: 18px;
-  }
-
-  .actions {
-    margin-top: 18px;
-    gap: 16px;
-  }
-
-  .primaryButton,
-  .secondaryButton {
-    box-sizing: border-box;
-    min-height: 48px;
-    padding: 10px 18px;
-    font-size: 17px;
-  }
-
-  .demoNote {
-    margin-top: 8px;
-    line-height: 18px;
-  }
 }
 
 /* Cửa sổ laptop có vùng hiển thị thấp hơn */
@@ -1146,12 +1012,12 @@
   }
 
   .hero h1 {
-    font-size: 30px;
-    line-height: 36px;
+    font-size: 26px;
+    line-height: 32px;
   }
 
   .successBanner {
-    margin: 12px auto;
+    margin: 10px auto;
     padding-block: 10px;
   }
 
@@ -1162,7 +1028,7 @@
   }
 
   .timeline li {
-    min-height: 60px;
+    min-height: 54px;
   }
 
   .actions {

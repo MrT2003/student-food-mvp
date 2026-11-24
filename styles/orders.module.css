@@ -4,9 +4,9 @@
   --orange: #ff4d12;
   --border: #e9e3da;
 
-  width: min(1528px, calc(100% - 64px));
+  width: 100%;
   margin: 0 auto;
-  padding: 30px 0 36px;
+  padding: 4px 0 24px;
   color: var(--ink);
   font-family: var(--font-body);
 }
@@ -333,7 +333,8 @@
 }
 
 .primaryButton,
-.outlineButton {
+.outlineButton,
+.cancelButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -344,6 +345,7 @@
   text-decoration: none;
   font-weight: 600 !important;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .primaryButton {
@@ -358,12 +360,34 @@
   color: var(--orange);
 }
 
+.cancelButton {
+  border: 1px solid #f7a79a;
+  background: #fff;
+  color: #dc3a31;
+}
+
+.secondaryActionsRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .primaryButton:hover {
   filter: brightness(0.96);
 }
 
 .outlineButton:hover {
   background: #fff7f1;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background: #fff3f2;
+  border-color: #ef6b5c;
+}
+
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .infoBanner {
@@ -728,10 +752,10 @@
 @media (min-width: 1024px) {
   /* Chá»‰ tÃ¡c Ä‘á»™ng layout Ä‘ang chá»©a trang ÄÆ¡n hÃ ng */
   :global(main):has(> .page) {
-    width: min(1480px, calc(100% - 48px));
-    max-width: none;
+    width: min(1560px, calc(100% - 64px));
+    max-width: 1560px;
     margin-inline: auto;
-    padding: 18px 0;
+    padding: 18px 0 36px;
   }
 
   .page {
@@ -742,14 +766,14 @@
 
   /* TiÃªu Ä‘á» vÃ  bá»™ lá»c */
   .heading h1 {
-    font-size: clamp(30px, 2.2vw, 36px);
+    font-size: 28px;
     line-height: 1.2;
   }
 
   .heading p {
-    margin-top: 6px;
-    font-size: 16px;
-    line-height: 24px;
+    margin-top: 4px;
+    font-size: 14.5px;
+    line-height: 22px;
   }
 
   .filters {
@@ -764,14 +788,14 @@
 
   .page .scopeButton,
   .page .statusButton {
-    min-height: 38px;
-    padding: 8px 16px;
-    font-size: 14px;
+    min-height: 36px;
+    padding: 6px 14px;
+    font-size: 13.5px;
     line-height: 20px;
   }
 
   .filterDivider {
-    height: 26px;
+    height: 24px;
     margin-inline: 6px;
   }
 
@@ -785,18 +809,18 @@
   }
 
   .sectionHeading h2 {
-    font-size: 23px;
-    line-height: 30px;
+    font-size: 20px;
+    line-height: 1.3;
   }
 
   .sectionIcon {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
   }
 
   .sectionIcon svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
 
   /* Card Ä‘Æ¡n hÃ ng hiá»‡n táº¡i */
@@ -805,49 +829,50 @@
   }
 
   .currentCard {
-    grid-template-columns: 104px minmax(0, 1fr) minmax(260px, 29%);
+    grid-template-columns: 88px minmax(0, 1fr) minmax(240px, 27%);
     align-items: center;
-    gap: 20px;
-    padding: 14px 18px;
+    gap: 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
   }
 
   .currentCard > .foodPlaceholder {
-    width: 104px;
-    height: 104px;
+    width: 88px;
+    height: 88px;
     align-self: center;
   }
 
   .orderTitle {
-    gap: 8px 14px;
+    gap: 8px 12px;
   }
 
   .orderTitle h3 {
-    font-size: 22px;
-    line-height: 28px;
+    font-size: 17px;
+    line-height: 22px;
   }
 
   .badge {
-    padding: 6px 9px;
+    padding: 5px 9px;
     font-size: 12px;
     line-height: 18px;
   }
 
   .badge svg {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
   }
 
   .orderCode {
-    margin-top: 5px;
-    font-size: 15px;
-    line-height: 21px;
+    margin-top: 3px;
+    font-size: 13px;
+    line-height: 19px;
   }
 
   .metadata {
-    margin-top: 12px;
-    gap: 8px 0;
-    font-size: 14px;
-    line-height: 20px;
+    margin-top: 8px;
+    gap: 6px 0;
+    font-size: 13px;
+    line-height: 19px;
   }
 
   .metadata > span {
@@ -860,30 +885,30 @@
   }
 
   .metadata svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
   }
 
   .itemPreview {
     gap: 10px;
-    margin-top: 10px;
+    margin-top: 8px;
   }
 
   .smallPlaceholder {
-    flex-basis: 42px;
-    width: 42px;
-    height: 42px;
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
   }
 
   .itemPreview strong {
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 13.5px;
+    line-height: 19px;
   }
 
   .itemPreview p {
     margin-top: 2px;
-    font-size: 13px;
+    font-size: 12.5px;
     line-height: 18px;
   }
 
@@ -891,73 +916,76 @@
   .orderActions {
     justify-content: center;
     gap: 5px;
-    padding-left: 20px;
+    padding-left: 18px;
   }
 
   .muted {
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 13px;
+    line-height: 18px;
   }
 
   .total {
-    font-size: 25px;
-    line-height: 30px;
+    font-size: 20px;
+    line-height: 25px;
   }
 
   .orderDate {
     margin: 0 0 3px;
-    font-size: 13px;
-    line-height: 20px;
+    font-size: 12.5px;
+    line-height: 18px;
   }
 
   .page .primaryButton,
-  .page .outlineButton {
-    min-height: 36px;
-    padding: 7px 12px;
-    font-size: 14px;
-    line-height: 20px;
+  .page .outlineButton,
+  .page .cancelButton {
+    min-height: 34px;
+    padding: 6px 12px;
+    font-size: 13px;
+    line-height: 18px;
+    border-radius: 8px;
   }
 
   /* Banner hÆ°á»›ng dáº«n */
   .infoBanner {
-    gap: 14px;
+    gap: 12px;
     margin: 12px 0;
     padding: 10px 14px;
   }
 
   .bulbIcon {
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
   }
 
   .bulbIcon svg {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
   }
 
   .infoBanner h3 {
     margin-bottom: 3px;
-    font-size: 16px;
-    line-height: 22px;
+    font-size: 15px;
+    line-height: 21px;
   }
 
   .infoBanner p {
     font-size: 13px;
-    line-height: 20px;
+    line-height: 19px;
   }
 
   /* Lá»‹ch sá»­ Ä‘Æ¡n hÃ ng */
   .historyGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
   }
 
   .historyCard {
     padding: 12px;
+    border-radius: 12px;
   }
 
   .historyTop {
-    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-columns: 60px minmax(0, 1fr);
     gap: 12px;
   }
 
@@ -966,26 +994,26 @@
   }
 
   .historyTitle h3 {
-    font-size: 16px;
-    line-height: 21px;
+    font-size: 15px;
+    line-height: 20px;
   }
 
   .historyTitle .badge {
-    padding: 5px 7px;
-    font-size: 12px;
+    padding: 4px 7px;
+    font-size: 11.5px;
   }
 
   .historyContent .orderCode {
-    margin-top: 4px;
-    font-size: 13px;
-    line-height: 19px;
+    margin-top: 3px;
+    font-size: 12.5px;
+    line-height: 18px;
   }
 
   .historyMetadata {
     margin-top: 8px;
     gap: 6px 12px;
-    font-size: 13px;
-    line-height: 20px;
+    font-size: 12.5px;
+    line-height: 18px;
   }
 
   .historyMetadata > span {
@@ -993,14 +1021,14 @@
   }
 
   .historyMetadata svg {
-    width: 17px;
-    height: 17px;
+    width: 15px;
+    height: 15px;
   }
 
   .historyBottom {
     grid-template-columns: minmax(80px, 1fr) auto auto;
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 10px;
   }
 
   .historyAmount {
@@ -1008,12 +1036,12 @@
   }
 
   .historyAmount strong {
-    font-size: 22px;
-    line-height: 27px;
+    font-size: 18px;
+    line-height: 24px;
   }
 
   .page .textButton {
-    font-size: 14px;
+    font-size: 13.5px;
   }
 
   .demoNote {
@@ -1072,8 +1100,8 @@
 .filterSection {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin: 18px 0 22px;
+  gap: 10px;
+  margin: 14px 0 18px;
 }
 
 .statusTabs {
@@ -1093,13 +1121,13 @@
 
 .tabButton {
   flex: 0 0 auto;
-  min-height: 40px;
-  padding: 8px 20px;
+  min-height: 34px;
+  padding: 6px 14px;
   border: 1px solid #ece7df;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #ffffff;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
@@ -1127,10 +1155,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 44px;
+  height: 40px;
   padding: 0 14px;
   border: 1px solid #ece7df;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #ffffff;
   color: #4f6b99;
   box-shadow: 0 2px 6px rgb(8 20 71 / 3%);
@@ -1147,7 +1175,7 @@
   border: 0;
   background: transparent;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 13.5px;
   outline: none;
 }
 
@@ -1164,10 +1192,10 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 44px;
+  height: 40px;
   padding: 0 34px 0 14px;
   border: 1px solid #ece7df;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #ffffff;
   color: var(--ink);
   box-shadow: 0 2px 6px rgb(8 20 71 / 3%);
@@ -1211,9 +1239,9 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
-  padding: 12px 16px;
+  padding: 10px 14px;
   border: 1px solid #f0ece5;
-  border-radius: 14px;
+  border-radius: 12px;
   background: #ffffff;
   text-align: left;
   box-shadow: 0 2px 8px rgb(8 20 71 / 3%);
@@ -1229,9 +1257,9 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
 }
 
 .summary_pending {
@@ -1263,7 +1291,7 @@
 
 .summaryLabel {
   color: #4f668c;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -1272,7 +1300,7 @@
 
 .summaryCount {
   color: var(--ink);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   line-height: 1.15;
 }
@@ -1558,8 +1586,17 @@
   margin-left: 94px;
 }
 
+.currentActionsWithCancel {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.currentActionsWithCancel > :first-child {
+  grid-column: 1 / -1;
+}
+
 .mobileView .primaryButton,
-.mobileView .outlineButton {
+.mobileView .outlineButton,
+.mobileView .cancelButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1943,9 +1980,237 @@
   }
 
   .mobileView .primaryButton,
-  .mobileView .outlineButton {
+  .mobileView .outlineButton,
+  .mobileView .cancelButton {
     min-height: 34px;
     padding: 5px 8px;
     font-size: 12px;
+  }
+}
+
+/* ==========================================================================
+   Popup xác nhận hủy đơn hàng (Cancel Order Confirmation Modal)
+   ========================================================================== */
+
+.cancelModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgb(8 20 71 / 46%);
+  backdrop-filter: blur(2px);
+}
+
+.cancelModalDialog {
+  width: min(500px, calc(100vw - 32px));
+  padding: 22px 24px 24px;
+  border: 1px solid #f0ece5;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 22px 54px rgb(8 20 71 / 24%);
+  color: var(--ink);
+}
+
+.cancelModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cancelModalTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cancelModalWarnIcon {
+  flex-shrink: 0;
+  color: #f05228;
+}
+
+.cancelModalTitleRow h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.4px;
+  color: #081447;
+}
+
+.cancelModalCloseBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #556a8f;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.cancelModalCloseBtn:hover:not(:disabled) {
+  background: #f4f6fa;
+  color: #081447;
+}
+
+.cancelModalDescription {
+  margin: 8px 0 0;
+  color: #4a628a;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.cancelModalOrderBox {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid #fbe8de;
+  border-radius: 14px;
+  background: #fff6f1;
+}
+
+.cancelModalThumb {
+  position: relative;
+  flex: 0 0 68px;
+  width: 68px;
+  height: 68px;
+  border-radius: 12px;
+}
+
+.cancelModalOrderInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cancelModalOrderInfo strong {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #081447;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cancelModalOrderInfo span {
+  color: #5b7399;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.cancelModalTotal {
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #081447;
+}
+
+.cancelModalActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.cancelModalBackBtn,
+.cancelModalConfirmBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 11px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  transition: filter 0.15s ease, background-color 0.15s ease;
+}
+
+.cancelModalBackBtn {
+  border: 1px solid #f59d7e;
+  background: #ffffff;
+  color: #eb5628;
+}
+
+.cancelModalBackBtn:hover:not(:disabled) {
+  background: #fff7f3;
+}
+
+.cancelModalConfirmBtn {
+  border: 1px solid transparent;
+  background: linear-gradient(110deg, #ff6a28, #f23c1f);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgb(242 60 31 / 24%);
+}
+
+.cancelModalConfirmBtn:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+.cancelModalBackBtn:disabled,
+.cancelModalConfirmBtn:disabled,
+.cancelModalCloseBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .cancelModalDialog {
+    padding: 18px 18px 20px;
+    border-radius: 16px;
+  }
+
+  .cancelModalTitleRow h2 {
+    font-size: 18px;
+  }
+
+  .cancelModalDescription {
+    font-size: 13.5px;
+  }
+
+  .cancelModalOrderBox {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .cancelModalThumb {
+    flex-basis: 58px;
+    width: 58px;
+    height: 58px;
+  }
+
+  .cancelModalOrderInfo strong {
+    font-size: 15.5px;
+  }
+
+  .cancelModalOrderInfo span {
+    font-size: 13px;
+  }
+
+  .cancelModalTotal {
+    font-size: 16.5px;
+  }
+
+  .cancelModalBackBtn,
+  .cancelModalConfirmBtn {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 13.5px;
   }
 }

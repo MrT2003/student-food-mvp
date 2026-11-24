@@ -61,7 +61,7 @@ function formHarness(helper, uploadImage = async () => ({ secureUrl: "https://re
   const render = () => { stateCursor = 0; refCursor = 0; return Component(); };
   function nodes(node) { if (!node || typeof node !== "object") return []; return [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)]; }
   let tree = render();
-  for (const [id, value] of [["shop-name", "TEST"], ["shop-description", "TEST ONLY"], ["shop-location", "KTX TEST"], ["seller-app-lock-pin", testPin()]]) {
+  for (const [id, value] of [["shop-name", "TEST"], ["shop-description", "TEST ONLY"], ["shop-location", "KTX TEST"]]) {
     nodes(tree).find((node) => node.props?.id === id).props.onChange({ target: { value } }); tree = render();
   }
   return { render, navigation, nodes, submit: () => nodes(render()).find((node) => node.type === "form").props.onSubmit({ preventDefault() {} }) };
@@ -78,11 +78,19 @@ test("actual form waits for API, prevents duplicate submit, displays failure and
   const tree = ui.render();
   assert.ok(ui.nodes(tree).some((node) => node.props?.role === "alert"));
   assert.equal(ui.nodes(tree).find((node) => node.props?.type === "submit").props.disabled, false);
-  assert.equal(ui.nodes(tree).find((node) => node.props?.id === "seller-app-lock-pin").props.value === "", true);
+  assert.equal(ui.nodes(tree).find((node) => node.props?.id === "seller-app-lock-pin"), undefined);
 });
 test("actual form navigates only after successful API and confirmed seller profile (mock HTTP)", async () => {
   const f = client(); const ui = formHarness(f); await ui.submit();
   assert.equal(f.calls[1], "profile"); assert.deepEqual(ui.navigation, ["/seller", "refresh"]);
+});
+
+test('form blocks another creation when network outcome is unknown until profile is reconciled',async()=>{
+ const f=client({fetch:async()=>{throw Error('network unavailable');}});
+ const ui=formHarness(f);await ui.submit();await ui.submit();
+ assert.equal(f.calls.filter(call=>typeof call==='object'&&call.request).length,1);
+ assert.deepEqual(ui.navigation,[]);
+ assert.ok(ui.nodes(ui.render()).some(node=>node.props?.role==='alert'));
 });
 
 test("merged form keeps Cloudinary upload and blocks registration until upload completes", async () => {
@@ -99,8 +107,8 @@ test("merged form keeps Cloudinary upload and blocks registration until upload c
   assert.equal(ui.nodes(ui.render()).find((node) => node.props?.type === "submit").props.disabled, false);
   await ui.submit();
   assert.deepEqual(ui.navigation, ["/seller", "refresh"]);
-  // Upload UI không đưa field ảnh ngoài contract vào RPC đăng ký hiện có.
-  assert.equal(Object.hasOwn(JSON.parse(f.calls[0].request.body), "avatar_url"), false);
+  // URL upload đi qua API vào transaction RPC, không chỉ là preview.
+  assert.equal(JSON.parse(f.calls[0].request.body).avatar_url, "https://res.cloudinary.com/test/image/upload/test.webp");
 });
 
 test('duplicate role conflict recovers only with confirmed current seller and owned restaurant',async()=>{

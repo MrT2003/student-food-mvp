@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,6 +15,7 @@ import {
   Pencil,
   ReceiptText,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/store/useCartStore";
 import styles from "@/styles/order-confirm.module.css";
 import { useRouter } from "next/navigation";
@@ -25,6 +26,14 @@ import {
   getCartItemTotal,
   getCartItemUnitPrice,
 } from "@/lib/cart/calculations";
+
+type RestaurantBankRow = {
+  restaurant_id: string;
+  bank_name: string;
+  account_no: string;
+  account_name: string;
+  is_default: boolean;
+};
 
 function FoodPlaceholder({ kind }: { kind: "food" | "drink" }) {
   return <FoodThumbnail kind={kind} className={styles.placeholder} />;
@@ -45,6 +54,9 @@ export default function OrderConfirmView() {
   const [collapsedRestaurants, setCollapsedRestaurants] = useState<
     Record<string, boolean>
   >({});
+  const [restaurantBanks, setRestaurantBanks] = useState<
+    Record<string, RestaurantBankRow>
+  >({});
   const addressInput = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
@@ -61,6 +73,33 @@ export default function OrderConfirmView() {
     subtotal: total,
   } = useCartSummary();
   const deliveryFee = 0;
+
+  useEffect(() => {
+    const restaurantIds = groups.map((g) => g.restaurant.id);
+    if (restaurantIds.length === 0) return;
+
+    let cancelled = false;
+    const supabase = createClient();
+    void supabase
+      .from("restaurant_banks")
+      .select("restaurant_id, bank_name, account_no, account_name, is_default")
+      .in("restaurant_id", restaurantIds)
+      .then(({ data }) => {
+        if (cancelled || !Array.isArray(data)) return;
+        const map: Record<string, RestaurantBankRow> = {};
+        for (const row of data as RestaurantBankRow[]) {
+          const existing = map[row.restaurant_id];
+          if (!existing || row.is_default) {
+            map[row.restaurant_id] = row;
+          }
+        }
+        setRestaurantBanks(map);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [groups]);
 
   function toggleRestaurantCollapse(restaurantId: string) {
     setCollapsedRestaurants((prev) => ({
@@ -256,6 +295,7 @@ export default function OrderConfirmView() {
                 note: "",
               };
               const isCollapsed = Boolean(collapsedRestaurants[restaurant.id]);
+              const bankInfo = restaurantBanks[restaurant.id];
 
               return (
                 <section
@@ -397,6 +437,19 @@ export default function OrderConfirmView() {
                                 Tiền mặt (Thanh toán khi nhận món)
                               </option>
                             </select>
+                            {preference.payment === "bank" && (
+                              <p style={{ margin: "6px 0 0", fontSize: 13, color: "#19325c" }}>
+                                {bankInfo ? (
+                                  <>
+                                    <strong>{bankInfo.bank_name}</strong> · STK:{" "}
+                                    <strong>{bankInfo.account_no}</strong> · Chủ TK:{" "}
+                                    <strong>{bankInfo.account_name}</strong>
+                                  </>
+                                ) : (
+                                  "Thông tin chuyển khoản của quán sẽ hiển thị sau khi tạo đơn."
+                                )}
+                              </p>
+                            )}
                           </div>
                         </div>
 

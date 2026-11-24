@@ -10,6 +10,7 @@ export type SellerRegistrationSchedule =
   | { mode: "daily"; days: { id: SellerDayId; open: string; close: string }[] };
 
 export type ValidatedSellerRegistration = {
+  avatar_url?: string | null;
   name: string;
   description: string;
   location: string;
@@ -35,6 +36,8 @@ export type SellerRegistrationResult = {
 
 // Field vắng mặt phải được giữ nguyên; schedule nếu có là cấu hình thay thế đầy đủ.
 export type SellerRestaurantPatch = {
+  contact_phone?: string | null;
+  avatar_url?: string | null;
   name?: string;
   description?: string;
   location?: string;
@@ -47,14 +50,17 @@ export type SellerRestaurantUpdateResult = {
     name: string;
     description: string | null;
     location: string | null;
+    contact_phone?: string | null;
+    avatar_url?: string | null;
     // Lịch cũ không bị ép sang quy ước mới khi PATCH không gửi schedule.
     operating_hours: Json | null;
   };
 };
 
 export type SellerRestaurantOpenResult = {
-  restaurant: { id: string; operating_status: "open" };
+  restaurant: { id: string; operating_status: "open" | "closed" };
   alreadyOpen: boolean;
+  alreadyAtTarget: boolean;
 };
 
 export type SellerBankCreate = {

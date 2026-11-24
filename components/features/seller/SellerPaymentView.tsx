@@ -89,10 +89,32 @@ export const VIETNAM_BANKS: readonly string[] = [
   "Timo",
 ] as const;
 
+const POPULAR_BANKS = [
+  "Vietcombank",
+  "BIDV",
+  "VietinBank",
+  "Agribank",
+  "Techcombank",
+  "MB Bank",
+  "ACB",
+  "TPBank",
+  "VPBank",
+  "Sacombank",
+  "VIB",
+  "HDBank",
+  "SHB",
+  "MSB",
+  "OCB",
+  "SeABank",
+  "LPBank",
+  "Eximbank",
+  "Nam A Bank",
+  "Cake by VPBank",
+  "Timo",
+] as const;
+
 export const DEFAULT_SELLER_TRANSFER_CONTENT =
   "Thanh toán đơn hàng StudentFood";
-
-const DEMO_SHOP_NAME = "Cơm Cô Ba";
 
 export function createInitialSellerPaymentPreview(
   draft: SellerPreview | null = null,
@@ -128,33 +150,11 @@ export function validateSellerPaymentForm(
   return null;
 }
 
-function formatPreviewTransferContent(shopName: string): string {
-  const normalized = shopName
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .replace(/[^a-zA-Z0-9\s]/g, " ")
-    .trim()
-    .replace(/\s+/g, " ")
-    .toUpperCase();
-  return `#SF0101 ${normalized || "COM CO BA"}`.slice(0, 140);
-}
-
 function CashIcon({ size = 40 }: { size?: number }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
       <rect x="2" y="7" width="36" height="26" rx="3" fill="currentColor" />
-      <path
-        d="M10 11h20a4 4 0 0 0 4 4v10a4 4 0 0 0-4 4H10a4 4 0 0 0-4-4V15a4 4 0 0 0 4-4Z"
-        fill="#e5faee"
-      />
+      <path d="M10 11h20a4 4 0 0 0 4 4v10a4 4 0 0 0-4 4H10a4 4 0 0 0-4-4V15a4 4 0 0 0 4-4Z" fill="#e5faee" />
       <ellipse cx="20" cy="20" rx="6" ry="8" fill="currentColor" />
       <circle cx="10" cy="20" r="1.5" fill="currentColor" />
       <circle cx="30" cy="20" r="1.5" fill="currentColor" />
@@ -164,13 +164,7 @@ function CashIcon({ size = 40 }: { size?: number }) {
 
 function BankIcon({ size = 40 }: { size?: number }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      fill="currentColor"
-      aria-hidden="true"
-    >
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="currentColor" aria-hidden="true">
       <path d="m20 2 18 10v4H2v-4L20 2ZM5 34h30v4H5zM8 18h6v14H8zm9 0h6v14h-6zm9 0h6v14h-6z" />
       <circle cx="20" cy="11" r="2" fill="#e9f2ff" />
     </svg>
@@ -179,38 +173,20 @@ function BankIcon({ size = 40 }: { size?: number }) {
 
 function BankShieldEmblem() {
   return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M12 2.25 4.75 5.1v6.15c0 5.05 3.12 9.48 7.25 10.5 4.13-1.02 7.25-5.45 7.25-10.5V5.1L12 2.25Z"
         fill="#0b8a42"
       />
-      <path
-        d="M12 2.25 4.75 5.1v3.15h14.5V5.1L12 2.25Z"
-        fill="#6bc247"
-      />
-      <path
-        d="M8.5 9.2 12 16.4l3.5-7.2h-2.1L12 12.4l-1.4-3.2H8.5Z"
-        fill="#ffffff"
-      />
+      <path d="M12 2.25 4.75 5.1v3.15h14.5V5.1L12 2.25Z" fill="#6bc247" />
+      <path d="M8.5 9.2 12 16.4l3.5-7.2h-2.1L12 12.4l-1.4-3.2H8.5Z" fill="#ffffff" />
     </svg>
   );
 }
 
 function FilledInfoIcon({ size = 18 }: { size?: number }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden="true">
       <circle cx="10" cy="10" r="8.5" fill="#0d6efd" />
       <rect x="9.1" y="8.6" width="1.8" height="6" rx="0.9" fill="#ffffff" />
       <circle cx="10" cy="6" r="1.1" fill="#ffffff" />
@@ -218,37 +194,111 @@ function FilledInfoIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-// Decorative pattern only, deliberately not a payment QR payload.
-function PaymentQrIllustration() {
-  const finders = [
-    [0, 0],
-    [22, 0],
-    [0, 22],
-  ];
-  const dots = Array.from({ length: 29 * 29 }, (_, index) => ({
-    x: index % 29,
-    y: Math.floor(index / 29),
-  })).filter(
-    ({ x, y }) =>
-      !finders.some(
-        ([fx, fy]) => x >= fx - 1 && x <= fx + 7 && y >= fy - 1 && y <= fy + 7,
-      ) &&
+const SELLER_VIETQR_BANK_CODES: Record<string, string> = {
+  vietcombank: "VCB",
+  bidv: "BIDV",
+  vietinbank: "ICB",
+  agribank: "VBA",
+  techcombank: "TCB",
+  "mb bank": "MB",
+  acb: "ACB",
+  tpbank: "TPB",
+  vpbank: "VPB",
+  sacombank: "STB",
+  hdbank: "HDB",
+  vib: "VIB",
+  shb: "SHB",
+  msb: "MSB",
+  ocb: "OCB",
+  seabank: "SEAB",
+  lpbank: "LPB",
+  eximbank: "EIB",
+  "bac a bank": "BAB",
+  pvcombank: "PVCB",
+  abbank: "ABB",
+  "nam a bank": "NAB",
+  vietbank: "VIETBANK",
+  vietabank: "VAB",
+  ncb: "NCB",
+  bvbank: "BVB",
+  kienlongbank: "KLB",
+  saigonbank: "SGB",
+  pgbank: "PGB",
+  baovietbank: "BVB",
+  "donga bank": "DOB",
+  "vikki bank": "VIKKI",
+  gpbank: "GPB",
+  mbv: "MBV",
+  cbbank: "CBB",
+  "co-opbank": "COOPBANK",
+  "shinhan bank": "SHBVN",
+  "woori bank": "WVN",
+  hsbc: "HSBC",
+  "standard chartered": "SCVN",
+  uob: "UOB",
+  cimb: "CIMB",
+  "public bank": "PBVN",
+  "hong leong bank": "HLBVN",
+  indovinabank: "IVB",
+  vrb: "VRB",
+  citibank: "CITIBANK",
+  "cake by vpbank": "CAKE",
+  timo: "TIMO",
+};
+
+function buildSellerPreviewVietQrUrl(
+  bankName: string,
+  accountNo: string,
+  accountName: string,
+  amount: number,
+  addInfo: string,
+): string | null {
+  const bankCode =
+    SELLER_VIETQR_BANK_CODES[bankName.trim().toLowerCase()] ||
+    (/^[A-Za-z0-9]{2,12}$/.test(bankName.trim()) ? bankName.trim().toUpperCase() : "");
+  const cleanAccountNo = accountNo.trim().replace(/\s+/g, "");
+  if (!bankCode || !cleanAccountNo) return null;
+  const cleanText = (val: string) =>
+    val
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[đĐ]/g, (c) => (c === "đ" ? "d" : "D"))
+      .replace(/[^a-zA-Z0-9 -]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const params = new URLSearchParams();
+  if (amount > 0) params.set("amount", String(Math.round(amount)));
+  const info = cleanText(addInfo).slice(0, 50);
+  if (info) params.set("addInfo", info);
+  const holder = cleanText(accountName).toUpperCase().slice(0, 64);
+  if (holder) params.set("accountName", holder);
+  return `https://img.vietqr.io/image/${encodeURIComponent(bankCode)}-${encodeURIComponent(cleanAccountNo)}-qr_only.png?${params.toString()}`;
+}
+
+function PaymentQrIllustration({ qrUrl }: { qrUrl?: string | null }) {
+  if (qrUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={qrUrl}
+        alt="Mã VietQR thanh toán"
+        width={176}
+        height={176}
+        style={{ width: "100%", height: "100%", objectFit: "contain" }}
+      />
+    );
+  }
+  const finders = [[0, 0], [22, 0], [0, 22]];
+  const dots = Array.from({ length: 29 * 29 }, (_, index) => ({ x: index % 29, y: Math.floor(index / 29) }))
+    .filter(({ x, y }) =>
+      !finders.some(([fx, fy]) => x >= fx - 1 && x <= fx + 7 && y >= fy - 1 && y <= fy + 7) &&
       !(x >= 11 && x <= 17 && y >= 11 && y <= 17) &&
-      (x * 19 + y * 13 + x * y * 7) % 11 < 6,
-  );
+      ((x * 19 + y * 13 + x * y * 7) % 11 < 6)
+    );
   return (
     <svg viewBox="-1 -1 31 31" aria-hidden="true" focusable="false">
       <rect x={-1} y={-1} width={31} height={31} fill="white" />
-      {dots.map(({ x, y }) => (
-        <rect
-          key={`${x}-${y}`}
-          x={x}
-          y={y}
-          width={1}
-          height={1}
-          fill="#102119"
-        />
-      ))}
+      {dots.map(({ x, y }) => <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill="#102119" />)}
       {finders.map(([x, y]) => (
         <g key={`${x}-${y}`}>
           <rect x={x} y={y} width={7} height={7} fill="#102119" />
@@ -257,10 +307,7 @@ function PaymentQrIllustration() {
         </g>
       ))}
       <rect x={11} y={11} width={7} height={7} rx={1} fill="#e2f4e9" />
-      <path
-        d="M12.5 12.5 14.5 12 16.5 12.5v2c0 1.3-1 2.2-2 3-1-.8-2-1.7-2-3Z"
-        fill="#048552"
-      />
+      <path d="M12.5 12.5 14.5 12 16.5 12.5v2c0 1.3-1 2.2-2 3-1-.8-2-1.7-2-3Z" fill="#048552" />
     </svg>
   );
 }
@@ -273,12 +320,72 @@ const blank = (): SellerBankCreate => ({
   is_default: false,
 });
 
+export default function SellerPaymentView() {
+  const { data, error, retry } = useSellerAccess();
+  return (
+    <div className={styles.page}>
+      <StudentHeader variant="seller" />
+      <div className={styles.workspace}>
+        <SellerSidebar active="payments" name={data?.restaurant?.name ?? ""} />
+        {data?.restaurant ? (
+          <BankManager
+            key={`${data.user.id}:${data.restaurant.id}`}
+            actorId={data.user.id}
+            restaurantId={data.restaurant.id}
+            shopName={data.restaurant.name}
+          />
+        ) : (
+          <main className={styles.card}>
+            {error || "Đang tải cửa hàng…"}
+            {error && <button onClick={retry}>Thử lại</button>}
+          </main>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function readStoredPaymentMethods(
+  restaurantId: string,
+): { cash: boolean; bank: boolean } | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  try {
+    const raw =
+      window.localStorage.getItem(`sf:seller-payment-methods:${restaurantId}`) ??
+      window.localStorage.getItem("sf:seller-payment-methods:latest");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { cash?: unknown; bank?: unknown };
+    if (typeof parsed?.cash === "boolean" && typeof parsed?.bank === "boolean") {
+      return { cash: parsed.cash, bank: parsed.bank };
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return null;
+}
+
+function writeStoredPaymentMethods(
+  restaurantId: string,
+  next: { cash: boolean; bank: boolean },
+) {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    const payload = JSON.stringify(next);
+    window.localStorage.setItem(`sf:seller-payment-methods:${restaurantId}`, payload);
+    window.localStorage.setItem("sf:seller-payment-methods:latest", payload);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function BankManager({
   actorId,
   restaurantId,
+  shopName = "Cửa hàng của bạn",
 }: {
   actorId: string;
   restaurantId: string;
+  shopName?: string;
 }) {
   // Không dùng preview/persist store: dữ liệu chỉ thuộc instance user + quán hiện tại.
   const [banks, setBanks] = useState<Bank[] | null>(null);
@@ -288,16 +395,33 @@ export function BankManager({
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const pending = useRef(false);
-  const mounted = useRef(true);
-  const generation = useRef(0);
-  const current = useCallback(
-    () => mounted.current && useAuthStore.getState().user?.id === actorId,
-    [actorId],
+  const [cashEnabled, setCashEnabled] = useState(
+    () => readStoredPaymentMethods(restaurantId)?.cash ?? true,
   );
-  const cancel = useCallback(() => {
-    generation.current++;
-  }, []);
+  const [bankEnabled, setBankEnabled] = useState(
+    () => readStoredPaymentMethods(restaurantId)?.bank ?? false,
+  );
+  const [guide, setGuide] = useState(false);
+  const [showMobileQrModal, setShowMobileQrModal] = useState(false);
+  const pending = useRef(false), mounted = useRef(true), generation = useRef(0);
+  const current = useCallback(() => mounted.current && useAuthStore.getState().user?.id === actorId, [actorId]);
+  const cancel = useCallback(() => { generation.current++; }, []);
+
+  function toggleCashMethod() {
+    setCashEnabled((prevCash) => {
+      const nextCash = !prevCash;
+      writeStoredPaymentMethods(restaurantId, { cash: nextCash, bank: bankEnabled });
+      return nextCash;
+    });
+  }
+
+  function toggleBankMethod() {
+    setBankEnabled((prevBank) => {
+      const nextBank = !prevBank;
+      writeStoredPaymentMethods(restaurantId, { cash: cashEnabled, bank: nextBank });
+      return nextBank;
+    });
+  }
 
   const reload = useCallback(async () => {
     const run = ++generation.current;
@@ -306,14 +430,19 @@ export function BankManager({
       const result = await readSellerBanks(actorId, restaurantId);
       if (current() && run === generation.current) {
         setBanks(result.banks);
+        const stored = readStoredPaymentMethods(restaurantId);
+        if (stored) {
+          setCashEnabled(stored.cash);
+          setBankEnabled(stored.bank);
+        } else {
+          setBankEnabled(result.banks.length > 0);
+        }
         setError("");
       }
     } catch (err) {
       if (current() && run === generation.current) {
         setBanks(null);
-        setError(
-          err instanceof Error ? err.message : "Không tải được ngân hàng.",
-        );
+        setError(err instanceof Error ? err.message : "Không tải được ngân hàng.");
       }
     } finally {
       if (current() && run === generation.current) setLoading(false);
@@ -362,8 +491,7 @@ export function BankManager({
         payload[field] = values[field];
       }
     }
-    if (!editing || values.is_default !== editing.is_default)
-      payload.is_default = values.is_default;
+    if (!editing || values.is_default !== editing.is_default) payload.is_default = values.is_default;
     if (!Object.keys(payload).length) {
       setNotice("Không có thay đổi để lưu.");
       return;
@@ -375,653 +503,378 @@ export function BankManager({
     try {
       await saveSellerBank(actorId, restaurantId, editing?.id ?? null, payload);
       if (!current()) return;
-      setNotice(
-        "API đã xác nhận lưu tài khoản. Thông tin này không tự bật phương thức thanh toán.",
-      );
+      setNotice("Đã lưu tài khoản ngân hàng thành công.");
       setEditing(null);
       setValues(blank());
       await reload(); // Đọc lại nguồn DB; không tự mô phỏng bỏ default cũ.
     } catch (err) {
-      if (current())
-        setError(
-          err instanceof Error ? err.message : "Không lưu được ngân hàng.",
-        );
+      if (current()) setError(err instanceof Error ? err.message : "Không lưu được ngân hàng.");
     } finally {
       pending.current = false;
       if (current()) setBusy(false);
     }
   }
 
-  const otherDefault = banks?.some(
-    (bank) => bank.is_default && bank.id !== editing?.id,
+  const otherDefault = banks?.some((bank) => bank.is_default && bank.id !== editing?.id);
+  const activeBank = editing ?? banks?.find((b) => b.is_default) ?? banks?.[0] ?? null;
+  const previewBankName = values.bank_name.trim() || activeBank?.bank_name || "";
+  const previewAccountNo = values.account_no.trim() || activeBank?.account_no || "";
+  const previewAccountName = values.account_name.trim() || activeBank?.account_name || "";
+  const hasSavedOrDraftBank = Boolean(
+    (banks && banks.length > 0) ||
+      (values.bank_name.trim() && values.account_no.trim() && values.account_name.trim()),
   );
-
-  return (
-    <main className={styles.main}>
-      <header className={styles.heading}>
-        <h1>Thanh toán</h1>
-        <p>Quản lý tài khoản ngân hàng của cửa hàng.</p>
-      </header>
-      <section className={styles.card}>
-        <h2>Phương thức thanh toán</h2>
-        <p>
-          Lựa chọn tiền mặt/chuyển khoản chưa được lưu hoặc áp dụng. Thêm ngân
-          hàng không tự bật chuyển khoản. Chưa có QR thanh toán ở màn này.
-        </p>
-      </section>
-      {error && (
-        <p className={styles.error} role="alert">
-          {error}
-        </p>
-      )}
-      {notice && (
-        <p className={styles.notice} role="status">
-          {notice}
-        </p>
-      )}
-      <div className={styles.content}>
-        <div className={styles.left}>
-          <section className={styles.card}>
-            <h2>Tài khoản ngân hàng</h2>
-            <button
-              type="button"
-              className={styles.outline}
-              disabled={busy || loading}
-              onClick={() => {
-                void reload();
-              }}
-            >
-              Tải lại danh sách
-            </button>
-            {loading ? (
-              <p>Đang tải ngân hàng…</p>
-            ) : banks === null ? (
-              <p>Chưa tải được danh sách; chưa thể lưu.</p>
-            ) : banks.length === 0 ? (
-              <p>Chưa có tài khoản ngân hàng.</p>
-            ) : (
-              banks.map((bank) => (
-                <article key={bank.id}>
-                  <h3>
-                    {bank.bank_name}
-                    {bank.is_default ? " · Mặc định" : ""}
-                  </h3>
-                  <p>
-                    {bank.account_no} · {bank.account_name}
-                  </p>
-                  <button
-                    type="button"
-                    className={styles.outline}
-                    disabled={busy || loading}
-                    onClick={() => edit(bank)}
-                  >
-                    Sửa tài khoản {bank.bank_name}
-                  </button>
-                </article>
-              ))
-            )}
-          </section>
-          <form onSubmit={save} className={styles.card} noValidate>
-            <h2>
-              {editing ? "Sửa tài khoản ngân hàng" : "Thêm tài khoản ngân hàng"}
-            </h2>
-            <fieldset
-              disabled={busy || loading || banks === null}
-              style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
-            >
-              <div className={styles.bankFields}>
-                <label>
-                  Ngân hàng <b>*</b>
-                  <input
-                    name="bank_name"
-                    value={values.bank_name}
-                    onChange={(event) =>
-                      setValues((value) => ({
-                        ...value,
-                        bank_name: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  Số tài khoản <b>*</b>
-                  <input
-                    name="account_no"
-                    value={values.account_no}
-                    onChange={(event) =>
-                      setValues((value) => ({
-                        ...value,
-                        account_no: event.target.value,
-                      }))
-                    }
-                    autoComplete="off"
-                  />
-                </label>
-                <label>
-                  Tên chủ tài khoản <b>*</b>
-                  <input
-                    name="account_name"
-                    value={values.account_name}
-                    onChange={(event) =>
-                      setValues((value) => ({
-                        ...value,
-                        account_name: event.target.value,
-                      }))
-                    }
-                    autoComplete="off"
-                  />
-                </label>
-                <label className={styles.defaultOption}>
-                  <input
-                    type="checkbox"
-                    checked={values.is_default}
-                    onChange={(event) =>
-                      setValues((value) => ({
-                        ...value,
-                        is_default: event.target.checked,
-                      }))
-                    }
-                  />
-                  Đặt làm mặc định
-                </label>
-              </div>
-              {otherDefault && (
-                <p className={styles.info}>
-                  Đang có tài khoản mặc định khác. Yêu cầu đặt mặc định mới sẽ
-                  bị từ chối an toàn cho đến khi cơ chế chuyển nguyên tử được
-                  xác minh; không tự bỏ mặc định cũ.
-                </p>
-              )}
-              <footer className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.outline}
-                  onClick={() => edit(null)}
-                >
-                  {editing ? "Hủy sửa / Thêm mới" : "Xóa nội dung nhập"}
-                </button>
-                <button type="submit" className={styles.primary}>
-                  {busy
-                    ? "Đang lưu…"
-                    : editing
-                      ? "Lưu tài khoản"
-                      : "Thêm tài khoản"}
-                </button>
-              </footer>
-            </fieldset>
-          </form>
-        </div>
-        <aside className={styles.right}>
-          <section className={styles.card}>
-            <h2>Lưu ý</h2>
-            <p>
-              Có thể không chọn tài khoản mặc định. Bỏ mặc định không tự chọn tài
-              khoản thay thế.
-            </p>
-            <p>
-              Chưa xác minh chủ tài khoản hoặc thực hiện chuyển tiền. Không chia
-              sẻ ảnh/log chứa số tài khoản.
-            </p>
-          </section>
-        </aside>
-      </div>
-    </main>
+  const enabledCount = Number(cashEnabled) + Number(bankEnabled);
+  const configured = enabledCount > 0 && (!bankEnabled || hasSavedOrDraftBank);
+  const transferContent = `SF-01-0001 - ${shopName}`;
+  const previewVietQrUrl = buildSellerPreviewVietQrUrl(
+    previewBankName,
+    previewAccountNo,
+    previewAccountName,
+    45000,
+    transferContent,
   );
-}
-
-export default function SellerPaymentView() {
-  const { data, error, retry } = useSellerAccess();
-
-  if (error) {
-    return (
-      <div className={styles.page}>
-        <StudentHeader variant="seller" />
-        <div className={styles.workspace}>
-          <SellerSidebar active="payments" name="" />
-          <main className={styles.card}>
-            {error}
-            <button onClick={retry}>Thử lại</button>
-          </main>
-        </div>
-      </div>
-    );
-  }
-
-  const name = data?.restaurant?.name || DEMO_SHOP_NAME;
-  const effectivePayment = createInitialSellerPaymentPreview(null);
-  const formKey = data?.restaurant
-    ? `${data.user.id}:${data.restaurant.id}`
-    : "preview";
-
-  return (
-    <div className={styles.page}>
-      <StudentHeader variant="seller" />
-      <div className={styles.workspace}>
-        <SellerSidebar active="payments" name={name} />
-        <PaymentForm
-          key={formKey}
-          initial={effectivePayment}
-          shopName={name}
-          actorId={data?.user.id}
-          restaurantId={data?.restaurant?.id}
-        />
-      </div>
-    </div>
-  );
-}
-
-function PaymentForm({
-  initial,
-  shopName,
-  actorId,
-  restaurantId,
-}: {
-  initial: SellerPaymentPreview;
-  shopName: string;
-  actorId?: string;
-  restaurantId?: string;
-}) {
-  const [values, setValues] = useState(initial);
-  const [savedSnapshot, setSavedSnapshot] = useState(initial);
-  const [defaultTransferText, setDefaultTransferText] = useState(
-    DEFAULT_SELLER_TRANSFER_CONTENT,
-  );
-  const [savedTransferText, setSavedTransferText] = useState(
-    DEFAULT_SELLER_TRANSFER_CONTENT,
-  );
-  const [editingBankId, setEditingBankId] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [guide, setGuide] = useState(false);
-  const [showMobileQrModal, setShowMobileQrModal] = useState(false);
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    mounted.current = true;
-    if (actorId && restaurantId) {
-      void readSellerBanks(actorId, restaurantId)
-        .then((result) => {
-          if (!mounted.current || useAuthStore.getState().user?.id !== actorId)
-            return;
-          const primary =
-            result.banks.find((bank) => bank.is_default) ?? result.banks[0];
-          if (primary) {
-            setEditingBankId(primary.id);
-            setValues((current) => {
-              const next = {
-                ...current,
-                bank_name: primary.bank_name,
-                account_no: primary.account_no,
-                account_name: primary.account_name,
-              };
-              setSavedSnapshot(next);
-              return next;
-            });
-          }
-        })
-        .catch(() => {
-          // Fallback to initial values if reading banks fails
-        });
-    }
-    return () => {
-      mounted.current = false;
-    };
-  }, [actorId, restaurantId]);
-
-  const cash = values.cashEnabledPreview;
-  const transfer = values.bankEnabledPreview;
-
-  // Sample code only; each actual checkout supplies its own server-allocated code.
-  const transferContent = formatPreviewTransferContent(shopName);
-  const bankComplete = Boolean(
-    values.bank_name &&
-      /^\d{6,19}$/.test(values.account_no.trim()) &&
-      values.account_name.trim(),
-  );
-  const enabledCount = Number(cash) + Number(transfer);
-  const configured = !transfer || bankComplete;
-  const bankOptions = [
-    ...new Set([...VIETNAM_BANKS, values.bank_name].filter(Boolean)),
-  ];
-
-  function field<K extends keyof SellerPaymentPreview>(
-    key: K,
-    value: SellerPaymentPreview[K],
-  ) {
-    setValues((current) => ({ ...current, [key]: value }));
-    setError("");
-    setNotice("");
-  }
-
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy) return;
-    const validationError = validateSellerPaymentForm(
-      values,
-      defaultTransferText,
-    );
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-    const cleaned = {
-      ...values,
-      account_no: values.account_no.trim(),
-      account_name: values.account_name.trim().toUpperCase(),
-      branchPreview: values.branchPreview.trim(),
-    };
-
-    if (actorId && restaurantId && transfer && bankComplete) {
-      setBusy(true);
-      try {
-        const savedBank = await saveSellerBank(
-          actorId,
-          restaurantId,
-          editingBankId,
-          {
-            bank_name: cleaned.bank_name,
-            account_no: cleaned.account_no,
-            account_name: cleaned.account_name,
-          },
-        );
-        if (mounted.current) {
-          setEditingBankId(savedBank.bank.id);
-        }
-      } catch (err) {
-        if (mounted.current) {
-          setBusy(false);
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Không thể lưu tài khoản ngân hàng.",
-          );
-        }
-        return;
-      }
-      if (mounted.current) setBusy(false);
-    }
-
-    setSavedSnapshot(cleaned);
-    setValues(cleaned);
-    setSavedTransferText(
-      defaultTransferText.trim() || DEFAULT_SELLER_TRANSFER_CONTENT,
-    );
-    setDefaultTransferText(
-      defaultTransferText.trim() || DEFAULT_SELLER_TRANSFER_CONTENT,
-    );
-    setError("");
-    setNotice(
-      actorId && restaurantId
-        ? "Đã lưu thông tin ngân hàng và cài đặt thanh toán."
-        : "Đã lưu cài đặt trong demo frontend. Chưa ghi DB hoặc xác minh tài khoản ngân hàng.",
-    );
-  }
-
-  function cancel() {
-    setValues(savedSnapshot);
-    setDefaultTransferText(savedTransferText);
-    setError("");
-    setNotice("Đã khôi phục cài đặt được lưu gần nhất trong bản demo.");
-  }
+  const bankOptions = [...new Set([...POPULAR_BANKS, values.bank_name].filter(Boolean))];
 
   const checks = [
     {
-      title: cash ? "Tiền mặt đã được bật" : "Tiền mặt đang tắt",
-      text: cash
-        ? "Phương thức thanh toán tiền mặt đang hoạt động."
-        : "Khách không thể chọn tiền mặt trong cấu hình này.",
-      done: cash,
+      title: "Phương thức thanh toán",
+      text:
+        enabledCount === 2
+          ? "Đã bật Tiền mặt và Chuyển khoản"
+          : cashEnabled
+            ? "Đã bật Tiền mặt khi nhận hàng"
+            : bankEnabled
+              ? "Đã bật Chuyển khoản ngân hàng"
+              : "Chưa bật phương thức nào",
+      done: enabledCount > 0,
     },
     {
-      title: transfer ? "Chuyển khoản đã được bật" : "Chuyển khoản đang tắt",
-      text: transfer
-        ? "Phương thức chuyển khoản đang hoạt động."
-        : "Khách không thể chọn chuyển khoản trong cấu hình này.",
-      done: transfer,
+      title: "Tài khoản ngân hàng",
+      text:
+        banks && banks.length > 0
+          ? `Đã lưu ${banks.length} tài khoản (${(banks.find((b) => b.is_default) ?? banks[0]).bank_name})`
+          : "Chưa lưu tài khoản ngân hàng",
+      done: Boolean(banks && banks.length > 0),
     },
     {
-      title: bankComplete
-        ? "Thông tin ngân hàng đã đầy đủ"
-        : "Thông tin ngân hàng chưa đầy đủ",
-      text: bankComplete
-        ? "Đã cung cấp đầy đủ thông tin tài khoản."
-        : "Bổ sung các trường bắt buộc nếu dùng chuyển khoản.",
-      done: bankComplete,
-    },
-    {
-      title:
-        enabledCount && configured
-          ? "Sẵn sàng nhận thanh toán"
-          : "Chưa sẵn sàng nhận thanh toán",
-      text: "Trạng thái xem trước, chưa áp dụng trên hệ thống.",
-      done: Boolean(enabledCount && configured),
+      title: "Mã QR chuyển khoản",
+      text: hasSavedOrDraftBank
+        ? "Sẵn sàng hiển thị thông tin chuyển khoản cho sinh viên"
+        : "Nhập thông tin ngân hàng để tạo QR",
+      done: hasSavedOrDraftBank,
     },
   ];
 
   return (
     <main className={styles.main}>
-      {/* Phiên bản Desktop giữ nguyên 100% */}
+      {/* Phiên bản Desktop */}
       <div className={styles.desktopView}>
         <header className={styles.heading}>
-          <h1>Thanh toán</h1>
-          <p>
-            Cài đặt phương thức thanh toán và thông tin tài khoản ngân hàng để
-            nhận tiền từ sinh viên.
-          </p>
+          <div>
+            <h1>Thanh toán</h1>
+            <p>Thiết lập phương thức thanh toán và tài khoản nhận tiền cho cửa hàng của bạn.</p>
+          </div>
         </header>
-        <div className={styles.stats}>
+
+        <section className={styles.stats} aria-label="Tóm tắt cấu hình thanh toán">
           <article className={styles.card}>
             <span className={styles.statIcon} data-tone="blue">
-              <Wallet size={29} />
-            </span>
-            <div>
-              <h3>Phương thức đang bật</h3>
-              <strong className={styles.count}>{enabledCount}</strong>
-              <p>Tổng số phương thức thanh toán hiện đang hoạt động</p>
-            </div>
-          </article>
-          <article className={styles.card}>
-            <span className={styles.statIcon} data-tone="green">
-              <CashIcon size={40} />
-            </span>
-            <div>
-              <h3>Tiền mặt</h3>
-              <span className={styles.badge} data-on={cash}>
-                ● {cash ? "Đã bật" : "Đang tắt"}
-              </span>
-              <p>Khách hàng thanh toán khi nhận món.</p>
-            </div>
-          </article>
-          <article className={styles.card}>
-            <span className={styles.statIcon} data-tone="blue">
-              <BankIcon size={40} />
+              <Wallet size={32} />
             </span>
             <div>
               <div className={styles.statTitle}>
-                <h3>Chuyển khoản</h3>
-                <span className={styles.badge} data-on={bankComplete}>
-                  ● {bankComplete ? "Đã cấu hình" : "Chưa cấu hình"}
+                <h3>Phương thức đang bật</h3>
+                <span className={styles.badge} data-on={enabledCount > 0}>
+                  ● {enabledCount > 0 ? "Đang hoạt động" : "Chưa bật"}
+                </span>
+              </div>
+              <strong className={styles.count}>{enabledCount}/2</strong>
+              <p>Tiền mặt và Chuyển khoản ngân hàng</p>
+            </div>
+          </article>
+
+          <article className={styles.card}>
+            <span className={styles.statIcon} data-tone="blue">
+              <BankIcon size={34} />
+            </span>
+            <div>
+              <div className={styles.statTitle}>
+                <h3>Chuyển khoản ngân hàng</h3>
+                <span className={styles.badge} data-on={bankEnabled && hasSavedOrDraftBank}>
+                  ● {bankEnabled ? (hasSavedOrDraftBank ? "Đã cấu hình" : "Chưa có STK") : "Đang tắt"}
                 </span>
               </div>
               <p>
-                {bankComplete
-                  ? "Đã thiết lập thông tin ngân hàng nhận thanh toán."
-                  : "Bổ sung thông tin ngân hàng nhận thanh toán."}
+                {previewBankName && previewAccountNo
+                  ? `${previewBankName} · ${previewAccountNo}`
+                  : "Thêm tài khoản ngân hàng để nhận tiền chuyển khoản từ sinh viên"}
               </p>
             </div>
           </article>
-        </div>
-        {(error || notice) && (
-          <p
-            className={error ? styles.error : styles.notice}
-            role={error ? "alert" : "status"}
-          >
-            {error || notice}
-          </p>
-        )}
-        <form onSubmit={save} className={styles.content} noValidate>
+
+          <article className={styles.card}>
+            <span className={styles.statIcon} data-tone="green">
+              <ShieldCheck size={34} />
+            </span>
+            <div>
+              <div className={styles.statTitle}>
+                <h3>Trạng thái cấu hình</h3>
+                <span className={styles.badge} data-on={configured}>
+                  ● {configured ? "Sẵn sàng nhận tiền" : "Chưa hoàn tất"}
+                </span>
+              </div>
+              <p>
+                {configured
+                  ? "Cửa hàng đã sẵn sàng nhận thanh toán từ đơn hàng của sinh viên"
+                  : "Vui lòng bật phương thức thanh toán và lưu tài khoản ngân hàng"}
+              </p>
+            </div>
+          </article>
+        </section>
+
+        {error && <p className={styles.error} role="alert">{error}</p>}
+        {notice && <p className={styles.notice} role="status">{notice}</p>}
+
+        <div className={styles.content}>
           <div className={styles.left}>
             <section className={styles.card}>
               <h2>Phương thức thanh toán</h2>
               <div className={styles.methods}>
-                {[
-                  {
-                    key: "cashEnabledPreview" as const,
-                    title: "Tiền mặt",
-                    text: "Khách hàng thanh toán khi nhận món.",
-                    enabled: cash,
-                    icon: CashIcon,
-                    tone: "green",
-                  },
-                  {
-                    key: "bankEnabledPreview" as const,
-                    title: "Chuyển khoản",
-                    text: "Khách hàng chuyển khoản trước hoặc theo hướng dẫn của cửa hàng.",
-                    enabled: transfer,
-                    icon: BankIcon,
-                    tone: "blue",
-                  },
-                ].map(({ key, title, text, enabled, icon: Icon, tone }) => (
-                  <article
-                    key={key}
-                    className={styles.method}
-                    data-enabled={enabled}
-                  >
-                    <span className={styles.methodIcon} data-tone={tone}>
-                      <Icon size={43} />
+                <article className={styles.method} data-enabled={cashEnabled}>
+                  <span className={styles.methodIcon} data-tone="green">
+                    <CashIcon size={38} />
+                  </span>
+                  <div>
+                    <h3>Tiền mặt khi nhận hàng</h3>
+                    <p>Sinh viên thanh toán trực tiếp bằng tiền mặt khi nhận đồ ăn.</p>
+                    <span className={styles.badge} data-on={cashEnabled}>
+                      ● {cashEnabled ? "Đang bật" : "Đang tắt"}
                     </span>
-                    <div>
-                      <h3>{title}</h3>
-                      <p>{text}</p>
-                      <span className={styles.badge} data-on={enabled}>
-                        ● {enabled ? "Đang bật" : "Đang tắt"}
-                      </span>
-                    </div>
-                    <label className={styles.switch}>
-                      <input
-                        type="checkbox"
-                        role="switch"
-                        aria-label={`Bật ${title}`}
-                        checked={enabled}
-                        onChange={(event) => field(key, event.target.checked)}
-                      />
-                    </label>
-                  </article>
-                ))}
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={cashEnabled}
+                    aria-label="Bật Tiền mặt khi nhận hàng"
+                    onClick={toggleCashMethod}
+                    style={{
+                      position: "absolute",
+                      right: 16,
+                      top: 18,
+                      width: 42,
+                      height: 24,
+                      borderRadius: 20,
+                      border: 0,
+                      padding: 3,
+                      background: cashEnabled ? "linear-gradient(110deg,#ff8b23,#ff5721)" : "#b9c4d2",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: cashEnabled ? "flex-end" : "flex-start",
+                    }}
+                  >
+                    <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", display: "block" }} />
+                  </button>
+                </article>
+
+                <article className={styles.method} data-enabled={bankEnabled}>
+                  <span className={styles.methodIcon} data-tone="blue">
+                    <BankIcon size={38} />
+                  </span>
+                  <div>
+                    <h3>Chuyển khoản ngân hàng</h3>
+                    <p>Sinh viên chuyển khoản qua mã QR hoặc số tài khoản ngân hàng của quán.</p>
+                    <span className={styles.badge} data-on={bankEnabled}>
+                      ● {bankEnabled ? "Đang bật" : "Đang tắt"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={bankEnabled}
+                    aria-label="Bật Chuyển khoản ngân hàng"
+                    onClick={toggleBankMethod}
+                    style={{
+                      position: "absolute",
+                      right: 16,
+                      top: 18,
+                      width: 42,
+                      height: 24,
+                      borderRadius: 20,
+                      border: 0,
+                      padding: 3,
+                      background: bankEnabled ? "linear-gradient(110deg,#ff8b23,#ff5721)" : "#b9c4d2",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: bankEnabled ? "flex-end" : "flex-start",
+                    }}
+                  >
+                    <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", display: "block" }} />
+                  </button>
+                </article>
               </div>
               <p className={styles.info}>
                 <Info size={17} />
-                Bạn có thể bật một hoặc cả hai phương thức thanh toán tùy theo
-                nhu cầu kinh doanh của cửa hàng.
+                Bạn có thể bật một hoặc cả hai phương thức thanh toán tùy theo nhu cầu kinh doanh của cửa hàng.
               </p>
             </section>
+
             <div className={styles.bankColumns}>
-              <section className={styles.card}>
-                <h2>Thông tin chuyển khoản</h2>
+              <form onSubmit={save} className={styles.card} noValidate>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 6 }}>
+                  <h2 style={{ margin: 0 }}>{editing ? "Sửa tài khoản ngân hàng" : "Thông tin chuyển khoản"}</h2>
+                  <button
+                    type="button"
+                    className={styles.outline}
+                    style={{ height: 36, padding: "6px 14px", fontSize: 13 }}
+                    disabled={busy || loading}
+                    onClick={() => { void reload(); }}
+                  >
+                    Tải lại danh sách
+                  </button>
+                </div>
                 <p className={styles.subtitle}>
-                  Thông tin này sẽ được sử dụng để tạo mã QR chuyển khoản cho
-                  sinh viên.
+                  Thông tin này được lưu vào cơ sở dữ liệu để hiển thị cho sinh viên khi chuyển khoản.
                 </p>
-                <div className={styles.bankFields}>
-                  <label>
-                    Ngân hàng <b>*</b>
-                    <div className={styles.bankSelect}>
-                      <ShieldCheck size={23} aria-hidden="true" />
-                      <select
-                        value={values.bank_name}
-                        onChange={(event) =>
-                          field("bank_name", event.target.value)
-                        }
-                      >
-                        <option value="">Chọn ngân hàng</option>
-                        {bankOptions.map((name) => (
-                          <option key={name} value={name}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
+
+                <div style={{ marginBottom: 12 }}>
+                  {loading ? (
+                    <p style={{ margin: "4px 0" }}>Đang tải ngân hàng…</p>
+                  ) : banks === null ? (
+                    <p style={{ margin: "4px 0" }}>Chưa tải được danh sách; chưa thể lưu.</p>
+                  ) : banks.length === 0 ? (
+                    <p style={{ margin: "4px 0", fontSize: 14 }}>Chưa có tài khoản ngân hàng nào được lưu. Hãy chọn ngân hàng và thêm tài khoản bên dưới.</p>
+                  ) : (
+                    <div style={{ display: "grid", gap: 8, maxHeight: 120, overflowY: "auto" }}>
+                      {banks.map((bank) => (
+                        <article
+                          key={bank.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: 12,
+                            padding: "9px 14px",
+                            borderRadius: 10,
+                            border: editing?.id === bank.id ? "1.5px solid #ff642e" : "1px solid #e2e7ef",
+                            background: bank.is_default ? "#f2fcf8" : "#f8f9fb",
+                          }}
+                        >
+                          <div>
+                            <h3>{bank.bank_name}{bank.is_default ? " · Mặc định" : ""}</h3>
+                            <p style={{ margin: "2px 0 0", fontSize: 13.5 }}>{bank.account_no} · {bank.account_name}</p>
+                          </div>
+                          <button
+                            type="button"
+                            className={styles.outline}
+                            style={{ height: 36, padding: "6px 14px", fontSize: 13 }}
+                            disabled={busy || loading}
+                            onClick={() => edit(bank)}
+                          >
+                            Sửa tài khoản {bank.bank_name}
+                          </button>
+                        </article>
+                      ))}
                     </div>
-                  </label>
-                  <label>
-                    Số tài khoản <b>*</b>
-                    <input
-                      inputMode="numeric"
-                      maxLength={19}
-                      value={values.account_no}
-                      onChange={(event) =>
-                        field("account_no", event.target.value)
-                      }
-                      autoComplete="off"
-                    />
-                  </label>
-                  <label>
-                    Tên chủ tài khoản <b>*</b>
-                    <input
-                      maxLength={100}
-                      value={values.account_name}
-                      onChange={(event) =>
-                        field("account_name", event.target.value)
-                      }
-                      autoComplete="off"
-                    />
-                  </label>
-                  <label>
-                    Chi nhánh <span>(tùy chọn)</span>
-                    <input
-                      maxLength={120}
-                      value={values.branchPreview}
-                      onChange={(event) =>
-                        field("branchPreview", event.target.value)
-                      }
-                    />
-                  </label>
-                  <div className={styles.full}>
+                  )}
+                </div>
+
+                <fieldset disabled={busy || loading || banks === null} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+                  <div className={styles.bankFields}>
                     <label>
-                      Nội dung chuyển khoản mặc định
+                      Ngân hàng <b>*</b>
+                      <div className={styles.bankSelect}>
+                        <ShieldCheck size={22} aria-hidden="true" />
+                        <select
+                          name="bank_name"
+                          value={values.bank_name}
+                          onChange={(event) => setValues((value) => ({ ...value, bank_name: event.target.value }))}
+                        >
+                          <option value="">Chọn ngân hàng</option>
+                          {bankOptions.map((bankOption) => (
+                            <option key={bankOption} value={bankOption}>
+                              {bankOption}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </label>
+
+                    <label>
+                      Số tài khoản <b>*</b>
                       <input
-                        readOnly
-                        value={transferContent}
-                        aria-label="Nội dung chuyển khoản mặc định"
+                        name="account_no"
+                        placeholder="Nhập số tài khoản nhận tiền"
+                        value={values.account_no}
+                        onChange={(event) => setValues((value) => ({ ...value, account_no: event.target.value }))}
+                        autoComplete="off"
                       />
                     </label>
-                    <small>
-                      Nội dung được tạo tự động từ mã đơn và tên quán, thay đổi
-                      theo từng đơn hàng.
-                    </small>
+
+                    <label>
+                      Tên chủ tài khoản <b>*</b>
+                      <input
+                        name="account_name"
+                        placeholder="VD: NGUYEN VAN A"
+                        value={values.account_name}
+                        onChange={(event) => setValues((value) => ({ ...value, account_name: event.target.value }))}
+                        autoComplete="off"
+                      />
+                    </label>
+
+                    <label className={`${styles.defaultOption} ${styles.full}`}>
+                      <input
+                        type="checkbox"
+                        checked={values.is_default}
+                        onChange={(event) => setValues((value) => ({ ...value, is_default: event.target.checked }))}
+                      />
+                      Đặt làm tài khoản nhận tiền mặc định của quán
+                    </label>
                   </div>
-                </div>
-              </section>
+
+                  {otherDefault && (
+                    <p className={styles.info}>
+                      <Info size={16} />
+                      Đang có tài khoản mặc định khác. Yêu cầu đặt mặc định mới sẽ bị từ chối an toàn cho đến khi cơ chế chuyển nguyên tử được xác minh; không tự bỏ mặc định cũ.
+                    </p>
+                  )}
+
+                  <footer className={styles.actions}>
+                    <button type="button" className={styles.outline} onClick={() => edit(null)}>
+                      {editing ? "Hủy sửa / Thêm mới" : "Xóa nội dung nhập"}
+                    </button>
+                    <button type="submit" className={styles.primary}>
+                      {busy ? "Đang lưu…" : editing ? "Lưu tài khoản" : "Thêm tài khoản"}
+                    </button>
+                  </footer>
+                </fieldset>
+              </form>
+
               <section className={`${styles.card} ${styles.qrCard}`}>
                 <h3>Xem trước QR thanh toán</h3>
                 <div className={styles.qrPreview}>
                   <strong className={styles.qrBrand}>
-                    <span>Viet</span>QR <small>DEMO</small>
+                    <span>Viet</span>QR <small>PREVIEW</small>
                   </strong>
-                  <div
-                    className={styles.qrImage}
-                    role="img"
-                    aria-label="Hình minh họa QR, không dùng để thanh toán"
-                  >
-                    <PaymentQrIllustration />
+                  <div className={styles.qrImage} role="img" aria-label="Hình minh họa QR thanh toán">
+                    <PaymentQrIllustration qrUrl={previewVietQrUrl} />
                   </div>
                   <strong>{shopName}</strong>
-                  <span>{values.bank_name || "Chưa chọn ngân hàng"}</span>
-                  <span>{values.account_no || "Chưa có số tài khoản"}</span>
-                  <span>
-                    {values.account_name || "Chưa có tên chủ tài khoản"}
-                  </span>
+                  <span>{previewBankName || "Chưa chọn ngân hàng"}</span>
+                  <span>{previewAccountNo || "Chưa có số tài khoản"}</span>
+                  <span>{previewAccountName || "Chưa có tên chủ tài khoản"}</span>
                   <strong className={styles.amount}>45.000đ</strong>
                   <small>Nội dung: {transferContent}</small>
-                  <small>(Mã đơn và số tiền mẫu, không phải đơn hàng thật)</small>
+                  <small>(Mã đơn và số tiền mẫu minh họa)</small>
                 </div>
                 <p className={styles.info}>
                   <Info size={16} />
-                  QR thật sẽ được tạo theo từng đơn khi nối API.
+                  Thông tin ngân hàng đã lưu sẽ hiển thị cho sinh viên khi chọn thanh toán chuyển khoản.
                 </p>
               </section>
             </div>
           </div>
+
           <aside className={styles.right}>
             <section className={styles.card}>
               <h2>Trạng thái cấu hình</h2>
@@ -1029,7 +882,7 @@ function PaymentForm({
                 {checks.map((entry) => (
                   <article key={entry.title}>
                     <span data-done={entry.done}>
-                      {entry.done ? <Check size={23} /> : <Info size={23} />}
+                      {entry.done ? <Check size={22} /> : <Info size={22} />}
                     </span>
                     <div>
                       <h3>{entry.title}</h3>
@@ -1039,26 +892,20 @@ function PaymentForm({
                 ))}
               </div>
             </section>
+
             <section className={styles.card}>
               <div className={styles.supportHeading}>
                 <span>
-                  <Headphones size={31} />
+                  <Headphones size={28} />
                 </span>
                 <div>
                   <h2>Cần hỗ trợ?</h2>
-                  <p>
-                    Đội ngũ StudentFood luôn sẵn sàng hỗ trợ bạn trong quá trình
-                    cài đặt thanh toán.
-                  </p>
+                  <p>Đội ngũ StudentFood luôn sẵn sàng hỗ trợ bạn trong quá trình cài đặt thanh toán.</p>
                 </div>
               </div>
               <div className={styles.supportActions}>
-                <button
-                  type="button"
-                  className={styles.outline}
-                  onClick={() => setGuide(true)}
-                >
-                  <FileText size={18} />
+                <button type="button" className={styles.outline} onClick={() => setGuide(true)}>
+                  <FileText size={17} />
                   Xem hướng dẫn
                 </button>
                 <button
@@ -1066,50 +913,31 @@ function PaymentForm({
                   className={styles.outline}
                   onClick={() => {
                     setError("");
-                    setNotice(
-                      "Kênh liên hệ hỗ trợ chưa được cấu hình trong bản demo.",
-                    );
+                    setNotice("Hãy chọn ngân hàng, nhập số tài khoản và tên chủ tài khoản trước khi bấm lưu.");
                   }}
                 >
-                  <MessageCircle size={18} />
+                  <MessageCircle size={17} />
                   Liên hệ hỗ trợ
                 </button>
               </div>
             </section>
-            <footer className={styles.actions}>
-              <button type="button" className={styles.outline} onClick={cancel}>
-                Hủy thay đổi
-              </button>
-              <button type="submit" className={styles.primary} disabled={busy}>
-                Lưu thay đổi
-              </button>
-            </footer>
           </aside>
-        </form>
+        </div>
+
         {guide && (
-          <section
-            className={styles.guide}
-            aria-label="Hướng dẫn cài đặt thanh toán"
-          >
-            <button
-              type="button"
-              onClick={() => setGuide(false)}
-              aria-label="Đóng hướng dẫn"
-            >
+          <section className={styles.guide} aria-label="Hướng dẫn cài đặt thanh toán">
+            <button type="button" onClick={() => setGuide(false)} aria-label="Đóng hướng dẫn">
               <X size={18} />
             </button>
             <h3>Hướng dẫn cài đặt</h3>
             <p>
-              Bật ít nhất một phương thức. Nếu bật chuyển khoản, nhập ngân hàng,
-              số tài khoản và tên chủ tài khoản, rồi bấm Lưu thay đổi. Nội dung
-              chuyển khoản tự tạo theo từng đơn. Hủy thay đổi khôi phục lần lưu
-              gần nhất.
+              Chọn ngân hàng từ danh sách cuộn xuống, điền chính xác số tài khoản và tên chủ tài khoản (viết hoa không dấu), sau đó bấm Thêm tài khoản / Lưu tài khoản. Bạn có thể bấm vào nút &ldquo;Sửa tài khoản&rdquo; trên từng dòng để cập nhật lại thông tin bất kỳ lúc nào.
             </p>
           </section>
         )}
       </div>
 
-      {/* Phiên bản Mobile trùng khớp 100% với ảnh mẫu */}
+      {/* Phiên bản Mobile */}
       <div className={styles.mobileView} data-testid="seller-payment-mobile">
         <header className={styles.mobileTopBar}>
           <Link
@@ -1123,12 +951,7 @@ function PaymentForm({
           <span className={styles.mobileTopSpacer} aria-hidden="true" />
         </header>
 
-        <form
-          onSubmit={save}
-          className={styles.mobileForm}
-          noValidate
-          data-testid="seller-payment-mobile-form"
-        >
+        <div className={styles.mobileForm} data-testid="seller-payment-mobile-form">
           <p className={styles.mobileIntro}>
             Cài đặt phương thức nhận tiền của cửa hàng.
           </p>
@@ -1177,17 +1000,26 @@ function PaymentForm({
                   <strong>Tiền mặt</strong>
                   <span>Khách thanh toán khi nhận món.</span>
                 </div>
-                <label className={styles.mobileSwitch}>
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    aria-label="Bật Tiền mặt"
-                    checked={cash}
-                    onChange={(event) =>
-                      field("cashEnabledPreview", event.target.checked)
-                    }
-                  />
-                </label>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={cashEnabled}
+                  aria-label="Bật Tiền mặt"
+                  onClick={toggleCashMethod}
+                  style={{
+                    width: 48,
+                    height: 28,
+                    borderRadius: 999,
+                    border: 0,
+                    padding: 3,
+                    background: cashEnabled ? "#149a4f" : "#c5d0de",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: cashEnabled ? "flex-end" : "flex-start",
+                  }}
+                >
+                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#fff", display: "block" }} />
+                </button>
               </div>
 
               <div className={styles.mobileMethodRow}>
@@ -1202,17 +1034,26 @@ function PaymentForm({
                   <strong>Chuyển khoản</strong>
                   <span>Nhận tiền qua tài khoản ngân hàng.</span>
                 </div>
-                <label className={styles.mobileSwitch}>
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    aria-label="Bật Chuyển khoản"
-                    checked={transfer}
-                    onChange={(event) =>
-                      field("bankEnabledPreview", event.target.checked)
-                    }
-                  />
-                </label>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={bankEnabled}
+                  aria-label="Bật Chuyển khoản"
+                  onClick={toggleBankMethod}
+                  style={{
+                    width: 48,
+                    height: 28,
+                    borderRadius: 999,
+                    border: 0,
+                    padding: 3,
+                    background: bankEnabled ? "#149a4f" : "#c5d0de",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: bankEnabled ? "flex-end" : "flex-start",
+                  }}
+                >
+                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#fff", display: "block" }} />
+                </button>
               </div>
             </div>
 
@@ -1234,110 +1075,10 @@ function PaymentForm({
               Thông tin ngân hàng
             </h2>
             <p className={styles.mobileCardSubtitle}>
-              Dùng để tạo mã QR thanh toán cho từng đơn.
+              {previewBankName && previewAccountNo
+                ? `${previewBankName} · ${previewAccountNo} (${previewAccountName})`
+                : "Nhập thông tin ngân hàng ở khung phía trên để lưu."}
             </p>
-
-            <div className={styles.mobileFieldStack}>
-              <label className={styles.mobileFieldLabel}>
-                <span className={styles.mobileLabelText}>
-                  Ngân hàng <b>*</b>
-                </span>
-                <div className={styles.mobileSelectWrap}>
-                  <span className={styles.mobileBankEmblem} aria-hidden="true">
-                    <BankShieldEmblem />
-                  </span>
-                  <select
-                    aria-label="Ngân hàng"
-                    value={values.bank_name}
-                    onChange={(event) =>
-                      field("bank_name", event.target.value)
-                    }
-                    className={styles.mobileSelect}
-                  >
-                    {bankOptions.map((bank) => (
-                      <option key={bank} value={bank}>
-                        {bank}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={18}
-                    strokeWidth={2.2}
-                    className={styles.mobileSelectChevron}
-                    aria-hidden="true"
-                  />
-                </div>
-              </label>
-
-              <label className={styles.mobileFieldLabel}>
-                <span className={styles.mobileLabelText}>
-                  Số tài khoản <b>*</b>
-                </span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={19}
-                  value={values.account_no}
-                  onChange={(event) => field("account_no", event.target.value)}
-                  autoComplete="off"
-                  className={styles.mobileInput}
-                />
-              </label>
-
-              <label className={styles.mobileFieldLabel}>
-                <span className={styles.mobileLabelText}>
-                  Tên chủ tài khoản <b>*</b>
-                </span>
-                <input
-                  type="text"
-                  maxLength={100}
-                  value={values.account_name}
-                  onChange={(event) =>
-                    field("account_name", event.target.value)
-                  }
-                  autoComplete="off"
-                  className={styles.mobileInput}
-                />
-              </label>
-
-              <label className={styles.mobileFieldLabel}>
-                <span className={styles.mobileLabelText}>
-                  Chi nhánh{" "}
-                  <span className={styles.mobileOptionalTag}>
-                    (không bắt buộc)
-                  </span>
-                </span>
-                <input
-                  type="text"
-                  maxLength={120}
-                  value={values.branchPreview}
-                  onChange={(event) =>
-                    field("branchPreview", event.target.value)
-                  }
-                  className={styles.mobileInput}
-                />
-              </label>
-
-              <label className={styles.mobileFieldLabel}>
-                <span className={styles.mobileLabelText}>
-                  Nội dung chuyển khoản mặc định <b>*</b>
-                </span>
-                <input
-                  type="text"
-                  maxLength={140}
-                  value={defaultTransferText}
-                  onChange={(event) => {
-                    setDefaultTransferText(event.target.value);
-                    setError("");
-                    setNotice("");
-                  }}
-                  className={styles.mobileInput}
-                />
-                <small className={styles.mobileFieldHint}>
-                  Nội dung chuyển khoản có thể thay đổi theo từng đơn.
-                </small>
-              </label>
-            </div>
           </section>
 
           {/* Card 3: Xem trước mã QR */}
@@ -1371,30 +1112,7 @@ function PaymentForm({
             <FilledInfoIcon size={18} />
             <span>Hướng dẫn thiết lập thanh toán</span>
           </button>
-
-          {/* Thanh nút hành động cố định dưới cùng */}
-          <footer
-            className={styles.mobileBottomBar}
-            data-testid="seller-payment-mobile-actions"
-          >
-            <div className={styles.mobileBottomInner}>
-              <button
-                type="button"
-                className={styles.mobileCancelBtn}
-                onClick={cancel}
-              >
-                Hủy thay đổi
-              </button>
-              <button
-                type="submit"
-                className={styles.mobileSaveBtn}
-                disabled={busy}
-              >
-                Lưu thay đổi
-              </button>
-            </div>
-          </footer>
-        </form>
+        </div>
 
         {/* Modal Xem trước mã QR trên Mobile */}
         {showMobileQrModal && (
@@ -1421,63 +1139,22 @@ function PaymentForm({
               </div>
               <div className={styles.qrPreview}>
                 <strong className={styles.qrBrand}>
-                  <span>Viet</span>QR <small>DEMO</small>
+                  <span>Viet</span>QR <small>PREVIEW</small>
                 </strong>
                 <div
                   className={styles.qrImage}
                   role="img"
-                  aria-label="Hình minh họa QR, không dùng để thanh toán"
+                  aria-label="Hình minh họa QR thanh toán"
                 >
-                  <PaymentQrIllustration />
+                  <PaymentQrIllustration qrUrl={previewVietQrUrl} />
                 </div>
                 <strong>{shopName}</strong>
-                <span>{values.bank_name || "Chưa chọn ngân hàng"}</span>
-                <span>{values.account_no || "Chưa có số tài khoản"}</span>
-                <span>
-                  {values.account_name || "Chưa có tên chủ tài khoản"}
-                </span>
+                <span>{previewBankName || "Chưa chọn ngân hàng"}</span>
+                <span>{previewAccountNo || "Chưa có số tài khoản"}</span>
+                <span>{previewAccountName || "Chưa có tên chủ tài khoản"}</span>
                 <strong className={styles.amount}>45.000đ</strong>
-                <small>
-                  Nội dung:{" "}
-                  {defaultTransferText.trim() ||
-                    DEFAULT_SELLER_TRANSFER_CONTENT}
-                </small>
+                <small>Nội dung: {transferContent}</small>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Hướng dẫn thiết lập thanh toán trên Mobile */}
-        {guide && (
-          <div
-            className={styles.mobileModalBackdrop}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="mobile-payment-guide-title"
-            onClick={() => setGuide(false)}
-          >
-            <div
-              className={styles.mobileModalCard}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className={styles.mobileModalHeader}>
-                <h3 id="mobile-payment-guide-title">
-                  Hướng dẫn thiết lập thanh toán
-                </h3>
-                <button
-                  type="button"
-                  aria-label="Đóng hướng dẫn"
-                  onClick={() => setGuide(false)}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <p className={styles.mobileModalBody}>
-                Bật ít nhất một phương thức thanh toán. Nếu bật chuyển khoản,
-                hãy chọn ngân hàng, nhập số tài khoản, tên chủ tài khoản và nội
-                dung chuyển khoản mặc định, sau đó bấm Lưu thay đổi để tạo mã
-                QR thanh toán tự động cho người mua.
-              </p>
             </div>
           </div>
         )}

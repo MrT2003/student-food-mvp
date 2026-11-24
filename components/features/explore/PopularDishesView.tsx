@@ -18,6 +18,7 @@ import {
   Tag,
   Utensils,
 } from "lucide-react";
+import { CATEGORY_EMOJI, MASTER_CATEGORIES } from "@/lib/categories";
 import type { PopularDishCard } from "@/lib/explore/popular-data";
 import styles from "@/styles/popular-dishes.module.css";
 import {
@@ -32,14 +33,6 @@ const foodIcons = {
   snack: Drumstick,
   bread: Sandwich,
 };
-
-const filters = [
-  { label: "Cơm", icon: CookingPot },
-  { label: "Trà sữa", icon: CupSoda },
-  { label: "Ăn vặt", icon: Drumstick },
-  { label: "Món Việt", icon: Soup },
-  { label: "Món Hàn", icon: Flame },
-];
 
 type SortBy = "popular" | "price-asc" | "price-desc" | "name";
 
@@ -130,14 +123,14 @@ export default function PopularDishesView({
           Tất cả
         </button>
 
-        {filters.map(({ label, icon: Icon }) => (
+        {MASTER_CATEGORIES.map((label) => (
           <button
             key={label}
             type="button"
             aria-pressed={category === label}
             onClick={() => setCategory(category === label ? null : label)}
           >
-            <Icon size={20} aria-hidden="true" />
+            <span aria-hidden="true">{CATEGORY_EMOJI[label]}</span>
             {label}
           </button>
         ))}

@@ -107,5 +107,63 @@ export const OrderServices = {
 			// Làm mờ nhưng vẫn cho click xem lịch sử; giá null không được hiển thị thành 0đ.
 			return { ...item, isDimmed: notices.length > 0, notices };
 		});
-	}
+	},
+
+	async cancelOrder(orderId: string): Promise<void> {
+		const trimmed = orderId?.trim();
+		if (!trimmed) {
+			throw new Error("Mã đơn hàng không hợp lệ.");
+		}
+		const client = createClient();
+		const { data: { user }, error: authError } = await client.auth.getUser();
+		if (authError || !user) {
+			throw new Error("Vui lòng đăng nhập lại để hủy đơn hàng.");
+		}
+		await assertPurchaseAccess(client);
+
+		if (typeof window !== "undefined" && typeof fetch === "function") {
+			let response: Response;
+			let payload: { success?: boolean; order_status?: string; code?: string; error?: string } | null = null;
+			try {
+				response = await fetch(`/api/orders/${encodeURIComponent(trimmed)}/cancel`, {
+					method: "POST",
+					credentials: "same-origin",
+				});
+				payload = await response.json().catch(() => null);
+			} catch {
+				throw new Error("Chưa xác định được kết quả hủy đơn. Vui lòng tải lại trạng thái trước khi thử lại.");
+			}
+
+			if (response.ok && payload?.success === true && payload.order_status === "cancelled") {
+				return;
+			}
+
+			if (payload?.code !== "CANCEL_RPC_MISSING") {
+				throw new Error(payload?.error || "Không thể hủy đơn hàng lúc này. Vui lòng thử lại.");
+			}
+		}
+
+		let { error } = await client.rpc("cancel_pending_order", {
+			p_order_id: trimmed,
+		});
+		if (error && (error.code === "PGRST202" || error.code === "42883")) {
+			const fallback = await client.rpc("cancel_order", {
+				p_order_id: trimmed,
+			});
+			error = fallback.error;
+		}
+		if (error) {
+			const msg = error.message || "";
+			if (msg.includes("ORDER_NOT_FOUND")) {
+				throw new Error("Không tìm thấy đơn hàng.");
+			}
+			if (msg.includes("ORDER_INVALID_STATUS") || msg.includes("CANNOT_CANCEL") || msg.includes("NOT_PENDING")) {
+				throw new Error("Đơn hàng đã được cửa hàng xác nhận hoặc không còn ở trạng thái chờ xác nhận.");
+			}
+			if (msg.includes("NOT_ALLOWED") || msg.includes("UNAUTHORIZED") || error.code === "42501") {
+				throw new Error("Bạn không có quyền hủy đơn hàng này.");
+			}
+			throw new Error("Không thể hủy đơn hàng lúc này. Vui lòng thử lại.");
+		}
+	},
 }

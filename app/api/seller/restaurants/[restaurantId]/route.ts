@@ -12,11 +12,12 @@ const updateErrors = {
   RESTAURANT_NOT_FOUND: { status: 404, message: "Không tìm thấy cửa hàng." },
   UNAUTHORIZED: { status: 401, message: "Vui lòng đăng nhập lại." },
   DATABASE_ACCESS_DENIED: { status: 403, message: "Không có quyền cập nhật cửa hàng." },
+  CONTACT_PHONE_UNAVAILABLE: { status: 503, message: "DB chưa sẵn sàng cho số liên hệ quán. Cần xác minh cột contact_phone và triển khai SQL đã review." },
   UPDATE_FAILED: { status: 500, message: "Không thể cập nhật cửa hàng. Vui lòng thử lại." },
 } as const;
 
-function failure(code: string, message: string, status: number) {
-  return NextResponse.json({ error: { code, message } }, { status, headers: { "Cache-Control": "no-store" } });
+function failure(code: string, message: string, status: number, field?: string) {
+  return NextResponse.json({ error: { code, message, ...(field ? { field } : {}) } }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ restaurantId: string }> }) {
@@ -38,7 +39,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
     const result = await SellerServices.updateRestaurant(data.user.id, restaurantId, input, supabase);
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    if (error instanceof SellerValidationError) return failure("VALIDATION_ERROR", error.message, 400);
+    if (error instanceof SellerValidationError) return failure("VALIDATION_ERROR", error.message, 400, error.field);
     if (error instanceof SellerRestaurantUpdateError) {
       const detail = updateErrors[error.code];
       return failure(error.code, detail.message, detail.status);

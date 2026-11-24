@@ -1,10 +1,24 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { load, userId, restaurantId, bankId, other } from "./seller-sdk-fixture.mjs";
+import { fixture, load, userId, restaurantId, bankId, other } from "./seller-sdk-fixture.mjs";
 const plain=value=>JSON.parse(JSON.stringify(value));
 const schedule=load("../lib/seller/schedule-client.ts");
 const shop={id:restaurantId,name:"QUAN TEST",description:"TEST ONLY",location:"KTX TEST",slug:"stable-slug",status:"inactive",operating_status:"closed",avatar_url:null,operating_hours:null};
 const bank={id:bankId,restaurant_id:restaurantId,bank_name:"TEST BANK",account_no:"000123",account_name:"TEST ONLY",is_default:false};
+
+test('restaurant upload validates file type and size before any network call',async()=>{
+ const {CloudinaryService}=load('../services/cloudinary.service.ts');
+ for(const file of [{type:'text/plain',size:10},{type:'image/png',size:5*1024*1024+1}]){
+  await assert.rejects(CloudinaryService.uploadImage(file));
+ }
+ for(const type of ['image/jpeg','image/png','image/webp'])assert.equal(CloudinaryService.validateImageFile({type,size:1024}),null);
+});
+
+test('avatar save requires persisted URL acknowledgment before invalidating access',async()=>{
+ const h=helper();
+ await assert.rejects(h.updateSellerRestaurant(userId,restaurantId,{avatar_url:'https://example.invalid/new.png'}),/Chưa xác nhận được ảnh/);
+ assert.equal(h.invalidations(),0);
+});
 
 function helper(options={}) {
  let actor={id:userId,role:"seller",status:"active"}, invalidations=0;const calls=[];
@@ -43,7 +57,7 @@ test("schedule decodes version1 only, distinguishes later/unknown, preserves day
  assert.throws(()=>schedule.shopSchedulePayload("same",parsed.days,"15:00","10:00"));assert.throws(()=>schedule.shopSchedulePayload("daily",schedule.readShopSchedule(null).days,"10:00","14:00"));
 });
 
-function harness(file,exportName,mocks={}) {
+function harness(file,exportName,mocks={},globals={}) {
  let stateCursor=0,refCursor=0,effectCursor=0,memoCursor=0,props;const states=[],refs=[],effects=[],memos=[];
  const changed=(a,b)=>!a||a.length!==b?.length||a.some((v,i)=>v!==b[i]);
  const jsx=(type,props,key)=>({type,props,key});
@@ -57,8 +71,8 @@ function harness(file,exportName,mocks={}) {
   "./StaffRecruitment":{default:"StaffRecruitment"},"./SellerSidebar":{default:"SellerSidebar"},"@/components/layout/StudentHeader":{default:"StudentHeader"},
   "./SellerAccessProvider":{useSellerAccess:()=>({data:{user:{id:userId},restaurant:shop}})},
   "@/store/useAuthStore":{useAuthStore:{getState:()=>({user:{id:userId}})}},
-  "@/lib/seller/management-client":{},"@/lib/seller/schedule-client":schedule,"@/services/cloudinary.service":{CloudinaryService:{uploadImage:async()=>({secureUrl:"https://example.invalid/test.png"})}},
-  "@/styles/seller-shop.module.css":{default:{}},"@/styles/seller-menu.module.css":{default:{}},"@/styles/seller-payments.module.css":{default:{}},...mocks});
+  "@/lib/seller/open-client":{},"@/lib/seller/management-client":{},"@/lib/seller/schedule-client":schedule,"@/services/cloudinary.service":{CloudinaryService:{uploadImage:async()=>({secureUrl:"https://example.invalid/test.png"})}},
+  "@/styles/seller-shop.module.css":{default:{}},"@/styles/seller-menu.module.css":{default:{}},"@/styles/seller-payments.module.css":{default:{}},...mocks},globals);
  const Component=exports[exportName];
  const render=(next=props)=>{props=next;stateCursor=refCursor=effectCursor=memoCursor=0;return Component(props);};
  const nodes=n=>!n||typeof n!=="object"?[]:[n,...[n.props?.children].flat(Infinity).flatMap(nodes)];
@@ -112,4 +126,104 @@ test("bank form prevents duplicate submissions and ignores completion after unmo
  let done;const ui=paymentUI({write:()=>new Promise(resolve=>{done=resolve;})});await tick();let tree=ui.render();ui.nodes(tree).find(n=>n.type==="button"&&String(n.props.children).startsWith("Sửa tài khoản")).props.onClick();tree=ui.render();
  ui.nodes(tree).find(n=>n.props?.name==="account_name").props.onChange({target:{value:"NEW"}});const submit=ui.nodes(ui.render()).find(n=>n.type==="form").props.onSubmit;
  const pending=submit(event);await submit(event);assert.equal(ui.calls.length,1);ui.unmount();done({bank});await pending;assert.ok(!ui.nodes(ui.render()).some(n=>n.props?.role==="status"));
+});
+
+test('shop saves uploaded avatar, preserves it on text-only save and supports explicit removal',async()=>{
+ const ui=shopUI(async(a,id,patch)=>({restaurant:{...shop,...patch}}));
+ const file=ui.nodes(ui.render()).find(n=>n.type==='input'&&n.props.type==='file');await file.props.onChange({target:{files:[{}],value:'x'}});await tick();
+ await ui.nodes(ui.render()).find(n=>n.type==='form').props.onSubmit(event);assert.equal(ui.calls[0][2].avatar_url,'https://example.invalid/test.png');
+ ui.nodes(ui.render()).find(n=>n.type==='input'&&n.props.value===shop.name).props.onChange({target:{value:'NEW'}});
+ await ui.nodes(ui.render()).find(n=>n.type==='form').props.onSubmit(event);assert.deepEqual(plain(ui.calls[1][2]),{name:'NEW'});
+ ui.nodes(ui.render()).find(n=>n.type==='button'&&n.props.children==='Xóa ảnh').props.onClick();await ui.nodes(ui.render()).find(n=>n.type==='form').props.onSubmit(event);assert.equal(ui.calls[2][2].avatar_url,null);ui.unmount();
+});
+test('late upload cannot replace latest image, failed upload prevents success',async()=>{
+ const pending=[];const calls=[];
+ const ui=harness('../components/features/seller/SellerShopView.tsx','ShopForm',{
+  '@/services/cloudinary.service':{CloudinaryService:{uploadImage:()=>new Promise((resolve,reject)=>pending.push({resolve,reject}))}},
+  '@/lib/seller/management-client':{updateSellerRestaurant:async(a,id,patch)=>{calls.push(patch);return {restaurant:{...shop,...patch}};}}
+ });ui.render({initial:shop,actorId:userId});ui.flush();
+ const choose=()=>ui.nodes(ui.render()).find(n=>n.type==='input'&&n.props.type==='file').props.onChange({target:{files:[{}],value:'x'}});
+ choose();choose();pending[1].resolve({secureUrl:'https://example.invalid/new.png'});await tick();pending[0].resolve({secureUrl:'https://example.invalid/old.png'});await tick();
+ await ui.nodes(ui.render()).find(n=>n.type==='form').props.onSubmit(event);assert.equal(calls[0].avatar_url,'https://example.invalid/new.png');
+ choose();pending[2].reject(Error('upload failed'));await tick();await ui.nodes(ui.render()).find(n=>n.type==='form').props.onSubmit(event);assert.equal(calls.length,1);assert.ok(ui.nodes(ui.render()).some(n=>n.props?.role==='alert'));ui.unmount();
+});
+
+
+test('shop status uses explicit server target, blocks double click and waits for shared DB context',async()=>{
+ let done;const calls=[];const ui=harness('../components/features/seller/SellerShopView.tsx','ShopForm',{
+  '@/lib/seller/open-client':{openSellerRestaurant:async(...args)=>{calls.push(args);return new Promise(resolve=>{done=resolve;});}}
+ });const initial={...shop,operating_status:'open'};ui.render({initial,actorId:userId});ui.flush();
+ const close=()=>ui.nodes(ui.render()).find(n=>n.type==='button'&&n.props.children==='Đóng cửa hàng');
+ const click=close().props.onClick;click();click();assert.equal(calls.length,1);assert.deepEqual(calls[0],[userId,restaurantId,'closed']);
+ assert.ok(ui.nodes(ui.render()).some(n=>n.type==='button'&&n.props.children==='Đang đóng…'&&n.props.disabled));
+ done({recovered:false});await tick();assert.ok(close());
+ ui.render({initial:{...initial,operating_status:'closed'},actorId:userId});assert.ok(ui.nodes(ui.render()).some(n=>n.type==='button'&&n.props.children==='Mở nhận đơn'&&!n.props.disabled));ui.unmount();
+});
+
+test('shop close failure preserves confirmed status and reports error',async()=>{
+ const ui=harness('../components/features/seller/SellerShopView.tsx','ShopForm',{
+  '@/lib/seller/open-client':{openSellerRestaurant:async()=>{throw Error('Không thể xác nhận trạng thái');}}
+ });ui.render({initial:{...shop,operating_status:'open'},actorId:userId});ui.flush();
+ ui.nodes(ui.render()).find(n=>n.type==='button'&&n.props.children==='Đóng cửa hàng').props.onClick();await tick();
+ assert.ok(ui.nodes(ui.render()).some(n=>n.props?.role==='alert'));assert.ok(ui.nodes(ui.render()).some(n=>n.props?.['data-open']===true));assert.ok(!ui.nodes(ui.render()).some(n=>n.props?.role==='status'));ui.unmount();
+});
+
+
+test('shop contact loads saved string and submits only dirty phone, then permits explicit clear',async()=>{
+ const ui=shopUI(async(a,id,patch)=>({restaurant:{...shop,...patch}}),{...shop,contact_phone:'0012345678',contact_phone_available:true});
+ const phone=()=>ui.nodes(ui.render()).find(n=>n.props?.name==='contact_phone');assert.equal(phone().props.value,'0012345678');
+ phone().props.onChange({target:{value:'0098765432'}});await ui.nodes(ui.render()).find(n=>n.type==='form').props.onSubmit(event);
+ assert.deepEqual(plain(ui.calls[0][2]),{contact_phone:'0098765432'});
+ phone().props.onChange({target:{value:''}});await ui.nodes(ui.render()).find(n=>n.type==='form').props.onSubmit(event);assert.equal(ui.calls[1][2].contact_phone,null);ui.unmount();
+});
+test('shop has no fake public link without saved slug and phone stays unavailable on old DB',()=>{
+ const ui=shopUI(undefined,{...shop,slug:''});const tree=ui.render();
+ assert.equal(ui.nodes(tree).find(n=>n.props?.name==='contact_phone').props.disabled,true);
+ assert.ok(ui.nodes(tree).filter(n=>n.type==='button'&&(n.props['aria-label']==='Sao chép đường dẫn quán'||String(n.props.children).includes('Sao chép link quán'))).every(n=>n.props.disabled));
+ assert.ok(!ui.nodes(tree).some(n=>n.props?.href?.startsWith('/restaurants/')));ui.unmount();
+});
+
+
+test('shop copy uses saved slug and deployment origin, never a demo domain',async()=>{
+ const copied=[];const ui=harness('../components/features/seller/SellerShopView.tsx','ShopForm',{}, {
+  window:{location:{origin:'https://food.example:8443'}},navigator:{clipboard:{writeText:async value=>copied.push(value)}},
+ });ui.render({initial:shop,actorId:userId});ui.flush();
+ await ui.nodes(ui.render()).find(n=>n.type==='button'&&n.props['aria-label']==='Sao chép đường dẫn quán').props.onClick();await tick();
+ assert.deepEqual(copied,['https://food.example:8443/restaurants/'+shop.slug]);ui.unmount();
+});
+
+
+test('restaurant validation retains field-specific safe guidance instead of blaming schedule',async()=>{
+ const f=helper({status:400,body:{error:{code:'VALIDATION_ERROR',field:'contact_phone',message:'PRIVATE'}}});
+ await assert.rejects(f.updateSellerRestaurant(userId,restaurantId,{contact_phone:'bad'}),e=>e.message.includes('Số điện thoại liên hệ')&&!e.message.includes('lịch')&&!e.message.includes('PRIVATE'));
+ assert.equal(f.invalidations(),0);
+});
+
+
+test('phone-only form traverses serializer, client, PATCH route and service without serializing draft schedule',async()=>{
+ const db=fixture();db.state.restaurant.contact_phone=null;const initial={...db.state.restaurant,contact_phone_available:true};const before=structuredClone(db.state.restaurant);let invalidations=0;
+ const route=load('../app/api/seller/restaurants/[restaurantId]/route.ts',{
+  'next/server':{NextResponse:{json:(body,init)=>Response.json(body,init)}},
+  '@/lib/supabase/server':{createClient:async()=>db.client},'@/services/seller.service':db,
+ });
+ const requests=[];
+ const realClient=load('../lib/seller/management-client.ts',{
+  '@/store/useAuthStore':{useAuthStore:{getState:()=>({user:{id:userId,role:'seller',status:'active'}})}},
+  './access-client':{invalidateSellerAccess:()=>invalidations++},
+ },{fetch:async(path,options)=>{
+  requests.push({method:options.method,body:JSON.parse(options.body)});
+  const request=new Request('http://localhost:3000'+path,{method:options.method,headers:{...options.headers,Origin:'http://localhost:3000'},body:options.body});
+  return route.PATCH(request,{params:Promise.resolve({restaurantId})});
+ }});
+ const ui=harness('../components/features/seller/SellerShopView.tsx','ShopForm',{'@/lib/seller/management-client':realClient});ui.render({initial,actorId:userId});ui.flush();
+ ui.nodes(ui.render()).find(n=>n.type==='input'&&n.props.type==='radio').props.onChange();
+ const time=ui.nodes(ui.render()).find(n=>n.type==='select');time.props.onChange({target:{value:'23:45'}});
+ ui.nodes(ui.render()).find(n=>n.props?.name==='contact_phone').props.onChange({target:{value:'0123456789'}});
+ await ui.nodes(ui.render()).find(n=>n.type==='form').props.onSubmit(event);
+ assert.deepEqual(requests,[{method:'PATCH',body:{contact_phone:'0123456789'}}]);assert.equal(db.state.restaurant.contact_phone,'0123456789');
+ assert.deepEqual(Object.keys(db.writes()[0].values).sort(),['contact_phone','updated_at']);assert.equal(invalidations,1);
+ for(const field of ['operating_hours','avatar_url','slug','status','operating_status','owner_id'])assert.deepEqual(db.state.restaurant[field],before[field]);
+ assert.ok(ui.nodes(ui.render()).some(n=>n.props?.role==='status'));ui.unmount();
+ const reread=await db.client.from('restaurants').select('contact_phone').eq('id',restaurantId).maybeSingle();assert.equal(reread.data.contact_phone,'0123456789');
+ const reloaded=shopUI(undefined,{...initial,...reread.data});assert.equal(reloaded.nodes(reloaded.render()).find(n=>n.props?.name==='contact_phone').props.value,'0123456789');reloaded.unmount();
 });

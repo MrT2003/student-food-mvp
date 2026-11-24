@@ -1,4 +1,5 @@
 "use client";
+import { restaurantPath as publicPath, restaurantUrl } from "@/lib/seller/shop-contract";
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -185,6 +186,7 @@ export default function SellerOverviewView() {
   const [openState, setOpenState] = useState({
     key: "",
     pending: false,
+    target: "open" as "open" | "closed",
     error: "",
     message: "",
   });
@@ -202,11 +204,13 @@ export default function SellerOverviewView() {
     !loading &&
     data?.user.role === "seller" &&
     data.user.status === "active" &&
-    restaurant?.operating_status === "closed";
+    (restaurant?.operating_status === "closed" || opened);
 
-  async function openRestaurant() {
+  const canChangeStatus = !loading && data?.user.role === "seller" && data.user.status === "active" && (opened || restaurant?.operating_status === "closed");
+  const progressLabel = openState.target === "closed" ? "Đang đóng…" : "Đang mở…";
+  async function openRestaurant(target: "open" | "closed" = "open") {
     if (
-      !canOpen ||
+      !canChangeStatus ||
       opening ||
       !data ||
       !restaurant ||
@@ -216,19 +220,15 @@ export default function SellerOverviewView() {
     const marker = { key };
     request.current = marker;
     const actor = data.user.id;
-    setOpenState({ key, pending: true, error: "", message: "" });
+    setOpenState({ key, pending: true, target, error: "", message: "" });
     try {
-      const result = await openSellerRestaurant(actor, restaurant.id);
+      const result = await openSellerRestaurant(actor, restaurant.id, target);
       if (mounted.current && useAuthStore.getState().user?.id === actor)
         setOpenState((current) =>
           current.key === key
             ? {
                 ...current,
-                message: result.recovered
-                  ? "Đã đọc lại và xác nhận cửa hàng đang mở."
-                  : result.alreadyOpen
-                    ? "Cửa hàng đã mở sẵn."
-                    : "Đã xác nhận cửa hàng đang mở.",
+                message: `${result.recovered ? "Đã đọc lại và xác nhận" : "Đã xác nhận"} cửa hàng ${target === "open" ? "đang mở" : "đã đóng"}.`,
               }
             : current,
         );
@@ -241,7 +241,7 @@ export default function SellerOverviewView() {
                 error:
                   error instanceof Error
                     ? error.message
-                    : "Không thể mở cửa hàng. Hãy tải lại trạng thái.",
+                    : "Không thể đổi trạng thái cửa hàng. Hãy tải lại trạng thái.",
               }
             : current,
         );
@@ -260,24 +260,46 @@ export default function SellerOverviewView() {
     sellerMobileDateOptions[0],
   );
   const name = restaurant?.name || "";
+  const savedPath = publicPath(restaurant?.slug);
+  async function copyShopLink() {
+    const actor = data?.user.id;
+    if (!actor || useAuthStore.getState().user?.id !== actor) return;
+    const url = restaurantUrl(restaurant?.slug, window.location.origin);
+    if (!url) { setNotice("Chưa có đường dẫn quán hợp lệ từ dữ liệu đã lưu."); return; }
+    try {
+      await navigator.clipboard.writeText(url);
+      if (mounted.current && useAuthStore.getState().user?.id === actor) setNotice("Đã sao chép đường dẫn quán.");
+    } catch { if (mounted.current && useAuthStore.getState().user?.id === actor) setNotice("Không sao chép được. Bạn có thể mở trang quán và sao chép địa chỉ."); }
+  }
   const unavailable = (feature: string) =>
     setNotice(`${feature} chưa sẵn sàng.`);
+  const allowedTabs =
+    Array.isArray(data?.allowed_tabs) && data.allowed_tabs.length > 0
+      ? data.allowed_tabs
+      : data?.user.role === "staff"
+        ? (["overview", "orders", "shop"] as const)
+        : (["overview", "orders", "menu", "shop", "payments"] as const);
   const setup = [
     {
+      tab: "menu",
       icon: Utensils,
       title: "Thêm món đầu tiên",
       badge: "Xem danh sách món",
       text: "Tạo món ăn, đặt giá và hình ảnh hấp dẫn để thu hút sinh viên.",
       action: "Thêm món",
+      href: "/seller/menu",
     },
     {
+      tab: "payments",
       icon: Wallet,
       title: "Thiết lập thanh toán",
       badge: "Thiết lập phương thức thanh toán",
       text: "Cấu hình các phương thức thanh toán cho cửa hàng.",
       action: "Thiết lập",
+      href: "/seller/payments",
     },
     {
+      tab: "shop",
       icon: Store,
       title: "Hoàn thiện thông tin cửa hàng",
       badge: restaurant?.avatar_url
@@ -285,8 +307,9 @@ export default function SellerOverviewView() {
         : "Chưa có ảnh đại diện",
       text: "Cập nhật thông tin cửa hàng để khách hàng dễ tìm thấy bạn.",
       action: "Chỉnh sửa",
+      href: "/seller/shop",
     },
-  ];
+  ].filter((item) => (allowedTabs as readonly string[]).includes(item.tab));
   if (loading && !restaurant) return <p role="status">Đang tải cửa hàng…</p>;
   if (!restaurant) return <SellerAccessProblem />;
 
@@ -334,20 +357,20 @@ export default function SellerOverviewView() {
                     </div>
                     <div className={styles.openAction}>
                       <button
-                        disabled={!canOpen || opening}
+                        disabled={!canChangeStatus || opening}
                         onClick={() => {
-                          void openRestaurant();
+                          void openRestaurant(opened ? "closed" : "open");
                         }}
                       >
                         {opening
-                          ? "Đang mở…"
+                          ? progressLabel
                           : opened
-                            ? "Đang mở"
+                            ? "Đóng cửa hàng"
                             : "Mở nhận đơn"}
                       </button>
                       <small>
                         {opened
-                          ? "Trạng thái được tải từ cửa hàng."
+                          ? "Đóng cửa hàng để ngừng nhận đơn mới."
                           : restaurant.operating_status === "paused"
                             ? "Chưa hỗ trợ mở từ trạng thái tạm ngừng tại đây."
                             : "Mở nhận đơn cho chính cửa hàng của bạn."}
@@ -378,7 +401,7 @@ export default function SellerOverviewView() {
                   </div>
                   <div className={styles.setupGrid}>
                     {setup.map(
-                      ({ icon: Icon, title, badge, text, action }, index) => (
+                      ({ tab, icon: Icon, title, badge, text, action, href }) => (
                         <article className={styles.setupCard} key={title}>
                           <div className={styles.setupHeading}>
                             <span className={styles.icon}>
@@ -388,7 +411,7 @@ export default function SellerOverviewView() {
                               <h4>{title}</h4>
                               <span
                                 className={
-                                  index === 2 && !!restaurant.avatar_url
+                                  tab === "shop" && !!restaurant.avatar_url
                                     ? styles.greenBadge
                                     : styles.redBadge
                                 }
@@ -397,25 +420,25 @@ export default function SellerOverviewView() {
                               </span>
                             </div>
                           </div>
-                          {index === 1 && (
+                          {tab === "payments" && (
                             <small>
                               {"Phương thức thanh toán chưa được xác nhận tại đây"}
                             </small>
                           )}
-                          {index === 2 && (
+                          {tab === "shop" && (
                             <small>
                               <Clock3 size={13} />{" "}
                               {restaurant.location || "Chưa có địa điểm"}
                             </small>
                           )}
                           <p>{text}</p>
-                          <button
+                          <Link
+                            href={href}
                             className={styles.primary}
-                            onClick={() => unavailable(title)}
                           >
                             {action}
                             <ArrowRight size={16} />
-                          </button>
+                          </Link>
                         </article>
                       ),
                     )}
@@ -426,16 +449,16 @@ export default function SellerOverviewView() {
                         </span>
                         <h4>Chia sẻ cửa hàng</h4>
                       </div>
-                      <div className={styles.sharePlaceholder}>
-                        <Copy size={16} /> {`/restaurants/${restaurant.slug}`}
-                      </div>
+                      <button type="button" className={styles.sharePlaceholder} disabled={!savedPath} onClick={() => void copyShopLink()}>
+                        <Copy size={16} /> {savedPath ?? "Chưa có đường dẫn quán hợp lệ"}
+                      </button>
                       <p>Xem trang cửa hàng của bạn.</p>
-                      <Link
+                      {savedPath && <Link
                         className={styles.outline}
-                        href={`/restaurants/${encodeURIComponent(restaurant.slug)}`}
+                        href={savedPath}
                       >
                         Xem cửa hàng
-                      </Link>
+                      </Link>}
                     </article>
                   </div>
                 </section>
@@ -518,7 +541,7 @@ export default function SellerOverviewView() {
                       className={styles.task}
                       key={title}
                       disabled={
-                        title === "Mở nhận đơn" && (!canOpen || opening)
+                        title === "Mở nhận đơn" && (!canOpen || opening || opened)
                       }
                       onClick={() =>
                         title === "Mở nhận đơn"
@@ -542,7 +565,7 @@ export default function SellerOverviewView() {
                         </strong>
                         <small>
                           {title === "Mở nhận đơn" && opening
-                            ? "Đang mở…"
+                            ? progressLabel
                             : text}
                         </small>
                       </span>
@@ -612,7 +635,7 @@ export default function SellerOverviewView() {
                     <Store size={30} strokeWidth={2} />
                   </span>
                   <div className={styles.mobileStatusCopy}>
-                    <span className={styles.mobileClosedPill}>
+                    <span className={styles.mobileClosedPill} data-open={opened}>
                       <span
                         className={styles.mobileClosedDot}
                         aria-hidden="true"
@@ -628,18 +651,21 @@ export default function SellerOverviewView() {
                 </div>
               </div>
               <div className={styles.mobileStatusRight}>
-                <span className={styles.mobileOpenButton}>
+                <button className={styles.mobileOpenButton} disabled={!canChangeStatus || opening} onClick={() => void openRestaurant(opened ? "closed" : "open")}>
                   {opening
-                    ? "Đang mở…"
+                    ? progressLabel
                     : opened
-                      ? "Đang mở"
-                      : "Tạm đóng"}
-                </span>
+                      ? "Đóng cửa hàng"
+                      : "Mở nhận đơn"}
+                </button>
                 <small>
                   {opened
                     ? "Trạng thái được tải từ cửa hàng."
-                    : "Sử dụng thẻ trạng thái trên máy tính hoặc danh sách công việc để mở nhận đơn."}
+                    : "Mở nhận đơn cho cửa hàng đang đóng; trạng thái tạm ngừng chưa hỗ trợ tại đây."}
                 </small>
+                {openState.key === key && (openState.error || openState.message) && (
+                  <p role={openState.error ? "alert" : "status"}>{openState.error || openState.message}</p>
+                )}
               </div>
             </section>
 
