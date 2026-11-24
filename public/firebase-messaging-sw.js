@@ -3,7 +3,9 @@
 // Chỉ nhận push, không cache/intercept request của Next.js hoặc dữ liệu tài khoản.
 
 // Chỉ mở trang đơn trong cùng origin; không chấp nhận URL tùy ý trong payload.
-function orderUrl(orderId) {
+function orderUrl(orderId, destination) {
+  // Chỉ nhận đích được allowlist; quyền xem đơn vẫn kiểm tra ở API seller.
+  if (destination === "seller_orders") return new URL("/seller/orders", self.location.origin).href;
   const validId = typeof orderId === "string"
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId);
   return new URL(validId ? `/orders/${encodeURIComponent(orderId)}` : "/orders", self.location.origin).href;
@@ -25,7 +27,14 @@ self.addEventListener("notificationclick", (event) => {
   // Thu hồi hộp thoại ngay lập tức sau khi người dùng bấm vào
   event.notification.close();
   // Tự động trích xuất mã đơn hàng  và tạo ra đường link URL tương ứng
-  const url = orderUrl(ownNotification ? data.orderId : firebaseMessage.data?.orderId);
+  const messageData = ownNotification ? data : firebaseMessage.data;
+  const target = new URL(orderUrl(messageData?.orderId, messageData?.destination));
+  // Trang đích có session mới được đánh dấu đọc; worker không giữ auth token.
+  if (/^[0-9a-f-]{36}$/i.test(messageData?.notificationId || "") && /^[0-9a-f-]{36}$/i.test(messageData?.recipientUserId || "")) {
+    target.searchParams.set("readNotification", messageData.notificationId);
+    target.searchParams.set("notificationRecipient", messageData.recipientUserId);
+  }
+  const url = target.href;
   event.waitUntil((async () => {
     // Scan toàn bộ các cửa sổ đang mở ứng dụng student-
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
@@ -49,21 +58,37 @@ importScripts("https://www.gstatic.com/firebasejs/13.1.0/firebase-messaging-comp
 firebase.initializeApp(self.FIREBASE_WEB_CONFIG);
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
+messaging.onBackgroundMessage(async (payload) => {
   // Firebase đã tự hiển thị khi có notification; không showNotification lần nữa.
   if (payload.notification) return;
 
   // Quy ước data-only cho backend bước sau: title, body, orderId, notificationId đều là string.
   const data = payload.data || {};
+  // Cửa sổ split-screen có thể visible nhưng không focus. Chỉ bỏ popup OS khi
+  // trang xác nhận đã nhận tin cho đúng tài khoản và đang hiển thị.
+  const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  for (const client of windows.filter((item) => item.visibilityState === "visible")) {
+    const accepted = await new Promise((resolve) => {
+      const channel = new MessageChannel();
+      const timer = setTimeout(() => { channel.port1.close(); resolve(false); }, 500);
+      channel.port1.onmessage = (event) => {
+        clearTimeout(timer); channel.port1.close(); resolve(event.data === true);
+      };
+      client.postMessage({ type: "STUDENT_FOOD_PUSH", payload }, [channel.port2]);
+    });
+    if (accepted) return;
+  }
   const title = typeof data.title === "string" && data.title.trim()
     ? data.title.slice(0, 120) : "StudentFood";
   return self.registration.showNotification(title, {
     body: typeof data.body === "string" ? data.body.slice(0, 500) : "Bạn có cập nhật mới về đơn hàng.",
     // Cùng notificationId thay thế thông báo cũ khi backend retry; không gộp mọi đơn vào một tag.
     ...(data.notificationId ? { tag: `student-food:${data.notificationId}` } : {}),
-    data: { source: "student-food", orderId: data.orderId || null },
+    requireInteraction: false,
+    data: { source: "student-food", orderId: data.orderId || null, destination: data.destination || null, notificationId: data.notificationId || null, recipientUserId: data.recipientUserId || null },
   });
 });
 
 // Không skipWaiting/claim cưỡng bức: để browser quản lý cập nhật worker theo lifecycle mặc định.
 // Bước tiếp theo sẽ đăng ký worker và truyền registration active cho getRegistrationToken().
+

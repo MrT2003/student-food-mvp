@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -446,7 +446,7 @@ function SellerMenuContent() {
                             onClick={() => setDeleting(row)}
                           >
                             <Trash2 size={16} />
-                            Ẩn món
+                            Xóa món
                           </button>
                         </div>
                       </article>
@@ -877,7 +877,7 @@ function SellerMenuContent() {
                                   }}
                                 >
                                   <Trash2 size={15} />
-                                  Ẩn món
+                                  Xóa món
                                 </button>
                               </div>
                             )}
@@ -998,16 +998,16 @@ function SellerMenuContent() {
           onClose={() => setDeleting(null)}
           aria-labelledby="delete-menu-title"
         >
-          <h2 id="delete-menu-title">Ẩn món ăn?</h2>
-          <p>Bạn có muốn xóa “{deleting.item.name}” khỏi menu khách hàng? Có thể hiện lại trong tab Đang ẩn.</p>
+          <h2 id="delete-menu-title">Xóa món ăn?</h2>
+          <p>Bạn có muốn xóa vĩnh viễn “{deleting.item.name}” và các nhóm tùy chọn của món này khỏi cơ sở dữ liệu? Hành động này không thể hoàn tác.</p>
           <footer>
             <button onClick={() => setDeleting(null)}>Hủy</button>
             <button
               className={styles.primary}
-              onClick={async () => { try { await deleteMenuItem(deleting.item.id); setDeleting(null); setNotice("Đã ẩn món; có thể hiện lại."); } catch(e) { setNotice(e instanceof Error ? e.message : "Không ẩn được món."); setDeleting(null); } }}
+              onClick={async () => { try { await deleteMenuItem(deleting.item.id); setDeleting(null); setNotice("Đã xóa món khỏi cơ sở dữ liệu."); } catch(e) { setNotice(e instanceof Error ? e.message : "Không xóa được món."); setDeleting(null); } }}
               disabled={busy}
             >
-              Ẩn món
+              Xóa món
             </button>
           </footer>
         </dialog>
@@ -1015,3 +1015,4 @@ function SellerMenuContent() {
     </div>
   );
 }
+

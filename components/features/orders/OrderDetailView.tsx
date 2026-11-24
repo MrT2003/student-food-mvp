@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import CancelOrderButton from "./CancelOrderButton";
 import { useRouter } from "next/navigation";
 import TransferContent from "@/components/ui/TransferContent";
 import type { ReactNode } from "react";
@@ -94,8 +95,7 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
         <div className={`${styles.card} ${styles.empty}`}>
           <h1>Không tìm thấy đơn hàng</h1>
           <p>
-            Không có dữ liệu cho đơn #{orderId}. Đơn vừa tạo trong bản preview
-            có thể mất khi tải lại trang.
+            Không tìm thấy đơn #{orderId} trong tài khoản hiện tại.
           </p>
           <Link href="/orders" className={styles.outlineButton}>
             <ArrowLeft size={20} aria-hidden="true" />
@@ -123,6 +123,7 @@ export default function OrderDetailView({ orderId }: { orderId: string }) {
   return (
     <div className={styles.page}>
       <header className={styles.heading}>
+        {order.status === "pending" && <CancelOrderButton orderId={orderId} />}
         <Link
           href="/orders"
           className={styles.backLink}

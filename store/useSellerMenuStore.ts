@@ -12,6 +12,7 @@ const messages: Record<string,string> = {
   MENU_SLUG_CONFLICT: "Mã đường dẫn món bị trùng. Hãy đối chiếu danh sách trước khi tạo lại.",
   MENU_WRITE_CONFLICT: "Dữ liệu menu bị trùng hoặc xung đột. Hãy tải lại để đối chiếu.",
   MENU_FORBIDDEN: "Chỉ seller đang hoạt động sở hữu quán được quản lý thực đơn.",
+  MENU_IN_USE: "Món ăn này đã có trong lịch sử đơn hàng nên không thể xóa khỏi cơ sở dữ liệu. Hãy đổi trạng thái hiển thị sang Đang ẩn.",
   UNAUTHORIZED: "Vui lòng đăng nhập lại.", VALIDATION_ERROR: "Thông tin món hoặc topping không hợp lệ (tối đa 20 nhóm, 50 lựa chọn/nhóm; giá tối đa 10.000.000, hai chữ số thập phân).",
 };
 class MenuClientError extends Error { constructor(public code:string) { super(messages[code] ?? "Chưa xác định kết quả. Hãy tải lại danh sách để đối chiếu; không gửi lại thao tác tạo món khi chưa kiểm tra."); } }
@@ -44,7 +45,7 @@ async function request(id:string,item:string|undefined,method:string,payload?:un
       if (issue) throw new MenuError('VALIDATION_ERROR', response.status, issue);
       throw new MenuClientError(data?.error?.code??'MENU_RESULT_UNKNOWN');
     }
-    if(method==='GET'?!Array.isArray(data?.items):!data?.item?.id)throw new MenuClientError('MENU_RESULT_UNKNOWN');
+    if(method==='GET'?!Array.isArray(data?.items):method==='DELETE'?!data?.deleted:!data?.item?.id)throw new MenuClientError('MENU_RESULT_UNKNOWN');
     return data;
   } catch(e) { if(e instanceof MenuClientError || e instanceof MenuError)throw e; throw new MenuClientError('MENU_RESULT_UNKNOWN'); }
   finally {clearTimeout(timer);signal?.removeEventListener('abort',cancel);}
@@ -85,7 +86,20 @@ export const useSellerMenuStore=create<State>((set,get)=>({
     try {const data=await request(rid,id,'PATCH',payload);if(run!==revision)throw new MenuClientError('UNAUTHORIZED');const saved=map(data.item);set(s=>({rows:s.rows.map(r=>r.item.id===id?saved:r)}));}
     finally {if(run===revision)set({busy:false});}
   },
-  deleteMenuItem:async id=>{await get().updateMenuItemFields(id,{is_active:false});},
+  deleteMenuItem: async (id) => {
+    if (get().busy) throw new MenuClientError("MENU_BUSY");
+    const rid = get().restaurantId;
+    if (!rid) throw new MenuClientError("MENU_FORBIDDEN");
+    const run = revision;
+    set({ busy: true });
+    try {
+      await request(rid, id, "DELETE");
+      if (run !== revision) throw new MenuClientError("UNAUTHORIZED");
+      set((s) => ({ rows: s.rows.filter((r) => r.item.id !== id) }));
+    } finally {
+      if (run === revision) set({ busy: false });
+    }
+  },
 }));
 // Auth changes invalidate cache synchronously; late reads/mutations cannot restore it.
 useAuthStore.subscribe((next,previous)=>{

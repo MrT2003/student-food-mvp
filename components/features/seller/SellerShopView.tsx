@@ -1,7 +1,7 @@
 "use client";
 
 import StaffRecruitment from "./StaffRecruitment";
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
@@ -270,6 +270,7 @@ export function ShopForm({
   const [manage, setManage] = useState(false);
   const [demoToken, setDemoToken] = useState("");
   const [tokenUpdated, setTokenUpdated] = useState("");
+  const [resettingToken, setResettingToken] = useState(false);
   const upload = useRef<HTMLInputElement>(null);
   const uploadRequestId = useRef(0);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -277,6 +278,76 @@ export function ShopForm({
   useEffect(() => {
     if (manage) dialog.current?.showModal();
   }, [manage]);
+
+  useEffect(() => {
+    if (isStaff || !initial.id || typeof fetch !== "function") return;
+    let cancelled = false;
+    void fetch(
+      `/api/seller/restaurants/${encodeURIComponent(initial.id)}/delivery-token`,
+      { credentials: "same-origin", cache: "no-store" },
+    )
+      .then(async (res) => {
+        if (!res.ok || cancelled) return;
+        const payload = (await res.json().catch(() => null)) as {
+          delivery_token?: string | null;
+          delivery_token_updated_at?: string | null;
+        } | null;
+        if (cancelled || !payload?.delivery_token) return;
+        setDemoToken(payload.delivery_token);
+        if (payload.delivery_token_updated_at) {
+          const dt = new Date(payload.delivery_token_updated_at);
+          if (!Number.isNaN(dt.getTime())) {
+            setTokenUpdated(
+              dt.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
+            );
+          }
+        }
+      })
+      .catch(() => {
+        // Giữ nguyên fallback nếu chưa tải được token
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isStaff, initial.id]);
+
+  async function resetRealDeliveryToken() {
+    if (resettingToken || isStaff || !initial.id) return;
+    setResettingToken(true);
+    try {
+      const res = await fetch(
+        `/api/seller/restaurants/${encodeURIComponent(initial.id)}/delivery-token/reset`,
+        { method: "POST", credentials: "same-origin" },
+      );
+      if (!res.ok) {
+        setError("Không thể đổi liên kết giao hàng. Vui lòng thử lại.");
+        return;
+      }
+      const payload = (await res.json().catch(() => null)) as {
+        delivery_token?: string | null;
+        delivery_token_updated_at?: string | null;
+      } | null;
+      if (payload?.delivery_token) {
+        setDemoToken(payload.delivery_token);
+        const dt = payload.delivery_token_updated_at
+          ? new Date(payload.delivery_token_updated_at)
+          : new Date();
+        setTokenUpdated(
+          Number.isNaN(dt.getTime())
+            ? new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })
+            : dt.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
+        );
+        setManage(false);
+        message("Đã tạo liên kết giao hàng mới. Liên kết cũ đã bị vô hiệu hóa.");
+      } else {
+        setError("Không thể đổi liên kết giao hàng. Vui lòng thử lại.");
+      }
+    } catch {
+      setError("Không thể đổi liên kết giao hàng. Vui lòng thử lại.");
+    } finally {
+      setResettingToken(false);
+    }
+  }
 
   const restaurantPath = publicPath(initial.slug);
   async function copyRestaurant() {
@@ -383,7 +454,7 @@ export function ShopForm({
     setError("");
     try {
       const uploaded = await CloudinaryService.uploadImage(file, {
-        folder: "student-food/restaurants",
+        purpose: "restaurant", restaurantId: isBackendRestaurant(initial) ? initial.id : undefined,
       });
       if (mounted.current && uploadRequestId.current === requestId) {
         setAvatar(uploaded.secureUrl);
@@ -966,8 +1037,8 @@ export function ShopForm({
             <div className={styles.deliveryHeading}>
               <h2>Quyền giao hàng</h2>
               <p>
-                Cho phép shipper xem đơn cần giao qua liên kết riêng khi backend
-                được kết nối.
+                Chia sẻ liên kết riêng này cho người giao hàng (shipper) để xem
+                và xác nhận các đơn cần giao mà không cần đăng nhập.
               </p>
             </div>
             <div className={styles.delivery}>
@@ -976,10 +1047,10 @@ export function ShopForm({
                   readOnly
                   value={
                     demoToken
-                      ? `/delivery/demo/${demoToken}`
+                      ? `/delivery/${demoToken}`
                       : "/delivery/demo"
                   }
-                  aria-label="Liên kết giao hàng demo"
+                  aria-label="Liên kết giao hàng"
                 />
               </div>
               <button
@@ -987,7 +1058,7 @@ export function ShopForm({
                 onClick={() =>
                   void copy(
                     `${window.location.origin}${
-                      demoToken ? `/delivery/demo/${demoToken}` : "/delivery/demo"
+                      demoToken ? `/delivery/${demoToken}` : "/delivery/demo"
                     }`,
                   )
                 }
@@ -996,11 +1067,11 @@ export function ShopForm({
                 Sao chép liên kết
               </button>
               <Link
-                href={demoToken ? `/delivery/demo/${demoToken}` : "/delivery/demo"}
+                href={demoToken ? `/delivery/${demoToken}` : "/delivery/demo"}
                 className={styles.outline}
               >
                 <ExternalLink size={18} />
-                Mở xem UI
+                {demoToken ? "Mở trang giao hàng" : "Mở xem UI"}
               </Link>
               <button
                 className={styles.outline}
@@ -1011,13 +1082,15 @@ export function ShopForm({
               </button>
               <span className={styles.warning}>
                 <TriangleAlert size={19} />
-                Tạo lại liên kết sẽ thay thế mã demo cũ.
+                Tạo lại liên kết sẽ vô hiệu hóa liên kết giao hàng cũ ngay lập tức.
               </span>
             </div>
             <small className={styles.updated}>
               {tokenUpdated
                 ? `Cập nhật lần cuối: ${tokenUpdated}`
-                : "Chưa có liên kết. Demo này chưa cấp quyền xem đơn giao hàng."}
+                : demoToken
+                  ? "Liên kết giao hàng đang hoạt động."
+                  : "Đang tải liên kết giao hàng…"}
             </small>
           </section>
         )}
@@ -1243,7 +1316,7 @@ export function ShopForm({
                 onClick={() =>
                   void copy(
                     `${window.location.origin}${
-                      demoToken ? `/delivery/demo/${demoToken}` : "/delivery/demo"
+                      demoToken ? `/delivery/${demoToken}` : "/delivery/demo"
                     }`,
                   )
                 }
@@ -1252,11 +1325,11 @@ export function ShopForm({
                 <span>Sao chép liên kết</span>
               </button>
               <Link
-                href={demoToken ? `/delivery/demo/${demoToken}` : "/delivery/demo"}
+                href={demoToken ? `/delivery/${demoToken}` : "/delivery/demo"}
                 className={styles.mobileDeliveryBtn}
               >
                 <ExternalLink size={16} strokeWidth={2.1} aria-hidden="true" />
-                <span>Mở xem UI</span>
+                <span>{demoToken ? "Mở giao hàng" : "Mở xem UI"}</span>
               </Link>
               <button
                 type="button"
@@ -1567,31 +1640,27 @@ export function ShopForm({
             </button>
           </header>
           <p>
-            Chỉ mô phỏng giao diện. Chưa gọi RPC reset_delivery_token và chưa
-            tạo quyền cho shipper.
+            Liên kết giao hàng hiện tại cấp quyền cho người giao hàng xem các
+            đơn đã duyệt và đánh dấu đã giao cho cửa hàng của bạn.
           </p>
           <p>
-            Tạo lại sẽ thay thế mã demo đang hiển thị, không thu hồi token nào
-            trên DB.
+            Nếu tạo lại liên kết mới, mã cũ sẽ lập tức ngừng hoạt động để bảo vệ
+            quyền riêng tư đơn hàng của quán.
           </p>
           <footer>
-            <button className={styles.outline} onClick={() => setManage(false)}>
+            <button
+              className={styles.outline}
+              disabled={resettingToken}
+              onClick={() => setManage(false)}
+            >
               Hủy
             </button>
             <button
               className={styles.primary}
-              onClick={() => {
-                setDemoToken(crypto.randomUUID());
-                setTokenUpdated(
-                  new Date().toLocaleString("vi-VN", {
-                    timeZone: "Asia/Ho_Chi_Minh",
-                  }),
-                );
-                setManage(false);
-                message("Đã tạo mã demo mới. Liên kết chưa hoạt động.");
-              }}
+              disabled={resettingToken}
+              onClick={() => void resetRealDeliveryToken()}
             >
-              {demoToken ? "Tạo lại liên kết demo" : "Tạo liên kết demo"}
+              {resettingToken ? "Đang tạo mã…" : "Đổi liên kết mới"}
             </button>
           </footer>
         </dialog>
@@ -1599,3 +1668,6 @@ export function ShopForm({
     </main>
   );
 }
+
+
+

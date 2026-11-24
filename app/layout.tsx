@@ -5,6 +5,9 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "StudentFood",
+  applicationName: "StudentFood",
+  appleWebApp: { capable: true, title: "StudentFood", statusBarStyle: "default" },
+  icons: { apple: [{ url: "/pwa/apple-touch-icon.png", sizes: "180x180", type: "image/png" }] },
   description: "Đặt món ngon quanh khu ký túc xá cùng StudentFood.",
 };
 

@@ -194,7 +194,100 @@ function FilledInfoIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-function PaymentQrIllustration() {
+const SELLER_VIETQR_BANK_CODES: Record<string, string> = {
+  vietcombank: "VCB",
+  bidv: "BIDV",
+  vietinbank: "ICB",
+  agribank: "VBA",
+  techcombank: "TCB",
+  "mb bank": "MB",
+  acb: "ACB",
+  tpbank: "TPB",
+  vpbank: "VPB",
+  sacombank: "STB",
+  hdbank: "HDB",
+  vib: "VIB",
+  shb: "SHB",
+  msb: "MSB",
+  ocb: "OCB",
+  seabank: "SEAB",
+  lpbank: "LPB",
+  eximbank: "EIB",
+  "bac a bank": "BAB",
+  pvcombank: "PVCB",
+  abbank: "ABB",
+  "nam a bank": "NAB",
+  vietbank: "VIETBANK",
+  vietabank: "VAB",
+  ncb: "NCB",
+  bvbank: "BVB",
+  kienlongbank: "KLB",
+  saigonbank: "SGB",
+  pgbank: "PGB",
+  baovietbank: "BVB",
+  "donga bank": "DOB",
+  "vikki bank": "VIKKI",
+  gpbank: "GPB",
+  mbv: "MBV",
+  cbbank: "CBB",
+  "co-opbank": "COOPBANK",
+  "shinhan bank": "SHBVN",
+  "woori bank": "WVN",
+  hsbc: "HSBC",
+  "standard chartered": "SCVN",
+  uob: "UOB",
+  cimb: "CIMB",
+  "public bank": "PBVN",
+  "hong leong bank": "HLBVN",
+  indovinabank: "IVB",
+  vrb: "VRB",
+  citibank: "CITIBANK",
+  "cake by vpbank": "CAKE",
+  timo: "TIMO",
+};
+
+function buildSellerPreviewVietQrUrl(
+  bankName: string,
+  accountNo: string,
+  accountName: string,
+  amount: number,
+  addInfo: string,
+): string | null {
+  const bankCode =
+    SELLER_VIETQR_BANK_CODES[bankName.trim().toLowerCase()] ||
+    (/^[A-Za-z0-9]{2,12}$/.test(bankName.trim()) ? bankName.trim().toUpperCase() : "");
+  const cleanAccountNo = accountNo.trim().replace(/\s+/g, "");
+  if (!bankCode || !cleanAccountNo) return null;
+  const cleanText = (val: string) =>
+    val
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[đĐ]/g, (c) => (c === "đ" ? "d" : "D"))
+      .replace(/[^a-zA-Z0-9 -]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const params = new URLSearchParams();
+  if (amount > 0) params.set("amount", String(Math.round(amount)));
+  const info = cleanText(addInfo).slice(0, 50);
+  if (info) params.set("addInfo", info);
+  const holder = cleanText(accountName).toUpperCase().slice(0, 64);
+  if (holder) params.set("accountName", holder);
+  return `https://img.vietqr.io/image/${encodeURIComponent(bankCode)}-${encodeURIComponent(cleanAccountNo)}-qr_only.png?${params.toString()}`;
+}
+
+function PaymentQrIllustration({ qrUrl }: { qrUrl?: string | null }) {
+  if (qrUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={qrUrl}
+        alt="Mã VietQR thanh toán"
+        width={176}
+        height={176}
+        style={{ width: "100%", height: "100%", objectFit: "contain" }}
+      />
+    );
+  }
   const finders = [[0, 0], [22, 0], [0, 22]];
   const dots = Array.from({ length: 29 * 29 }, (_, index) => ({ x: index % 29, y: Math.floor(index / 29) }))
     .filter(({ x, y }) =>
@@ -252,6 +345,39 @@ export default function SellerPaymentView() {
   );
 }
 
+function readStoredPaymentMethods(
+  restaurantId: string,
+): { cash: boolean; bank: boolean } | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  try {
+    const raw =
+      window.localStorage.getItem(`sf:seller-payment-methods:${restaurantId}`) ??
+      window.localStorage.getItem("sf:seller-payment-methods:latest");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { cash?: unknown; bank?: unknown };
+    if (typeof parsed?.cash === "boolean" && typeof parsed?.bank === "boolean") {
+      return { cash: parsed.cash, bank: parsed.bank };
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return null;
+}
+
+function writeStoredPaymentMethods(
+  restaurantId: string,
+  next: { cash: boolean; bank: boolean },
+) {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    const payload = JSON.stringify(next);
+    window.localStorage.setItem(`sf:seller-payment-methods:${restaurantId}`, payload);
+    window.localStorage.setItem("sf:seller-payment-methods:latest", payload);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function BankManager({
   actorId,
   restaurantId,
@@ -269,13 +395,33 @@ export function BankManager({
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [cashEnabled, setCashEnabled] = useState(true);
-  const [bankEnabled, setBankEnabled] = useState(true);
+  const [cashEnabled, setCashEnabled] = useState(
+    () => readStoredPaymentMethods(restaurantId)?.cash ?? true,
+  );
+  const [bankEnabled, setBankEnabled] = useState(
+    () => readStoredPaymentMethods(restaurantId)?.bank ?? false,
+  );
   const [guide, setGuide] = useState(false);
   const [showMobileQrModal, setShowMobileQrModal] = useState(false);
   const pending = useRef(false), mounted = useRef(true), generation = useRef(0);
   const current = useCallback(() => mounted.current && useAuthStore.getState().user?.id === actorId, [actorId]);
   const cancel = useCallback(() => { generation.current++; }, []);
+
+  function toggleCashMethod() {
+    setCashEnabled((prevCash) => {
+      const nextCash = !prevCash;
+      writeStoredPaymentMethods(restaurantId, { cash: nextCash, bank: bankEnabled });
+      return nextCash;
+    });
+  }
+
+  function toggleBankMethod() {
+    setBankEnabled((prevBank) => {
+      const nextBank = !prevBank;
+      writeStoredPaymentMethods(restaurantId, { cash: cashEnabled, bank: nextBank });
+      return nextBank;
+    });
+  }
 
   const reload = useCallback(async () => {
     const run = ++generation.current;
@@ -284,6 +430,13 @@ export function BankManager({
       const result = await readSellerBanks(actorId, restaurantId);
       if (current() && run === generation.current) {
         setBanks(result.banks);
+        const stored = readStoredPaymentMethods(restaurantId);
+        if (stored) {
+          setCashEnabled(stored.cash);
+          setBankEnabled(stored.bank);
+        } else {
+          setBankEnabled(result.banks.length > 0);
+        }
         setError("");
       }
     } catch (err) {
@@ -374,6 +527,13 @@ export function BankManager({
   const enabledCount = Number(cashEnabled) + Number(bankEnabled);
   const configured = enabledCount > 0 && (!bankEnabled || hasSavedOrDraftBank);
   const transferContent = `SF-01-0001 - ${shopName}`;
+  const previewVietQrUrl = buildSellerPreviewVietQrUrl(
+    previewBankName,
+    previewAccountNo,
+    previewAccountName,
+    45000,
+    transferContent,
+  );
   const bankOptions = [...new Set([...POPULAR_BANKS, values.bank_name].filter(Boolean))];
 
   const checks = [
@@ -497,7 +657,7 @@ export function BankManager({
                     role="switch"
                     aria-checked={cashEnabled}
                     aria-label="Bật Tiền mặt khi nhận hàng"
-                    onClick={() => setCashEnabled((v) => !v)}
+                    onClick={toggleCashMethod}
                     style={{
                       position: "absolute",
                       right: 16,
@@ -533,7 +693,7 @@ export function BankManager({
                     role="switch"
                     aria-checked={bankEnabled}
                     aria-label="Bật Chuyển khoản ngân hàng"
-                    onClick={() => setBankEnabled((v) => !v)}
+                    onClick={toggleBankMethod}
                     style={{
                       position: "absolute",
                       right: 16,
@@ -697,7 +857,7 @@ export function BankManager({
                     <span>Viet</span>QR <small>PREVIEW</small>
                   </strong>
                   <div className={styles.qrImage} role="img" aria-label="Hình minh họa QR thanh toán">
-                    <PaymentQrIllustration />
+                    <PaymentQrIllustration qrUrl={previewVietQrUrl} />
                   </div>
                   <strong>{shopName}</strong>
                   <span>{previewBankName || "Chưa chọn ngân hàng"}</span>
@@ -845,7 +1005,7 @@ export function BankManager({
                   role="switch"
                   aria-checked={cashEnabled}
                   aria-label="Bật Tiền mặt"
-                  onClick={() => setCashEnabled((v) => !v)}
+                  onClick={toggleCashMethod}
                   style={{
                     width: 48,
                     height: 28,
@@ -879,7 +1039,7 @@ export function BankManager({
                   role="switch"
                   aria-checked={bankEnabled}
                   aria-label="Bật Chuyển khoản"
-                  onClick={() => setBankEnabled((v) => !v)}
+                  onClick={toggleBankMethod}
                   style={{
                     width: 48,
                     height: 28,
@@ -986,7 +1146,7 @@ export function BankManager({
                   role="img"
                   aria-label="Hình minh họa QR thanh toán"
                 >
-                  <PaymentQrIllustration />
+                  <PaymentQrIllustration qrUrl={previewVietQrUrl} />
                 </div>
                 <strong>{shopName}</strong>
                 <span>{previewBankName || "Chưa chọn ngân hàng"}</span>

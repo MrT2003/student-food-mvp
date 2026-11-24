@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import TransferContent from "@/components/ui/TransferContent";
 import {
   ArrowRight,
   Banknote,
@@ -185,7 +184,6 @@ export default function OrderSuccessView() {
                   </div>
                 )}
 
-                {order.transferContent && <TransferContent value={order.transferContent} />}
                 <details className={styles.details}>
                   <summary>
                     Xem chi tiết

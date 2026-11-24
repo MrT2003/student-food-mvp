@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/media/AppImage";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -585,3 +585,4 @@ export default function SellerOrderDetailView({
     </div>
   );
 }
+

@@ -32,7 +32,7 @@ export default function ReorderSection() {
     if (!userId || authStatus !== "ready") { setResult(null); setLoading(false); return; }
     setLoading(true);
     // Mỗi phần tử là order_items.id; không group theo quán hoặc món.
-    OrderServices.fetchOrdered(10)
+    OrderServices.fetchOrdered(5)
       .then((items) => { if (!cancelled) setResult({ userId, items }); })
       .catch((reason: unknown) => {
         if (!cancelled) { setResult(null); setError(reason instanceof Error ? reason.message : "Không thể tải món đã đặt."); }
@@ -65,8 +65,8 @@ export default function ReorderSection() {
   return (
     <section id="reorder" className={styles.reorderSection} aria-labelledby="reorder-title">
       <div className={styles.sectionHeading}>
-        <h2 id="reorder-title"><span className={styles.sectionIcon}><Clock3 size={25} aria-hidden="true" /></span>Đặt lại nhanh</h2>
-        <Link className={styles.seeAll} href="/orders/history">Xem tất cả<ArrowRight size={21} aria-hidden="true" /></Link>
+        <h2 id="reorder-title"><span className={styles.sectionIcon}><Clock3 size={19} aria-hidden="true" /></span>Đặt lại nhanh</h2>
+        <Link className={styles.seeAll} href="/orders/history">Xem tất cả<ArrowRight size={17} aria-hidden="true" /></Link>
       </div>
       {authStatus === "loading" || loading ? <p role="status">Đang tải món đã đặt…</p>
         : authStatus === "error" ? <p role="alert">Không thể xác định phiên đăng nhập. Vui lòng tải lại trang.</p>
@@ -75,7 +75,7 @@ export default function ReorderSection() {
         : items.length === 0 ? <p>Bạn chưa có món đã đặt.</p> : null}
       {notice && <p role="status">{notice}</p>}
       <div className={`${styles.restaurantGrid} ${styles.reorderGrid}`} data-compact="true" aria-busy={loading}>
-        {items.map((item) => (
+        {items.slice(0, 5).map((item) => (
           <article key={item.orderItemId} className={`${styles.reorderCard} ${styles.snapshotCard}`} data-dimmed={item.isDimmed}>
             {/* Dùng button thay div onclick để bàn phím cũng mở được thẻ bị làm mờ. */}
             <button type="button" className={styles.snapshotDetails} onClick={() => setSelected(item)} aria-label={`Xem lần đặt ${item.name}`}>

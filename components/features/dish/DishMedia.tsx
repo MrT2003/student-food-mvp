@@ -1,4 +1,5 @@
 "use client";
+import { cloudinaryDeliveryUrl } from "@/lib/cloudinary/delivery";
 
 import { useState } from "react";
 import { CookingPot, CupSoda, Utensils } from "lucide-react";
@@ -31,7 +32,7 @@ export function DishHeroMedia({
     >
       {validUrl ? (
         <img
-          src={validUrl}
+          src={cloudinaryDeliveryUrl(validUrl)}
           alt={alt}
           onError={() => setFailedUrl(validUrl)}
           style={{
@@ -304,3 +305,4 @@ export function OptionItemArtwork({ optionName }: { optionName: string }) {
       return <CookingPot size={28} strokeWidth={1.5} aria-hidden="true" />;
   }
 }
+

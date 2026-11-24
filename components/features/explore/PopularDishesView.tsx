@@ -1,4 +1,5 @@
 "use client";
+import { cloudinaryDeliveryUrl } from "@/lib/cloudinary/delivery";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -199,7 +200,7 @@ export default function PopularDishesView({
                   >
                     {dish.imageUrl ? (
                       <img
-                        src={dish.imageUrl}
+                        src={cloudinaryDeliveryUrl(dish.imageUrl)}
                         alt={dish.name}
                         style={{
                           width: "100%",
@@ -252,3 +253,4 @@ export default function PopularDishesView({
     </div>
   );
 }
+

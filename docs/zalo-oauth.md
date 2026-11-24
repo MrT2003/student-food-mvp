@@ -1,5 +1,14 @@
 # Zalo OAuth — contract hiện tại
 
+## Test qua ngrok
+
+- Khi chạy `npm run dev`, đặt `ZALO_CALLBACK_URL_DEV=https://<hostname-ngrok>/api/auth/zalo/callback` trong `.env`.
+- Cấu hình callback tương ứng trong Zalo Developers, rồi restart dev server.
+- Bắt đầu đăng nhập lại từ domain ngrok; không dùng lại URL callback/code của lần trước.
+- Cookie `sf_zalo_flow` thuộc domain bắt đầu OAuth. Nếu Zalo trả về localhost thì cookie ở ngrok không được gửi theo và callback từ chối state.
+- `request.url` trong callback chỉ quyết định redirect sau khi xử lý; `redirect_uri` gửi sang Zalo được tạo trước đó từ biến môi trường.
+- Khi chuyển về test localhost hoặc đổi tunnel, cập nhật callback DEV và cấu hình Zalo tương ứng.
+
 Đối chiếu implementation, caller và lịch sử tại HEAD be15f4b. Commit 40083d6
 hoàn thiện đăng nhập và liên kết hai chiều; docs/test từ phong (c3e8138)
 còn mô tả bước lấy profile trước đó. Merge be15f4b không sửa các module Zalo.

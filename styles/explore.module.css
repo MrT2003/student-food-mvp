@@ -5,42 +5,75 @@
 }
 
 .hero {
-  padding-top: 2px;
+  position: relative;
+  overflow: hidden;
+  padding: 24px 28px 20px;
+  border: 1px solid #f6dec8;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #fff3e8 0%, #fffaf5 50%, #ffefe1 100%);
+  box-shadow: 0 6px 24px rgba(255, 101, 38, 0.06);
   text-align: center;
+}
+
+.heroBannerContent {
+  position: relative;
+  z-index: 1;
+}
+
+.heroDecorLeft,
+.heroDecorRight {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 0;
+  pointer-events: none;
+  color: #ff6b35;
+  opacity: 0.14;
+  display: flex;
+  align-items: center;
+}
+
+.heroDecorLeft {
+  left: 26px;
+}
+
+.heroDecorRight {
+  right: 26px;
 }
 
 .hero h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 40px;
+  font-size: 30px;
   font-weight: 800;
-  line-height: 1.24;
-  letter-spacing: -1.1px;
+  line-height: 1.22;
+  letter-spacing: -0.8px;
 }
 
 .hero h1 span {
   color: var(--sf-orange);
 }
 
-.hero > p {
+.hero > p,
+.heroBannerContent > p {
   margin: 4px 0 0;
   color: var(--sf-muted);
   font-family: var(--font-body);
-  font-size: 18px;
-  line-height: 27px;
+  font-size: 14.5px;
+  line-height: 1.5;
 }
 
 .search {
   display: flex;
   align-items: center;
-  gap: 17px;
+  gap: 12px;
   width: 100%;
-  max-width: 996px;
-  height: 62px;
-  margin: 22px auto 0;
-  padding: 6px 8px 6px 20px;
+  max-width: 720px;
+  height: 48px;
+  margin: 12px auto 0;
+  padding: 5px 6px 5px 16px;
   border: 1px solid var(--sf-border);
-  border-radius: 17px;
+  border-radius: 13px;
   background: var(--sf-card);
   color: #426bad;
 }
@@ -57,7 +90,7 @@
   border: 0;
   background: transparent;
   color: var(--sf-ink);
-  font-size: 17px;
+  font-size: 14.5px;
 }
 
 .search input::placeholder {
@@ -72,11 +105,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  min-height: 35px;
-  padding: 6px 14px;
+  gap: 8px;
+  min-height: 32px;
+  padding: 5px 12px;
   border: 1px solid #ff6526;
-  border-radius: 9px;
+  border-radius: 8px;
   background: linear-gradient(110deg, #ff8429, #ff351b);
   color: #fff;
   font-weight: 600;
@@ -90,33 +123,33 @@
 
 .search .primaryButton {
   flex-shrink: 0;
-  width: 157px;
-  height: 49px;
-  border-radius: 13px;
-  font-size: 17px;
+  width: 116px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 14px;
 }
 
 .filters {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .filters button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  min-height: 46px;
-  padding: 0 23px;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 14px;
   border: 1px solid #efefef;
-  border-radius: 28px;
+  border-radius: 30px;
   background: var(--sf-card);
   color: #42649b;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -138,8 +171,8 @@
 .greenDot {
   display: inline-block;
   flex-shrink: 0;
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   background: #33bf44;
 }
@@ -152,28 +185,28 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 8px;
+  gap: 16px;
+  margin-bottom: 9px;
 }
 
 .sectionHeading h2 {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 9px;
   margin: 0;
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.35;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.5px;
 }
 
 .sectionIcon {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   border: 1px solid #ff8150;
   border-radius: 50%;
   background: linear-gradient(135deg, #ff8429, #ff3815);
@@ -183,21 +216,21 @@
 .sort {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
   color: #58759d;
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
 .sort select {
-  min-height: 41px;
+  min-height: 34px;
   max-width: 165px;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 1px solid #dde3ed;
   border-radius: 9px;
   background: var(--sf-card);
   color: var(--sf-ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
 }
@@ -210,13 +243,13 @@
 
 .restaurantCard {
   display: grid;
-  grid-template-columns: 35% minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 12px;
   min-width: 0;
-  min-height: 146px;
-  padding: 12px;
+  min-height: 122px;
+  padding: 10px;
   border: 1px solid #f0eeea;
-  border-radius: 13px;
+  border-radius: 12px;
   background: var(--sf-card);
 }
 
@@ -234,7 +267,7 @@
   place-items: center;
   min-width: 0;
   height: 100%;
-  min-height: 108px;
+  min-height: 98px;
   overflow: hidden;
   border-radius: 8px;
   background: var(--sf-section);
@@ -256,8 +289,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 65px;
-  height: 65px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--sf-panel);
 }
@@ -273,16 +306,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 5px;
-  min-height: 31px;
+  min-height: 26px;
 }
 
 .restaurantTop h3 {
   min-width: 0;
   margin: 0;
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
-  line-height: 20px;
+  line-height: 19px;
   letter-spacing: -0.3px;
   white-space: nowrap;
   overflow: hidden;
@@ -295,19 +328,19 @@
   justify-content: center;
   flex-shrink: 0;
   gap: 5px;
-  min-height: 30px;
-  padding: 5px 9px;
+  min-height: 24px;
+  padding: 3px 8px;
   border-radius: 25px;
   background: #e7f9e8;
   color: #138722;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 500;
   white-space: nowrap;
 }
 
 .openBadge .greenDot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   background: #32b843;
 }
 
@@ -331,21 +364,21 @@
 .location {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin: 3px 0 6px;
+  gap: 6px;
+  margin: 2px 0 4px;
   color: #496da6;
-  font-size: 13px;
-  line-height: 19px;
+  font-size: 12.5px;
+  line-height: 18px;
 }
 
 .meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 9px;
+  margin-bottom: 6px;
   color: var(--sf-muted);
   font-size: 12px;
-  line-height: 18px;
+  line-height: 17px;
 }
 
 .meta > span {
@@ -372,23 +405,26 @@
 
 .restaurantContent > .primaryButton {
   width: 100%;
+  min-height: 32px;
   margin-top: auto;
-  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .popular {
-  margin-top: 26px;
+  margin-top: 24px;
 }
 
 .seeAll {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--sf-orange);
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -535,13 +571,25 @@
   }
 
   .restaurantTop h3 {
-    font-size: 16px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 1050px) {
+  .heroDecorLeft,
+  .heroDecorRight {
+    display: none;
   }
 }
 
 @media (max-width: 760px) {
   .explorePage {
     --explore-mobile-gutter: 24px;
+  }
+
+  .hero {
+    padding: 18px 16px 14px;
+    border-radius: 16px;
   }
 
   .hero h1 {
@@ -558,7 +606,8 @@
     color: var(--sf-orange);
   }
 
-  .hero > p {
+  .hero > p,
+  .heroBannerContent > p {
     max-width: 340px;
     margin: 8px auto 0;
     font-size: 14px;
@@ -603,6 +652,12 @@
     overscroll-behavior-x: contain;
     scrollbar-width: none;
     scroll-padding-inline: var(--explore-mobile-gutter);
+  }
+
+  .hero .filters {
+    margin: 10px -16px 0;
+    padding: 2px 16px 4px;
+    scroll-padding-inline: 16px;
   }
 
   .filters::-webkit-scrollbar,

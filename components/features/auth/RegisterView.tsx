@@ -43,15 +43,11 @@ export default function RegisterView({ mode = "register" }: Props) {
               Student<span className="text-[#ff4d0a]">Food</span>
             </h1>
 
-            <p className="mt-4 leading-relaxed text-[#526a9e]">
-              {isRegister ? "Tạo tài khoản để tiếp tục." : "Đăng nhập để tiếp tục."}
-            </p>
           </div>
 
           <div
             className={[
               styles.providers,
-              "mx-auto mt-8 w-full max-w-[440px]",
             ].join(" ")}
           >
 
@@ -62,6 +58,7 @@ export default function RegisterView({ mode = "register" }: Props) {
               <button type="button" onClick={() => void logout()}>Thử lại đăng xuất</button>
             </div>}
             <SocialAuthButtons
+              // Provider quyết định nút nào hiện loading; khóa cả hai khi chưa hoàn tất logout.
               pendingProvider={pendingProvider}
               disabled={finishingLogout}
               error={error}

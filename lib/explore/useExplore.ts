@@ -4,12 +4,13 @@ import { useMemo, useState } from "react";
 import { MASTER_CATEGORIES, type MasterCategory } from "@/lib/categories";
 import { normalizeSearchText as normalize } from "@/lib/format";
 import { exploreRestaurants, type ExploreRestaurant } from "./mock-data";
+import { popularDishCards, type PopularDishCard } from "./popular-data";
 
 export const categories = MASTER_CATEGORIES;
 
 export type Category = MasterCategory;
 export type Location = "all" | "KTX A" | "KTX B";
-export type SortBy = "popular" | "name" | "menu";
+export type SortBy = "popular" | "price-asc" | "price-desc" | "name" | "menu";
 
 export type ExploreFilters = {
   query: string;
@@ -88,8 +89,66 @@ export function filterAndSortExploreRestaurants(
   });
 }
 
+export function filterAndSortExploreDishes(
+  list: PopularDishCard[],
+  filters: Partial<ExploreFilters> = initialExploreFilters,
+): PopularDishCard[] {
+  const query = filters.query ?? initialExploreFilters.query;
+  const openOnly = filters.openOnly ?? initialExploreFilters.openOnly;
+  const location = filters.location ?? initialExploreFilters.location;
+  const category =
+    filters.category === undefined
+      ? initialExploreFilters.category
+      : filters.category;
+  const sortBy = filters.sortBy ?? initialExploreFilters.sortBy;
+  const search = normalize(query);
+
+  const result = list.filter((dish) => {
+    if (openOnly && dish.isOpen === false) return false;
+
+    if (location !== "all" && (dish.location ?? "") !== location) {
+      return false;
+    }
+
+    if (category) {
+      const matched = dish.category
+        ? dish.category === category
+        : dish.categories.includes(category);
+      if (!matched) return false;
+    }
+
+    if (!search) return true;
+
+    const searchableText = normalize(
+      [
+        dish.name,
+        dish.restaurantName,
+        dish.location ?? "",
+        dish.category ?? "",
+        ...dish.categories,
+      ].join(" "),
+    );
+
+    return searchableText.includes(search);
+  });
+
+  return [...result].sort((a, b) => {
+    if (sortBy === "price-asc") {
+      return a.price - b.price;
+    }
+    if (sortBy === "price-desc") {
+      return b.price - a.price;
+    }
+    if (sortBy === "name") {
+      return a.name.localeCompare(b.name, "vi");
+    }
+    return a.rank - b.rank;
+  });
+}
+
 export function useExplore(
   initialRestaurants: ExploreRestaurant[] = exploreRestaurants,
+  initialDishes: PopularDishCard[] = popularDishCards,
 ) {
   const [searchInput, setSearchInput] = useState("");
   const [query, setQuery] = useState(initialExploreFilters.query);
@@ -114,6 +173,18 @@ export function useExplore(
     [query, openOnly, location, category, sortBy, initialRestaurants],
   );
 
+  const dishes = useMemo(
+    () =>
+      filterAndSortExploreDishes(initialDishes, {
+        query,
+        openOnly,
+        location,
+        category,
+        sortBy,
+      }),
+    [query, openOnly, location, category, sortBy, initialDishes],
+  );
+
   function resetFilters() {
     setSearchInput("");
     setQuery(initialExploreFilters.query);
@@ -135,6 +206,7 @@ export function useExplore(
     sortBy,
     setSortBy,
     restaurants,
+    dishes,
     resetFilters,
     isAllSelected: isAllExploreFilters({
       query,

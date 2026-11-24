@@ -10,6 +10,7 @@ export async function proxy(request: NextRequest) {
   // hỏng hoàn toàn Service Worker ---> TÍNH NĂNG THÔNG BÁO NGẦM BỊ CHẾT
   // Chỉ bypass đúng hai tài nguyên công khai, không bỏ kiểm tra Auth cho các route khác.
   if (request.nextUrl.pathname === '/firebase-messaging-sw.js'
+    || request.nextUrl.pathname === '/manifest.webmanifest'
     || request.nextUrl.pathname === '/api/firebase/worker-config') {
     return NextResponse.next();
   }

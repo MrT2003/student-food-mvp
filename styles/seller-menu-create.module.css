@@ -37,6 +37,7 @@
 .addChoice { border:1px dashed #bacbdf; background:white; color:#5378ab; border-radius:22px; display:flex; gap:6px; align-items:center; padding:6px 12px; }
 .addGroup { width:100%; border:1px dashed #ff602c; background:#fffaf7; border-radius:8px; padding:9px; color:#ff5425; margin-top:12px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600; }
 .empty { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; }.empty p { color:#7890b0; margin:0; }.empty button { font-size:12px; padding:7px 12px; }
+.presetButtons { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .switches { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
 .switchLabel { display:flex; gap:10px; align-items:start; cursor:pointer; border-right:1px solid #edf0f5; padding-right:10px; }.switchLabel:last-child { border:0; }
 .switchLabel input { appearance:none; width:42px; height:24px; background:#adb9cc; border-radius:20px; flex-shrink:0; position:relative; margin:1px 0 0; cursor:pointer; transition:background .15s; }

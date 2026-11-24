@@ -1,4 +1,5 @@
 "use client";
+import { cloudinaryDeliveryUrl } from "@/lib/cloudinary/delivery";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -81,7 +82,7 @@ export default function SellerRegistrationView() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState("KTX A");
 
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("same");
   const [openTime, setOpenTime] = useState("10:00");
@@ -91,7 +92,6 @@ export default function SellerRegistrationView() {
   const [cash, setCash] = useState(true);
   const [bank, setBank] = useState(true);
   const [startClosed, setStartClosed] = useState(false);
-  const [appLockPin, setAppLockPin] = useState("");
 
   const [imagePreview, setImagePreview] = useState("");
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -152,7 +152,7 @@ export default function SellerRegistrationView() {
     setIsUploadingImage(true);
     try {
       const uploaded = await CloudinaryService.uploadImage(file, {
-        folder: "student-food/restaurants",
+        purpose: "restaurant_registration",
       });
       if (uploadRequestIdRef.current === requestId) {
         setImagePreview(uploaded.secureUrl);
@@ -196,9 +196,6 @@ export default function SellerRegistrationView() {
     }
     if (!cash && !bank) {
       nextErrors.push("Vui lòng chọn ít nhất một phương thức thanh toán.");
-    }
-    if (!/^[0-9]{4}$/.test(appLockPin)) {
-      nextErrors.push("Vui lòng nhập PIN gồm đúng 4 chữ số.");
     }
     if (isUploadingImage) {
       nextErrors.push("Vui lòng chờ tải ảnh lên Cloudinary hoàn tất.");
@@ -254,20 +251,36 @@ export default function SellerRegistrationView() {
         closeTime,
         startClosed,
         avatar_url: imagePreview || null,
-        appLockPin,
       });
+      if (typeof window !== "undefined" && window.localStorage) {
+        try {
+          const payload = JSON.stringify({ cash, bank });
+          if ("restaurant" in result && result.restaurant?.id) {
+            window.localStorage.setItem(
+              `sf:seller-payment-methods:${result.restaurant.id}`,
+              payload,
+            );
+          }
+          window.localStorage.setItem("sf:seller-payment-methods:latest", payload);
+        } catch {
+          // Ignore storage errors
+        }
+      }
       setMessage(result.message);
       router.push("/seller");
       router.refresh();
     } catch (error) {
-      uncertain = error instanceof Error && /Chưa xác định|chưa tải được|Kiểm tra lại hồ sơ|Kiểm tra lại hồ sơ và/i.test(error.message);
-      setErrors([
+      const errMsg =
         error instanceof Error
           ? error.message
-          : "Không thể đăng ký cửa hàng. Vui lòng thử lại sau.",
+          : error && typeof error === "object" && "message" in error && typeof (error as { message?: unknown }).message === "string"
+            ? (error as { message: string }).message
+            : "";
+      uncertain = /Chưa xác định|chưa tải được|Kiểm tra lại hồ sơ|Kiểm tra lại hồ sơ và/i.test(errMsg);
+      setErrors([
+        errMsg || "Không thể đăng ký cửa hàng. Vui lòng thử lại sau.",
       ]);
     } finally {
-      setAppLockPin("");
       submitting.current = uncertain;
       setPending(false);
     }
@@ -456,25 +469,20 @@ export default function SellerRegistrationView() {
 
                   <div className={styles.locationInput}>
                     <MapPin size={23} aria-hidden="true" />
-                    <input
+                    <select
                       id="shop-location"
                       name="location"
-                      list="shop-locations"
                       required
-                      maxLength={200}
                       value={location}
                       onChange={(event) => setLocation(event.target.value)}
-                      placeholder="Chọn khu vực hoặc nhập địa điểm"
-                    />
+                    >
+                      <option value="KTX A">KTX A</option>
+                      <option value="KTX B">KTX B</option>
+                    </select>
                   </div>
 
-                  <datalist id="shop-locations">
-                    <option value="KTX A" />
-                    <option value="KTX B" />
-                  </datalist>
-
                   <p className={styles.hint}>
-                    Ví dụ: KTX A, Q. Thủ Đức, TP. HCM
+                    Chọn khu vực phục vụ: KTX A hoặc KTX B
                   </p>
                 </div>
 
@@ -503,7 +511,7 @@ export default function SellerRegistrationView() {
                       <>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={imagePreview}
+                          src={cloudinaryDeliveryUrl(imagePreview)}
                           alt="Ảnh đại diện quán đã chọn"
                           className={styles.imagePreview}
                           onError={() => {
@@ -835,26 +843,6 @@ export default function SellerRegistrationView() {
             </button>
 
             <div className={styles.accordionBody}>
-              <div className={styles.field}>
-                <label htmlFor="seller-app-lock-pin">
-                  PIN khóa ứng dụng <span>*</span>
-                </label>
-                <input
-                  id="seller-app-lock-pin"
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  minLength={4}
-                  maxLength={4}
-                  pattern="[0-9]{4}"
-                  required
-                  value={appLockPin}
-                  disabled={pending}
-                  onChange={(event) => setAppLockPin(event.target.value)}
-                />
-                <small>PIN gồm đúng 4 chữ số, dùng để khóa ứng dụng.</small>
-              </div>
-
               <label className={styles.closedOption}>
                 <input
                   type="checkbox"
@@ -926,3 +914,5 @@ export default function SellerRegistrationView() {
     </div>
   );
 }
+
+
