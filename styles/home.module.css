@@ -28,13 +28,14 @@
   position: relative;
   z-index: 10;
   background: var(--sf-card);
+  border-bottom: 1px solid #f0e8de;
 }
 .headerInner {
-  width: 100%;
-  max-width: none;
+  width: min(1560px, calc(100% - 64px));
+  max-width: 1560px;
   height: 100%;
-  margin: 0;
-  padding: 0 24px;
+  margin: 0 auto;
+  padding: 0;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -249,10 +250,41 @@
   opacity: 0.68;
 }
 .main {
-  width: calc(100% - 96px);
-  max-width: 1528px;
-  margin: auto;
-  padding: 32px 0 56px;
+  width: min(1560px, calc(100% - 64px));
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 18px 0 36px;
+}
+.heroBanner {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 28px 20px;
+  border: 1px solid #f6dec8;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #fff3e8 0%, #fffaf5 50%, #ffefe1 100%);
+  box-shadow: 0 6px 24px rgba(255, 101, 38, 0.06);
+}
+.heroBannerContent {
+  position: relative;
+  z-index: 1;
+}
+.heroDecorLeft,
+.heroDecorRight {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 0;
+  pointer-events: none;
+  color: #ff6b35;
+  opacity: 0.14;
+  display: flex;
+  align-items: center;
+}
+.heroDecorLeft {
+  left: 26px;
+}
+.heroDecorRight {
+  right: 26px;
 }
 .hero {
   text-align: center;
@@ -260,10 +292,10 @@
 .hero h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 42px;
+  font-size: 30px;
   line-height: 1.22;
   font-weight: 800;
-  letter-spacing: -1.2px;
+  letter-spacing: -0.8px;
 }
 .hero h1 span {
   color: var(--sf-orange);
@@ -271,21 +303,21 @@
 .hero > p {
   margin: 4px 0 0;
   font-family: var(--font-body);
-  font-size: 18px;
-  line-height: 1.55;
+  font-size: 14.5px;
+  line-height: 1.5;
   font-weight: 400;
   color: var(--sf-muted);
 }
 .search {
   display: flex;
   align-items: center;
-  gap: 17px;
-  max-width: 902px;
-  height: 62px;
-  padding: 6px 7px 6px 20px;
-  margin: 16px auto 0;
+  gap: 12px;
+  max-width: 720px;
+  height: 48px;
+  padding: 5px 6px 5px 16px;
+  margin: 12px auto 0;
   border: 1px solid var(--sf-border);
-  border-radius: 17px;
+  border-radius: 13px;
   background: var(--sf-card);
   box-shadow: 0 2px 10px #44331f03;
   color: var(--sf-muted);
@@ -302,7 +334,7 @@
   border: 0;
   background: transparent;
   color: var(--sf-ink);
-  font-size: 17px;
+  font-size: 14.5px;
 }
 .search input::placeholder {
   color: var(--sf-muted);
@@ -315,7 +347,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 13px;
+  gap: 10px;
   border: 1px solid #ff6526;
   border-radius: 9px;
   background: linear-gradient(110deg, #ff8429, #ff3718);
@@ -332,11 +364,11 @@
   transform: translateY(1px);
 }
 .search .primaryButton {
-  height: 48px;
-  width: 157px;
+  height: 36px;
+  width: 116px;
   flex-shrink: 0;
-  border-radius: 13px;
-  font-size: 17px;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 600;
 }
 .searchSubmitIcon {
@@ -349,20 +381,20 @@
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 12px;
-  margin: 14px auto 0;
+  gap: 8px;
+  margin: 10px auto 0;
 }
 .filters button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 11px;
-  min-height: 44px;
-  padding: 0 24px;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 14px;
   border-radius: 30px;
   border: 1px solid #eeebe6;
   background: var(--sf-card);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   transition: background 0.15s;
@@ -385,32 +417,32 @@
   background: #0ec330;
 }
 .restaurantSection {
-  margin-top: 30px;
+  margin-top: 20px;
   scroll-margin-top: 24px;
 }
 .sectionHeading {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   margin-bottom: 9px;
 }
 .sectionHeading h2 {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 9px;
   margin: 0;
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 20px;
   line-height: 1.35;
   font-weight: 700;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.5px;
 }
 .sectionIcon {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   border: 1px solid #ff8150;
   border-radius: 50%;
@@ -420,13 +452,13 @@
 .seeAll {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 7px;
   padding: 0;
   border: 0;
   background: none;
   color: #ff3c13;
   text-decoration: none;
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -441,15 +473,15 @@
 }
 .restaurantCard {
   min-width: 0;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid #eeebe7;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--sf-card);
   box-shadow: 0 3px 12px #63452a02;
 }
 .restaurantMedia {
   position: relative;
-  height: 108px;
+  height: 90px;
 }
 .foodImage {
   object-fit: cover;
@@ -505,36 +537,36 @@
   top: 7px;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 12px;
+  gap: 5px;
+  padding: 4px 9px;
   border: 1px solid #d3e8cb;
   border-radius: 30px;
   background: #efffe5;
   color: #087712;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  line-height: 16px;
+  line-height: 14px;
   white-space: nowrap;
 }
 .openBadge .greenDot {
-  width: 11px;
-  height: 11px;
+  width: 8px;
+  height: 8px;
 }
 .restaurantCard h3 {
-  margin: 11px 0 7px;
+  margin: 8px 0 4px;
   font-family: var(--font-display);
-  font-size: 17px;
-  line-height: 22px;
+  font-size: 15px;
+  line-height: 20px;
   font-weight: 700;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.3px;
 }
 .location {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 6px;
   margin: 0;
-  font-size: 14px;
-  line-height: 22px;
+  font-size: 12.5px;
+  line-height: 18px;
 }
 .location svg {
   flex-shrink: 0;
@@ -542,10 +574,10 @@
 .restaurantMeta {
   display: flex;
   align-items: center;
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--sf-muted);
-  font-size: 13px;
-  line-height: 21px;
+  font-size: 12px;
+  line-height: 18px;
 }
 .restaurantMeta > span {
   display: inline-flex;
@@ -567,14 +599,15 @@
   text-overflow: ellipsis;
 }
 .restaurantCard > .primaryButton {
-  margin-top: 10px;
+  margin-top: 8px;
   width: 100%;
-  min-height: 38px;
-  font-size: 15px;
+  min-height: 33px;
+  font-size: 13.5px;
   font-weight: 600;
+  gap: 8px;
 }
 .reorderSection {
-  margin-top: 29px;
+  margin-top: 20px;
   scroll-margin-top: 24px;
 }
 .reorderNotice {
@@ -753,17 +786,22 @@
     gap: 6px;
   }
   .hero h1 {
-    font-size: 36px;
+    font-size: 26px;
   }
   .hero > p {
-    font-size: 16px;
+    font-size: 14px;
   }
-  .main {
+  .main,
+  .headerInner {
     width: calc(100% - 48px);
   }
   .headerInner {
-    padding: 0 20px;
+    padding: 0;
     gap: 16px;
+  }
+  .heroDecorLeft,
+  .heroDecorRight {
+    display: none;
   }
 }
 @media (max-width: 760px) {
@@ -771,6 +809,7 @@
     height: auto;
   }
   .headerInner {
+    width: calc(100% - 48px);
     grid-template-columns: 1fr auto;
     gap: 0;
     margin: auto;
@@ -808,6 +847,10 @@
   .main {
     --home-mobile-gutter: 24px;
     padding: 18px 0 32px;
+  }
+  .heroBanner {
+    padding: 18px 16px 14px;
+    border-radius: 16px;
   }
   .hero h1 {
     max-width: 560px;
@@ -875,6 +918,11 @@
     overscroll-behavior-x: contain;
     scrollbar-width: none;
     scroll-padding-inline: var(--home-mobile-gutter, 24px);
+  }
+  .heroBanner .filters {
+    margin: 12px -16px 0;
+    padding: 2px 16px 4px;
+    scroll-padding-inline: 16px;
   }
   .filters::-webkit-scrollbar {
     display: none;
@@ -1210,28 +1258,32 @@
 .snapshotPrice { color: #c2410c; font-weight: 700; }
 .snapshotNotice { color: #8b3434; font-size: 12px; font-weight: 600; }
 .snapshotCard[data-dimmed="true"] { background: #f3f4f6; border-color: #d1d5db; }
-.reorderGrid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.snapshotCard { flex-direction: column; justify-content: space-between; gap: 12px; padding: 14px; border-radius: 16px; border: 1px solid #ede9e3; box-shadow: 0 2px 10px rgba(80, 55, 25, 0.03); }
-.snapshotDetails { display: flex; align-items: center; gap: 14px; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
-.snapshotDetails .smallPlaceholder { width: 80px; height: 80px; min-height: 80px; border-radius: 14px; }
-.snapshotInfo { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; font-size: 13.5px; line-height: 1.35; }
-.snapshotInfo strong { font-family: var(--font-display); font-size: 16px; font-weight: 700; line-height: 1.3; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.snapshotMeta { color: #5b6b82; font-size: 13.5px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.snapshotPrice { margin-top: 2px; color: #ea580c; font-size: 16px; font-weight: 700; line-height: 1.3; }
-.snapshotNotice { color: #8b3434; font-size: 12px; font-weight: 600; }
-.snapshotCard .outlineButton { margin-top: 0; min-height: 40px; border-radius: 10px; border: 1.25px solid #ff5722; font-size: 14.5px; font-weight: 600; color: #ff4518; }
+.reorderGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.snapshotCard { flex-direction: column; justify-content: space-between; gap: 8px; padding: 10px; border-radius: 12px; border: 1px solid #ede9e3; box-shadow: 0 2px 10px rgba(80, 55, 25, 0.03); }
+.snapshotDetails { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.snapshotDetails .smallPlaceholder { width: 52px; height: 52px; min-height: 52px; border-radius: 10px; }
+.snapshotInfo { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 2px; font-size: 12.5px; line-height: 1.3; }
+.snapshotInfo strong { font-family: var(--font-display); font-size: 14px; font-weight: 700; line-height: 1.25; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.snapshotMeta { color: #5b6b82; font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.snapshotPrice { margin-top: 1px; color: #ea580c; font-size: 14px; font-weight: 700; line-height: 1.25; }
+.snapshotNotice { color: #8b3434; font-size: 11px; font-weight: 600; }
+.snapshotCard .outlineButton { margin-top: 0; min-height: 32px; border-radius: 8px; border: 1.25px solid #ff5722; font-size: 13px; font-weight: 600; color: #ff4518; }
 .snapshotCard[data-dimmed="true"] { background: #f3f4f6; border-color: #d1d5db; }
 .snapshotCard[data-dimmed="true"] .snapshotDetails { filter: grayscale(1); opacity: .7; }
 .snapshotDetails:focus-visible { outline: 2px solid #ea580c; outline-offset: 5px; border-radius: 5px; }
+@media (max-width: 1100px) {
+  .reorderGrid { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 10px; padding-bottom: 4px; scrollbar-width: thin; }
+  .reorderGrid > .snapshotCard { flex: 0 0 220px; }
+}
 @media (max-width: 760px) {
-  .reorderGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .snapshotCard { padding: 11px; gap: 10px; border-radius: 14px; }
-  .snapshotDetails { gap: 10px; }
-  .snapshotDetails .smallPlaceholder { width: 64px; height: 64px; min-height: 64px; border-radius: 11px; }
-  .snapshotInfo strong { font-size: 14px; }
-  .snapshotMeta { font-size: 12px; }
-  .snapshotPrice { font-size: 14px; }
-  .snapshotCard .outlineButton { min-height: 34px; font-size: 13px; border-radius: 8px; }
+  .reorderGrid > .snapshotCard { flex: 0 0 185px; }
+  .snapshotCard { padding: 9px; gap: 8px; border-radius: 12px; }
+  .snapshotDetails { gap: 8px; }
+  .snapshotDetails .smallPlaceholder { width: 48px; height: 48px; min-height: 48px; border-radius: 9px; }
+  .snapshotInfo strong { font-size: 13px; }
+  .snapshotMeta { font-size: 11.5px; }
+  .snapshotPrice { font-size: 13px; }
+  .snapshotCard .outlineButton { min-height: 30px; font-size: 12.5px; border-radius: 8px; }
 }
 .restaurantSection .restaurantGrid > :nth-child(n + 13) { display: none; }
 @media (max-width: 1399px) {

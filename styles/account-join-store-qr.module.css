@@ -114,8 +114,8 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: linear-gradient(135deg, #ff7a22, #ff3215);
   color: #fff;
@@ -130,7 +130,7 @@
 .headerCopy h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 22px;
   line-height: 1.22;
   font-weight: 800;
   letter-spacing: -0.5px;
@@ -140,7 +140,7 @@
 .headerCopy p {
   margin: 5px 0 0;
   color: rgb(255 255 255 / 84%);
-  font-size: 14.5px;
+  font-size: 13.5px;
   line-height: 1.42;
 }
 
@@ -323,14 +323,14 @@
   justify-content: center;
   gap: 10px;
   width: 100%;
-  min-height: 54px;
-  padding: 12px 20px;
+  min-height: 44px;
+  padding: 10px 18px;
   border: 1px solid #ff7635;
-  border-radius: 14px;
+  border-radius: 12px;
   background: linear-gradient(96deg, #ff8528 0%, #ff4b15 55%, #ff2511 100%);
   color: #fff;
   font-family: var(--font-body);
-  font-size: 16.5px;
+  font-size: 14.5px;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 8px 24px rgb(255 56 20 / 34%);
@@ -453,7 +453,7 @@
 .confirmHeaderCopy h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 29px;
+  font-size: 24px;
   line-height: 1.2;
   font-weight: 800;
   letter-spacing: -0.6px;
@@ -465,16 +465,16 @@
 }
 
 .confirmHeaderCopy p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: #536fa2;
-  font-size: 14.5px;
+  font-size: 13.5px;
   line-height: 1.45;
 }
 
 .confirmCard {
-  padding: 24px 18px 18px;
+  padding: 18px 16px;
   border: 1px solid #f0ebe3;
-  border-radius: 22px;
+  border-radius: 18px;
   background: #ffffff;
   box-shadow: 0 10px 30px rgb(8 20 71 / 4%);
 }
@@ -484,24 +484,24 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding-bottom: 20px;
+  padding-bottom: 16px;
   border-bottom: 1px solid #f0f2f6;
 }
 
 .successCircleOuter {
   display: grid;
   place-items: center;
-  width: 78px;
-  height: 78px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: #e1f8eb;
   color: #069c47;
 }
 
 .successHero h2 {
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   font-family: var(--font-display);
-  font-size: 23px;
+  font-size: 19px;
   line-height: 1.25;
   font-weight: 800;
   letter-spacing: -0.4px;
@@ -509,25 +509,25 @@
 }
 
 .successHero p {
-  margin: 6px 0 0;
+  margin: 5px 0 0;
   color: #5c75a3;
-  font-size: 14px;
+  font-size: 13.5px;
   line-height: 1.45;
 }
 
 .storeProfileRow {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 18px 0;
+  gap: 14px;
+  padding: 14px 0;
 }
 
 .storeThumb {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 76px;
+  height: 76px;
   flex-shrink: 0;
-  border-radius: 16px;
+  border-radius: 13px;
   overflow: hidden;
   background: #f5efe7;
   box-shadow: 0 6px 16px rgb(0 0 0 / 8%);
@@ -544,13 +544,13 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 5px;
 }
 
 .storeInfoCopy h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 21px;
+  font-size: 17.5px;
   line-height: 1.25;
   font-weight: 800;
   letter-spacing: -0.3px;
@@ -562,7 +562,7 @@
   align-items: center;
   gap: 5px;
   color: #5872a3;
-  font-size: 14.5px;
+  font-size: 13.5px;
   font-weight: 500;
 }
 
@@ -571,17 +571,17 @@
   align-items: center;
   gap: 6px;
   margin-top: 2px;
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 999px;
   background: #e1f8eb;
   color: #08873e;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
 }
 
 .detailsBox {
-  padding: 4px 16px;
-  border-radius: 16px;
+  padding: 4px 14px;
+  border-radius: 14px;
   background: #f7f9fc;
 }
 
@@ -590,8 +590,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 13px 0;
-  font-size: 14.5px;
+  padding: 10px 0;
+  font-size: 13.5px;
 }
 
 .detailRow + .detailRow {
@@ -643,14 +643,14 @@
   justify-content: center;
   gap: 10px;
   width: 100%;
-  min-height: 54px;
-  padding: 12px 20px;
+  min-height: 44px;
+  padding: 10px 18px;
   border: 1px solid #ff6526;
-  border-radius: 14px;
+  border-radius: 11px;
   background: linear-gradient(96deg, #ff8528 0%, #ff4b15 55%, #ff2511 100%);
   color: #fff;
   font-family: var(--font-body);
-  font-size: 16.5px;
+  font-size: 14.5px;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 8px 22px rgb(255 56 20 / 26%);
@@ -670,14 +670,14 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 52px;
-  padding: 11px 20px;
+  min-height: 44px;
+  padding: 10px 18px;
   border: 1px solid #ff9d80;
-  border-radius: 14px;
+  border-radius: 11px;
   background: #ffffff;
   color: #ff3816;
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 14.5px;
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
