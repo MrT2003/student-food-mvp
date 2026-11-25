@@ -56,6 +56,42 @@ export function SellerAccessProvider({ children }: {
     useEffect(() => { let mounted = true; Promise.resolve().then(() => { if (mounted)
         retry(); }); window.addEventListener("focus", retry); window.addEventListener("seller-access-changed", retry); return () => { mounted = false; cancel(); window.removeEventListener("focus", retry); window.removeEventListener("seller-access-changed", retry); }; }, [retry, cancel, path]);
     const value = eligible && state.key === key ? { ...state, retry } : { data: null, error: "", loading: status === "loading" || eligible, retry };
-    return <Context.Provider value={value}>{children}</Context.Provider>;
+    const currentTab =
+        !path || !path.startsWith("/seller") || path.startsWith("/seller/register")
+            ? null
+            : path === "/seller"
+              ? "overview"
+              : path === "/seller/orders" || path.startsWith("/seller/orders/")
+                ? "orders"
+                : path === "/seller/menu" || path.startsWith("/seller/menu/")
+                  ? "menu"
+                  : path === "/seller/shop" || path.startsWith("/seller/shop/")
+                    ? "shop"
+                    : path === "/seller/payments" || path.startsWith("/seller/payments/")
+                      ? "payments"
+                      : null;
+    const allowedTabs =
+        value.data?.restaurant
+            ? Array.isArray(value.data.allowed_tabs) && value.data.allowed_tabs.length > 0
+                ? value.data.allowed_tabs
+                : value.data.user.role === "staff"
+                  ? ["overview", "orders", "shop"]
+                  : ["overview", "orders", "menu", "shop", "payments"]
+            : null;
+    const forbiddenTab =
+        Boolean(currentTab && allowedTabs && !(allowedTabs as readonly string[]).includes(currentTab));
+    const fallbackUrl = value.data?.default_tab ?? "/seller/orders";
+
+    useEffect(() => {
+        if (forbiddenTab && typeof window !== "undefined" && window.location?.replace) {
+            window.location.replace(fallbackUrl);
+        }
+    }, [forbiddenTab, fallbackUrl]);
+
+    return (
+        <Context.Provider value={value}>
+            {forbiddenTab ? null : children}
+        </Context.Provider>
+    );
 }
 export const useSellerAccess = () => useContext(Context);

@@ -115,3 +115,83 @@ export async function joinScannedStaff(token: string) {
     }
     return profile;
 }
+
+
+export async function leaveStaffRestaurant(actorId: string, restaurantId: string) {
+    const matchesAssignment = () => {
+        const user = useAuthStore.getState().user;
+        return user?.id === actorId && user.role === "staff" &&
+            user.work_for_restaurant_id === restaurantId;
+    };
+    const conflict = "Quan hệ nhân viên đã thay đổi. Hãy kiểm tra lại cửa hàng hiện tại.";
+    const unknown = "Chưa xác nhận được kết quả rời cửa hàng. Hãy tải lại hồ sơ trước khi thử lại.";
+    if (!matchesAssignment()) throw Error(conflict);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    let response: Response | undefined;
+    let data;
+    try {
+        response = await fetch("/api/staff/leave", {
+            method: "POST", credentials: "same-origin", cache: "no-store",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ restaurantId }), signal: controller.signal,
+        });
+        data = await response.json();
+    } catch {
+        // The write may already have committed. Reconcile through the profile.
+    } finally {
+        clearTimeout(timeout);
+    }
+    const code = data?.error?.code;
+    const rejected = code === "STAFF_LEAVE_CONFLICT";
+    const failures: Record<string, string> = {
+        STAFF_LEAVE_RPC_UNAVAILABLE: "API chưa gọi được RPC rời cửa hàng. Cần kiểm tra triển khai, chữ ký và schema cache.",
+        STAFF_LEAVE_REJECTED: "Database từ chối cập nhật quan hệ nhân viên. Vui lòng liên hệ hỗ trợ.",
+        DATABASE_ACCESS_DENIED: "Tài khoản chưa có quyền database để rời cửa hàng.",
+        UNAUTHORIZED: messages.UNAUTHORIZED,
+        FORBIDDEN: "Yêu cầu rời cửa hàng không hợp lệ. Hãy tải lại trang.",
+        VALIDATION_ERROR: "Định danh cửa hàng không hợp lệ. Hãy tải lại trang.",
+        INVALID_JSON: "Dữ liệu yêu cầu rời cửa hàng không hợp lệ. Hãy tải lại trang.",
+    };
+    if (response && !response.ok && typeof code === "string" && Object.hasOwn(failures, code))
+        throw Error(failures[code]);
+
+    const confirmedWrite = response?.ok && data?.profile?.id === actorId &&
+        data.profile.role === "student" && data.profile.work_for_restaurant_id === null;
+    const readError = confirmedWrite
+        ? "Backend đã xác nhận bạn rời cửa hàng, nhưng chưa tải được trạng thái mới. Hãy tải lại trang."
+        : unknown;
+    const readController = new AbortController();
+    const readTimeout = setTimeout(() => readController.abort(), 10000);
+    let profile;
+    try {
+        const read = await fetch("/api/staff/leave", {
+            method: "GET", credentials: "same-origin", cache: "no-store", signal: readController.signal,
+        });
+        if (read.ok) profile = (await read.json())?.profile;
+    } catch {
+        // Readback failure must not replace a definite POST result.
+    } finally {
+        clearTimeout(readTimeout);
+    }
+    const current = useAuthStore.getState().user;
+    if (!profile || profile.id !== actorId || current?.id !== actorId || profile.status !== "active" ||
+        !["student", "staff", "seller"].includes(profile.role) ||
+        (profile.role === "staff" ? typeof profile.work_for_restaurant_id !== "string" : profile.work_for_restaurant_id !== null))
+        throw Error(rejected ? conflict : readError);
+
+    // Keep a newer assignment already observed by this tab over an old read.
+    if (current.role !== "student" && !matchesAssignment()) throw Error(conflict);
+    useAuthStore.getState().setUser({
+        ...current, role: profile.role, status: profile.status,
+        work_for_restaurant_id: profile.work_for_restaurant_id,
+    });
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("seller-access-changed"));
+    if (rejected) throw Error(conflict);
+    if (profile.role !== "student" || profile.work_for_restaurant_id !== null) {
+        if (confirmedWrite || profile.role !== "staff" || profile.work_for_restaurant_id !== restaurantId)
+            throw Error(conflict);
+        throw Error(unknown);
+    }
+}

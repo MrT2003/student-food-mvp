@@ -1,6 +1,8 @@
 "use client";
 
 import { create } from "zustand";
+import { useAuthStore } from "@/store/useAuthStore";
+import { purchaseSyncUserId } from "@/lib/auth/purchase-access";
 
 import type {
   AddCartItemInput,
@@ -59,6 +61,9 @@ const initialCart: Cart = {
   updated_at: "2026-09-01T00:00:00.000Z",
 };
 
+let purchaseGeneration = 0;
+let guestSnapshot: StudentSnapshot | undefined;
+
 type RestaurantPreference = {
   payment: "bank" | "cash";
   note: string;
@@ -99,6 +104,8 @@ type StudentMockState = {
   addCatalogItem: (input: AddCartItemInput) => ActionResult;
   reorderOrder: (orderId: string) => ActionResult;
   reorderDatabaseOrder: (orderId: string) => Promise<ActionResult>;
+  cancelOrderRecord: (orderId: string) => ActionResult;
+  cancelDatabaseOrder: (orderId: string) => Promise<ActionResult>;
 
   updateCartItemQuantity: (id: string, quantity: number) => ActionResult;
   removeCartItem: (id: string) => ActionResult;
@@ -274,21 +281,18 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
     preferences: {},
 
     syncFromDatabase: async (userId) => {
+      const auth = useAuthStore.getState();
+      const uid = purchaseSyncUserId(auth);
+      if (!uid || (userId !== undefined && userId !== uid)) return;
+
+      const generation = purchaseGeneration;
+      const isCurrent = () => {
+        const current = useAuthStore.getState();
+        return purchaseGeneration === generation && purchaseSyncUserId(current) === uid &&
+          current.user?.role === auth.user?.role;
+      };
       try {
         const supabase = createClient();
-        let uid = userId;
-        if (uid === undefined) {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          uid = user?.id ?? null;
-        }
-
-        if (!uid) {
-          set({ serverCart: null });
-          return;
-        }
-
         const [cartResult, ordersResponse] = await Promise.all([
           CartServices.getCart(uid),
           supabase
@@ -299,9 +303,13 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
             .eq("student_id", uid)
             .order("created_at", { ascending: false }),
         ]);
+        if (!isCurrent()) return;
 
         const now = new Date().toISOString();
         const state = get();
+        const isGuest = state.cart.student_id === MOCK_CUSTOMER.id;
+        if (isGuest) guestSnapshot = snapshot(state);
+        const sameOwner = !isGuest && state.cart.student_id === uid;
         const nextCart: Cart = cartResult.cart ?? {
           id: state.cart.id,
           student_id: uid,
@@ -327,16 +335,16 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
           mappedRows.map((row) => row.restaurant_id),
         );
         const preferences: StudentMockState["preferences"] = {};
-        for (const [id, preference] of Object.entries(state.preferences)) {
+        for (const [id, preference] of Object.entries(sameOwner ? state.preferences : {})) {
           if (preference && activeRestaurantIds.has(id)) {
             preferences[id] = preference;
           }
         }
 
         const nextOrderRecords: Record<string, OrderDetail> = {
-          ...state.orderRecords,
+          ...(sameOwner ? state.orderRecords : {}),
         };
-        let recoveredLastCheckout = state.lastCheckout;
+        let recoveredLastCheckout = sameOwner ? state.lastCheckout : null;
         if (Array.isArray(ordersResponse.data)) {
           for (const rawRow of ordersResponse.data) {
             const detail = mapRawOrderRow(rawRow as Record<string, unknown>);
@@ -362,7 +370,7 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
           lastCheckout: recoveredLastCheckout,
         });
       } catch (error) {
-        console.error("[useStudentMockStore] syncFromDatabase failed:", error);
+        if (isCurrent()) console.error("[useStudentMockStore] syncFromDatabase failed:", error);
       }
     },
 
@@ -703,6 +711,65 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
       }
     },
 
+    cancelOrderRecord: (orderId) => {
+      try {
+        const state = get();
+        const order = state.orderRecords[orderId];
+        if (!order) {
+          throw new Error("Không tìm thấy đơn hàng.");
+        }
+        if (order.order_status !== "pending") {
+          throw new Error("Chỉ có thể hủy đơn hàng khi đang chờ xác nhận.");
+        }
+        set({
+          orderRecords: {
+            ...state.orderRecords,
+            [orderId]: {
+              ...order,
+              order_status: "cancelled",
+            },
+          },
+        });
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: errorMessage(error) };
+      }
+    },
+
+    cancelDatabaseOrder: async (orderId) => {
+      try {
+        const state = get();
+        if (!state.serverCart) {
+          return state.cancelOrderRecord(orderId);
+        }
+        const order = state.orderRecords[orderId];
+        if (!order) {
+          throw new Error("Không tìm thấy đơn hàng.");
+        }
+        if (order.order_status !== "pending") {
+          throw new Error("Chỉ có thể hủy đơn hàng khi đang chờ xác nhận.");
+        }
+        await OrderServices.cancelOrder(orderId);
+        set((current) => {
+          const target = current.orderRecords[orderId];
+          if (!target) return current;
+          return {
+            orderRecords: {
+              ...current.orderRecords,
+              [orderId]: {
+                ...target,
+                order_status: "cancelled",
+              },
+            },
+          };
+        });
+        await get().syncFromDatabase();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: errorMessage(error) };
+      }
+    },
+
     updateCartItemQuantity: (id, quantity) => {
       try {
         validateQuantity(quantity);
@@ -841,6 +908,38 @@ function snapshot(state: StudentMockState): StudentSnapshot {
     address: state.address,
     preferences: state.preferences,
     lastCheckout: state.lastCheckout,
+  };
+}
+
+function clearPreviousPurchaseAccount(owner: string | null) {
+  const { cart, serverCart } = useStudentMockStore.getState();
+  if (cart.student_id === owner || (!serverCart && cart.student_id === MOCK_CUSTOMER.id)) return;
+
+  // Restore the independent draft used by signed-out visitors.
+  useStudentMockStore.setState({
+    serverCart: null,
+    cart: guestSnapshot?.cart ?? initialCart,
+    cart_items: guestSnapshot?.cart_items ?? [],
+    orderRecords: guestSnapshot?.orderRecords ?? {},
+    location: guestSnapshot?.location ?? "KTX A",
+    address: guestSnapshot?.address ?? "",
+    preferences: guestSnapshot?.preferences ?? {},
+    lastCheckout: guestSnapshot?.lastCheckout ?? null,
+  });
+}
+
+// The shared header also mounts outside the student layout.
+export function startStudentAccountScope() {
+  clearPreviousPurchaseAccount(purchaseSyncUserId(useAuthStore.getState()));
+  const unsubscribe = useAuthStore.subscribe((auth, previous) => {
+    const owner = purchaseSyncUserId(auth);
+    if (owner === purchaseSyncUserId(previous) && auth.user?.role === previous.user?.role) return;
+    purchaseGeneration++;
+    clearPreviousPurchaseAccount(owner);
+  });
+  return () => {
+    purchaseGeneration++;
+    unsubscribe();
   };
 }
 

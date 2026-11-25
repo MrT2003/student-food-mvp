@@ -1,4 +1,5 @@
 import "server-only";
+import { contactPhone } from "@/lib/seller/shop-contract";
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isRecord } from "@/utilities/system.utility";
@@ -19,7 +20,9 @@ import type {
   ValidatedSellerRegistration,
 } from "@/types/seller.types";
 
-export class SellerValidationError extends Error {}
+export class SellerValidationError extends Error {
+  constructor(message: string, public readonly field?: string) { super(message); }
+}
 
 export type SellerRegistrationErrorCode =
   | "PROFILE_NOT_FOUND" | "ACCOUNT_INACTIVE" | "ROLE_CONFLICT"
@@ -34,7 +37,7 @@ export class SellerRegistrationError extends Error {
 
 export type SellerRestaurantUpdateErrorCode =
   | "PROFILE_NOT_FOUND" | "ACCOUNT_INACTIVE" | "SELLER_REQUIRED" | "RESTAURANT_NOT_FOUND"
-  | "UNAUTHORIZED" | "DATABASE_ACCESS_DENIED" | "UPDATE_FAILED";
+  | "UNAUTHORIZED" | "DATABASE_ACCESS_DENIED" | "CONTACT_PHONE_UNAVAILABLE" | "UPDATE_FAILED";
 
 export class SellerRestaurantUpdateError extends Error {
   constructor(public readonly code: SellerRestaurantUpdateErrorCode) {
@@ -64,6 +67,7 @@ export class SellerBankError extends Error {
 
 export type SellerStaffErrorCode =
   | "PROFILE_NOT_FOUND" | "ACCOUNT_INACTIVE" | "SELLER_REQUIRED" | "RESTAURANT_NOT_FOUND"
+  | "STAFF_LEAVE_CONFLICT" | "STAFF_LEAVE_RPC_UNAVAILABLE" | "STAFF_LEAVE_RESULT_UNKNOWN" | "STAFF_LEAVE_REJECTED"
   | "ISSUER_NOT_ALLOWED" | "STAFF_ROLE_CONFLICT" | "STAFF_MEMBERSHIP_CONFLICT"
   | "STAFF_TOKEN_CONFIGURATION_MISSING" | "INVALID_STAFF_TOKEN" | "STAFF_TOKEN_EXPIRED"
   | "DATABASE_CONFIGURATION_MISSING" | "DATABASE_CONFIGURATION_INVALID" | "STAFF_OPERATION_FAILED" | "STAFF_JOIN_ATOMICITY_UNAVAILABLE" | "STAFF_JOIN_RPC_UNAVAILABLE" | "STAFF_JOIN_RESULT_UNKNOWN" | "UNAUTHORIZED" | "DATABASE_ACCESS_DENIED";
@@ -84,11 +88,20 @@ function staffTokenCall<T>(tools: StaffTokenTools, action: () => T): T {
 const dayIds: readonly string[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const registrationFields = [
   "name", "description", "location", "cash", "bank", "scheduleMode",
-  "days", "openTime", "closeTime", "startClosed", "appLockPin",
+  "days", "openTime", "closeTime", "startClosed", "appLockPin", "avatar_url",
 ];
 
+// Persistent HTTPS URL only; never store blob/data previews or URL credentials.
+function avatarUrl(value: unknown): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string" || !value.trim() || value.trim().length > 2048) invalid("avatar_url", "URL ảnh không hợp lệ.");
+  try { const url = new URL(value.trim()); if (url.protocol !== "https:" || url.username || url.password) throw Error(); }
+  catch { invalid("avatar_url", "Chỉ chấp nhận URL HTTPS bền vững."); }
+  return value.trim();
+}
+
 function invalid(field: string, reason: string): never {
-  throw new SellerValidationError(`SELLER_VALIDATION_ERROR: ${field}: ${reason}`);
+  throw new SellerValidationError(`SELLER_VALIDATION_ERROR: ${field}: ${reason}`, field);
 }
 
 function assertFields(value: Record<string, unknown>, allowed: readonly string[], field: string) {
@@ -324,12 +337,13 @@ async function writeRestaurantBank(userId: string, restaurantId: string, operati
 }
 
 export const SellerServices = {
-  // Endpoint chuyên biệt closed -> open; không mở rộng PATCH thông tin quán.
+  // Trạng thái đích rõ ràng, không blind toggle hoặc mở rộng PATCH thông tin quán.
   async openRestaurant(userId: string, restaurantId: unknown, input: unknown, supplied?: SupabaseClient): Promise<SellerRestaurantOpenResult> {
     const id = uuidValue(restaurantId);
     if (!isRecord(input)) invalid("payload", "Phải là object JSON.");
     assertFields(input, ["operating_status"], "payload");
-    if (!Object.hasOwn(input, "operating_status") || input.operating_status !== "open") invalid("operating_status", "Chỉ chấp nhận open.");
+    if (!Object.hasOwn(input, "operating_status") || (input.operating_status !== "open" && input.operating_status !== "closed")) invalid("operating_status", "Chỉ chấp nhận open hoặc closed.");
+    const target = input.operating_status as "open" | "closed";
     try {
       const { client, profile } = await sellerSession(userId, supplied);
       if (profile.role !== "seller") throw new SellerRestaurantOpenError("SELLER_REQUIRED");
@@ -337,13 +351,16 @@ export const SellerServices = {
         .select("id,operating_status").eq("id", id).eq("owner_id", userId).maybeSingle();
       checkSdkError(readError);
       if (!restaurant) throw new SellerRestaurantOpenError("RESTAURANT_NOT_FOUND");
-      // Lặp sau khi đã mở là no-op, không gọi RPC để đổi timestamp lần nữa.
-      if (restaurant.operating_status === "open") return { restaurant: { id, operating_status: "open" }, alreadyOpen: true };
-      if (restaurant.operating_status !== "closed") throw new SellerRestaurantOpenError("OPERATING_STATUS_CONFLICT");
+      // Request lặp với cùng đích là no-op; paused không được chuyển tại API này.
+      if (restaurant.operating_status === target) return { restaurant: { id, operating_status: target }, alreadyOpen: target === "open", alreadyAtTarget: true };
+      if (!["open", "closed"].includes(restaurant.operating_status)) throw new SellerRestaurantOpenError("OPERATING_STATUS_CONFLICT");
       let result;
       try {
-        result = await client.rpc("set_restaurant_operating_status", { p_restaurant_id: id, p_operating_status: "open" });
+        result = await client.rpc("set_restaurant_operating_status", { p_restaurant_id: id, p_operating_status: target });
       } catch { throw new SellerRestaurantOpenError("RESTAURANT_OPEN_RESULT_UNKNOWN"); }
+      // RPC đã được gửi: envelope hỏng không chứng minh ghi thất bại. Để client
+      // đọc lại qua API, thay vì trả FAILED khiến bỏ qua đối chiếu sau commit.
+      if (!isRecord(result)) throw new SellerRestaurantOpenError("RESTAURANT_OPEN_RESULT_UNKNOWN");
       if (result.error) {
         if (result.error.code === "42501" || result.error.message === "NOT_ALLOWED") throw new SellerRestaurantOpenError("DATABASE_ACCESS_DENIED");
         if (["PGRST202", "42883"].includes(result.error.code) || result.error.message === "INVALID_OPERATING_STATUS")
@@ -351,12 +368,12 @@ export const SellerServices = {
         if (!result.error.code) throw new SellerRestaurantOpenError("RESTAURANT_OPEN_RESULT_UNKNOWN");
         throw new SellerRestaurantOpenError("RESTAURANT_OPEN_FAILED");
       }
-      if (!isRecord(result.data) || result.data.success !== true || result.data.operating_status !== "open")
+      if (!isRecord(result.data) || result.data.success !== true || result.data.operating_status !== target)
         throw new SellerRestaurantOpenError("RESTAURANT_OPEN_RESULT_UNKNOWN");
       // Một RPC bằng session, không SDK UPDATE/ghi bù/retry sau kết quả chưa rõ.
       // RPC đã cung cấp kiểm tra owner tại UPDATE; active/seller vẫn là precheck
       // application, không khẳng định đã sửa quyền Data API hoặc race đổi role.
-      return { restaurant: { id, operating_status: "open" }, alreadyOpen: false };
+      return { restaurant: { id, operating_status: target }, alreadyOpen: false, alreadyAtTarget: false };
     } catch (error) {
       if (error instanceof SellerRestaurantOpenError) throw error;
       if (error instanceof SellerAccessError && error.code !== "SUPABASE_OPERATION_FAILED") throw new SellerRestaurantOpenError(error.code);
@@ -422,6 +439,37 @@ export const SellerServices = {
       const qrImageDataUrl = await toDataURL(qrPayload, { type: "image/png", errorCorrectionLevel: "M", width: 512, margin: 4 });
       return { restaurantId: id, ...issued, qrPayload, qrImageDataUrl };
     } catch { throw new SellerStaffError("STAFF_OPERATION_FAILED"); }
+  },
+
+  async leaveStaff(userId: string, input: unknown, client: SupabaseClient) {
+    if (!isRecord(input)) invalid("payload", "Phải là object JSON.");
+    assertFields(input, ["restaurantId"], "payload");
+    const restaurantId = uuidValue(input.restaurantId);
+    let result;
+    try {
+      result = await client.rpc("leave_staff_restaurant", { p_restaurant_id: restaurantId });
+    } catch {
+      throw new SellerStaffError("STAFF_LEAVE_RESULT_UNKNOWN");
+    }
+    if (result?.error) {
+      const { code, message } = result.error;
+      if (code === "P0001" && message === "STAFF_LEAVE_CONFLICT")
+        throw new SellerStaffError("STAFF_LEAVE_CONFLICT");
+      if (code === "P0001" && message === "UNAUTHORIZED")
+        throw new SellerStaffError("UNAUTHORIZED");
+      if (["PGRST106", "PGRST202", "PGRST203", "42883"].includes(code))
+        throw new SellerStaffError("STAFF_LEAVE_RPC_UNAVAILABLE");
+      if (code === "42501") throw new SellerStaffError("DATABASE_ACCESS_DENIED");
+      // Definite PostgreSQL rejection: syntax/data/constraint/transaction errors
+      // and explicit PL/pgSQL exceptions roll back the RPC statement.
+      if (/^(22|23|40|42)[0-9A-Z]{3}$/.test(code) || code === "P0001" || code === "PGRST102")
+        throw new SellerStaffError("STAFF_LEAVE_REJECTED");
+      throw new SellerStaffError("STAFF_LEAVE_RESULT_UNKNOWN");
+    }
+    if (!isRecord(result?.data) || result.data.id !== userId ||
+        result.data.role !== "student" || result.data.work_for_restaurant_id !== null)
+      throw new SellerStaffError("STAFF_LEAVE_RESULT_UNKNOWN");
+    return { profile: { id: userId, role: "student", work_for_restaurant_id: null } };
   },
 
   async joinStaff(userId: string, input: unknown, supplied?: SupabaseClient): Promise<StaffJoinResult> {
@@ -560,12 +608,17 @@ export const SellerServices = {
 
   validateRestaurantUpdate(input: unknown): SellerRestaurantPatch {
     if (!isRecord(input)) invalid("payload", "Phải là object JSON.");
-    assertFields(input, ["name", "description", "location", "schedule"], "payload");
+    assertFields(input, ["name", "description", "location", "schedule", "avatar_url", "contact_phone"], "payload");
     if (!Object.keys(input).length) invalid("payload", "Phải gửi ít nhất một trường cập nhật.");
     const patch: SellerRestaurantPatch = {};
     for (const [field, max] of [["name", 100], ["description", 300], ["location", 200]] as const) {
       if (Object.hasOwn(input, field)) patch[field] = requiredText(input[field], field, max);
     }
+    if (Object.hasOwn(input, "contact_phone")) {
+      try { patch.contact_phone = contactPhone(input.contact_phone); }
+      catch { invalid("contact_phone", "Số liên hệ phải gồm 9–15 chữ số, có thể bắt đầu bằng +."); }
+    }
+    if (Object.hasOwn(input, "avatar_url")) patch.avatar_url = avatarUrl(input.avatar_url);
     if (Object.hasOwn(input, "schedule")) patch.schedule = validatePatchSchedule(input.schedule);
     return patch;
   },
@@ -583,13 +636,17 @@ export const SellerServices = {
       for (const column of ["name", "description", "location"] as const) {
         if (Object.hasOwn(patch, column)) values[column] = patch[column];
       }
+      if (Object.hasOwn(patch, "contact_phone")) values.contact_phone = patch.contact_phone;
+      if (Object.hasOwn(patch, "avatar_url")) values.avatar_url = patch.avatar_url;
       if (patch.schedule !== undefined) values.operating_hours = operatingHours(patch.schedule);
       const { data, error } = await client.from("restaurants").update(values)
-        .eq("id", id).eq("owner_id", userId).select("id,name,description,location,operating_hours").maybeSingle();
+        .eq("id", id).eq("owner_id", userId).select("id,name,description,location,operating_hours,avatar_url" + (Object.hasOwn(patch, "contact_phone") ? ",contact_phone" : "")).returns<SellerRestaurantUpdateResult["restaurant"][]>().maybeSingle();
+      if (Object.hasOwn(patch, "contact_phone") && error && ["42703", "PGRST204"].includes(error.code))
+        throw new SellerRestaurantUpdateError("CONTACT_PHONE_UNAVAILABLE");
       checkSdkError(error);
       if (!data) throw new SellerRestaurantUpdateError("RESTAURANT_NOT_FOUND");
       return { restaurant: { id: data.id, name: data.name, description: data.description,
-        location: data.location, operating_hours: data.operating_hours } };
+        location: data.location, operating_hours: data.operating_hours, avatar_url: data.avatar_url, ...(Object.hasOwn(patch, "contact_phone") ? { contact_phone: data.contact_phone } : {}) } };
     } catch (error) {
       if (error instanceof SellerRestaurantUpdateError) throw error;
       if (error instanceof SellerAccessError && error.code !== "SUPABASE_OPERATION_FAILED") throw new SellerRestaurantUpdateError(error.code);
@@ -610,7 +667,8 @@ export const SellerServices = {
     const cash = booleanValue(input.cash, "cash");
     const bank = booleanValue(input.bank, "bank");
     if (!cash && !bank) invalid("payment", "Phải chọn ít nhất một phương thức thanh toán.");
-    if (typeof input.appLockPin !== "string" || !/^[0-9]{4}$/.test(input.appLockPin)) {
+    const appLockPin = input.appLockPin === undefined ? "0000" : input.appLockPin;
+    if (typeof appLockPin !== "string" || !/^[0-9]{4}$/.test(appLockPin)) {
       invalid("appLockPin", "PIN phải là chuỗi đúng 4 chữ số.");
     }
 
@@ -618,7 +676,7 @@ export const SellerServices = {
     // theo quy tắc server; client không được quyết định trạng thái ban đầu.
     if (input.startClosed !== undefined) booleanValue(input.startClosed, "startClosed");
     const schedule = validateSchedule(input);
-    return { name, description, location, cash, bank, appLockPin: input.appLockPin, schedule };
+    return { name, description, location, cash, bank, appLockPin, schedule, ...(Object.hasOwn(input, "avatar_url") ? { avatar_url: avatarUrl(input.avatar_url) } : {}) };
   },
 
   // register_seller đã được quản lý DB cung cấp định nghĩa đang triển khai:
@@ -633,6 +691,7 @@ export const SellerServices = {
       try {
         result = await client.rpc("register_seller", {
           p_restaurant_name: validated.name,
+          p_avatar_url: validated.avatar_url ?? null,
           p_description: validated.description,
           p_location: validated.location,
           p_operating_hours: operatingHours(validated.schedule),

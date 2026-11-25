@@ -113,6 +113,12 @@
 .staffReqEmpty { padding:24px 16px; border:1px dashed #dce3ef; border-radius:14px; text-align:center; color:#5b749e; font-size:14px; }
 .staffReqNoticeBox { display:flex; align-items:flex-start; gap:10px; margin-top:16px; padding:13px 16px; border-radius:14px; background:#fef5ee; color:#8d5636; font-size:13px; line-height:1.48; font-weight:500; }
 .staffReqNoticeIcon { flex-shrink:0; margin-top:2px; color:#ff571e; }
+.staffTabs { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:4px; margin-bottom:16px; border-radius:12px; background:#f3f5f9; }
+.staffTabBtn { height:38px; padding:0 12px; border:0; border-radius:9px; background:transparent; color:#4f6896; font-size:13.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+.staffTabBtnActive { background:#fff; color:#ff4c1e; box-shadow:0 2px 8px rgb(9 26 72 / 8%); }
+.staffRefreshBtn { margin-left:auto; height:30px; padding:0 10px; border:1px solid #ffd5c2; border-radius:8px; background:#fff; color:#e64c17; font-size:12.5px; font-weight:600; cursor:pointer; }
+.staffNoticeOk { margin:0 0 12px; padding:10px 12px; border-radius:10px; background:#eaf9f0; color:#166534; font-size:13px; font-weight:600; }
+.staffNoticeErr { margin:0 0 12px; padding:10px 12px; border-radius:10px; background:#fff0ef; color:#b91c1c; font-size:13px; font-weight:600; }
 
 .mobileSheetModal {
   width: min(440px, calc(100vw - 28px));
@@ -161,6 +167,28 @@
 }
 .mobileSheetForm label b {
   color: #ff4c2b;
+}
+.mobileSheetForm .radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-bottom: 4px;
+}
+.mobileSheetForm .radios label,
+.mobileSheetForm .daily label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.mobileSheetForm .radios input { accent-color: #ff6224; margin: 0; }
+.mobileSheetForm .daily > div {
+  grid-template-columns: 52px minmax(0, 1fr) 10px minmax(0, 1fr);
+}
+.mobileSheetForm .daily input[type="time"] {
+  min-width: 0;
+  padding-inline: 5px;
+  font-size: 12px;
 }
 .mobileSheetForm :is(input:not([type=checkbox]):not([type=radio]), select) {
   width: 100%;

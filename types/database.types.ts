@@ -684,6 +684,7 @@ export type Database = {
         Returns: Json;
       };
       reject_order: { Args: { p_order_id: string }; Returns: Json };
+      leave_staff_restaurant: { Args: { p_restaurant_id: string }; Returns: Json };
       remove_staff: { Args: { p_staff_id: string }; Returns: Json };
       reset_delivery_token: {
         Args: { p_restaurant_id: string };

@@ -14,9 +14,10 @@ export function load(file, mocks = {}, globals = {}) {
   const exports = {};
   const output = ts.transpileModule(readFileSync(new URL(file, import.meta.url), "utf8"),
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  vm.runInNewContext(output, { exports, URL, Buffer, Date,
+  vm.runInNewContext(output, { exports, URL, Buffer, Date, TextEncoder, TextDecoder, AbortController, setTimeout, clearTimeout,
     console: { error() { throw new Error("Must not log private data"); } },
     require(id) {
+      if (["@/lib/seller/shop-contract", "./shop-contract"].includes(id)) return load("../lib/seller/shop-contract.ts");
       if (id === "server-only") return {};
       if (id === "node:crypto") return crypto;
       if (id in mocks) return mocks[id];
@@ -57,7 +58,7 @@ export function fixture(options = {}) {
         state.restaurant.operating_status = payload.p_operating_status;
         state.restaurant.updated_at = new Date().toISOString();
         if (options.commitThenNetworkError) throw Error("PRIVATE_AFTER_COMMIT");
-        return { data: options.rpcResponse === undefined ? { success: true, operating_status: "open", unexpected: "PRIVATE" } : options.rpcResponse, error: null };
+        return { data: options.rpcResponse === undefined ? { success: true, operating_status: payload.p_operating_status, unexpected: "PRIVATE" } : options.rpcResponse, error: null };
       }
       assert.equal(name, "register_seller");
       // Model the provided RPC contract/serialized outcome, not PostgreSQL itself.
@@ -71,7 +72,7 @@ export function fixture(options = {}) {
         if (options.rpcError) return { data: null, error: options.rpcError };
         if (currentRole !== "student") return { data: null, error: { code: "P0001", message: "ALREADY_SELLER" } };
         currentRole = "seller";
-        const restaurant = { id: restaurantId, owner_id: userId, name: payload.p_restaurant_name, slug: "rpc-generated-slug", operating_status: "closed", operating_hours: payload.p_operating_hours };
+        const restaurant = { id: restaurantId, owner_id: userId, name: payload.p_restaurant_name, slug: "rpc-generated-slug", operating_status: "closed", operating_hours: payload.p_operating_hours, avatar_url: payload.p_avatar_url };
         state.registrations.push(restaurant);
         if (options.commitThenNetworkError) throw new Error("PRIVATE_NETWORK_AFTER_COMMIT");
         return { data: options.rpcResponse ?? { success: true, user: { id: userId, role: "seller", app_lock_pin: "PRIVATE" }, restaurant: { ...restaurant, delivery_token: "PRIVATE" } }, error: null };
@@ -80,6 +81,7 @@ export function fixture(options = {}) {
     from(table) {
       const call = { table, mode: "select", filters: [], columns: "", values: null }; calls.push(call);
       const query = {
+        returns() { return this; },
         select(columns) { call.columns = columns; return this; },
         eq(field, value) { call.filters.push([field, value, "eq"]); return this; },
         neq(field, value) { call.filters.push([field, value, "neq"]); return this; },

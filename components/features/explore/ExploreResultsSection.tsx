@@ -1,11 +1,11 @@
-import { Store } from "lucide-react";
-import type { ExploreRestaurant } from "@/lib/explore/mock-data";
+import { Utensils } from "lucide-react";
+import type { PopularDishCard } from "@/lib/explore/popular-data";
 import type { SortBy } from "@/lib/explore/useExplore";
-import ExploreRestaurantCard from "./ExploreRestaurantCard";
+import ExploreDishCard from "./ExploreDishCard";
 import styles from "@/styles/explore.module.css";
 
 type Props = {
-  restaurants: ExploreRestaurant[];
+  dishes: PopularDishCard[];
   sortBy: SortBy;
   onSortChange: (sortBy: SortBy) => void;
   onResetFilters: () => void;
@@ -13,7 +13,7 @@ type Props = {
 };
 
 export default function ExploreResultsSection({
-  restaurants,
+  dishes,
   sortBy,
   onSortChange,
   onResetFilters,
@@ -27,7 +27,7 @@ export default function ExploreResultsSection({
       <div className={styles.sectionHeading}>
         <h2 id="explore-results-title">
           <span className={styles.sectionIcon}>
-            <Store size={24} aria-hidden="true" />
+            <Utensils size={24} aria-hidden="true" />
           </span>
           Kết quả khám phá
         </h2>
@@ -40,31 +40,29 @@ export default function ExploreResultsSection({
             onChange={(event) => onSortChange(event.target.value as SortBy)}
           >
             <option value="popular">Phổ biến</option>
+            <option value="price-asc">Giá thấp đến cao</option>
+            <option value="price-desc">Giá cao đến thấp</option>
             <option value="name">Tên A–Z</option>
-            <option value="menu">Nhiều món nhất</option>
           </select>
         </div>
       </div>
 
       <p className={styles.srOnly} role="status">
-        Tìm thấy {restaurants.length} quán.
+        Tìm thấy {dishes.length} món ăn.
       </p>
 
-      {restaurants.length > 0 ? (
+      {dishes.length > 0 ? (
         <div
           className={styles.restaurantGrid}
           data-compact={compact ? "true" : undefined}
         >
-          {restaurants.map((restaurant) => (
-            <ExploreRestaurantCard
-              key={restaurant.id}
-              restaurant={restaurant}
-            />
+          {dishes.map((dish) => (
+            <ExploreDishCard key={dish.id} dish={dish} />
           ))}
         </div>
       ) : (
         <div className={styles.empty}>
-          <p>Không tìm thấy quán phù hợp.</p>
+          <p>Không tìm thấy món ăn phù hợp.</p>
           <button type="button" onClick={onResetFilters}>
             Xóa bộ lọc
           </button>

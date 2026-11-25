@@ -16,6 +16,7 @@ function load(file) {
   vm.runInNewContext(output, {
     exports,
     require(id) {
+      if (id === "@/lib/seller/shop-contract") return load("../lib/seller/shop-contract.ts");
       if (id === "server-only") return {};
       if (id === "node:crypto") return crypto;
       if (id === "@/lib/database/server") return {
@@ -102,7 +103,7 @@ for (const input of [null, undefined, [], "json", 1, true]) {
   test(`rejects non-object payload: ${JSON.stringify(input)}`, () => rejects(input, "payload"));
 }
 
-for (const field of ["name", "description", "location", "cash", "bank", "appLockPin", "scheduleMode", "days", "openTime", "closeTime"]) {
+for (const field of ["name", "description", "location", "cash", "bank", "scheduleMode", "days", "openTime", "closeTime"]) {
   test(`rejects missing required field in same mode: ${field}`, () => {
     const input = valid();
     delete input[field];
