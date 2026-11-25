@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
+import ShipperLoader from "@/components/ui/ShipperLoader";
 import SellerSidebar from "./SellerSidebar";
 import { useSellerAccess } from "./SellerAccessProvider";
 
@@ -662,21 +663,13 @@ export default function SellerMenuCreateView({ itemId }: { itemId?: string }) {
   }, [restaurantId, data?.user.id, data?.user.role, loadRestaurantMenu]);
 
   if (!restaurantId || data?.user.role !== "seller") return <p role="alert">Chỉ chủ quán được quản lý thực đơn.</p>;
-  if (loadedId !== restaurantId || loading) return <p role="status">Đang tải thực đơn…</p>;
+  if (loadedId !== restaurantId || loading) {
+    return <ShipperLoader fullPage label="Đang tải thực đơn…" />;
+  }
   if (menuError) return <p role="alert">{menuError}<button onClick={() => void loadRestaurantMenu(restaurantId)}>Thử lại</button></p>;
   if (itemId && !row) {
     if (loading) {
-      return (
-        <div className={shell.page}>
-          <StudentHeader variant="seller" />
-          <main className={shell.workspace}>
-            <SellerSidebar active="menu" name={shopName} />
-            <section className={styles.card}>
-              <p role="status">Đang tải thông tin món ăn…</p>
-            </section>
-          </main>
-        </div>
-      );
+      return <ShipperLoader fullPage label="Đang tải thông tin món ăn…" />;
     }
     return (
       <div className={shell.page}>

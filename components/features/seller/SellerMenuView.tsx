@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
+import ShipperLoader from "@/components/ui/ShipperLoader";
 import SellerSidebar from "./SellerSidebar";
 import { useSellerAccess } from "./SellerAccessProvider";
 
@@ -261,6 +262,7 @@ function SellerMenuContent() {
 
   return (
     <div className={styles.page}>
+      {menuLoading && <ShipperLoader overlay label="Đang tải thực đơn…" />}
       <StudentHeader variant="seller" />
       <div className={styles.workspace}>
         <SellerSidebar
@@ -269,7 +271,6 @@ function SellerMenuContent() {
           menuLabel="Thực đơn"
         />
         <main className={styles.main}>
-          {menuLoading && <p role="status">Đang tải thực đơn…</p>}
           {menuError && <p role="alert">{menuError}<button onClick={() => restaurantId && void loadRestaurantMenu(restaurantId)}>Thử lại</button></p>}
           <fieldset disabled={busy || menuLoading || !!menuError} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {/* Phiên bản Desktop giữ nguyên 100% */}

@@ -33,6 +33,7 @@ import { useSellerOrders } from "@/lib/seller/useSellerOrders";
 import type { SellerManagedOrder } from "@/types/seller-orders.types";
 import type { SellerAccess } from "@/types/seller-access.types";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
+import ShipperLoader from "@/components/ui/ShipperLoader";
 import {
   filterSellerOrders,
   isInSellerTab,
@@ -557,21 +558,25 @@ const money = (value: number | null) =>
 
 export default function SellerOrdersView() {
   const { data, error, retry } = useSellerAccess();
-  if (!data?.restaurant)
+  if (!data?.restaurant) {
+    if (!error) {
+      return <ShipperLoader fullPage label="Đang tải cửa hàng…" />;
+    }
     return (
       <div className={styles.page}>
         <StudentHeader variant="seller" />
         <div className={styles.workspace}>
           <SellerSidebar active="orders" name="" />
           <main className={styles.content}>
-            <p role={error ? "alert" : "status"}>
-              {error || "Đang tải cửa hàng…"}
+            <p role="alert">
+              {error}
+              <button onClick={retry}>Thử lại</button>
             </p>
-            {error && <button onClick={retry}>Thử lại</button>}
           </main>
         </div>
       </div>
     );
+  }
   // Account/quán đổi: unmount toàn bộ danh sách, bill, request state và bộ lọc cũ.
   return (
     <SellerOrdersContent
@@ -678,14 +683,28 @@ export function SellerOrdersContent({
 
   const pendingCount =
     loading || error || orders === null
-      ? 0
-      : filtered.filter((o) => isInSellerTab(o.order_status, "pending")).length;
+      ? undefined
+      : orders.filter(
+          (o) =>
+            o.restaurant_id === restaurant.id &&
+            isInSellerTab(o.order_status, "pending"),
+        ).length;
 
   return (
     <div
       className={styles.page}
       data-mobile-detail-open={selected ? "true" : "false"}
     >
+      {(busyIds.length > 0 || loading || !today) && (
+        <ShipperLoader
+          overlay
+          label={
+            busyIds.length > 0
+              ? "Đang cập nhật trạng thái đơn hàng…"
+              : "Đang tải danh sách đơn hàng…"
+          }
+        />
+      )}
       <StudentHeader variant="seller" />
       <div
         className={styles.workspace}
@@ -813,11 +832,7 @@ export function SellerOrdersContent({
                 </p>
               )}
               <div className={styles.orderList}>
-                {loading || !today ? (
-                  <p role="status" className={styles.empty}>
-                    Đang tải đơn hàng…
-                  </p>
-                ) : error ? (
+                {loading || !today ? null : error ? (
                   <div className={styles.empty} role="alert">
                     <p>{error}</p>
                     <button
