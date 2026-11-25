@@ -10,6 +10,7 @@ import {
   FileText,
   MapPin,
   Phone,
+  UserX,
   Utensils,
   Wallet,
   XCircle,
@@ -186,6 +187,8 @@ export function getSellerOrderDetailPaymentStatusLabel(
 
 export function getSellerOrderDetailStatusLabel(status: OrderStatus): string {
   if (status === "pending") return "Chờ xác nhận";
+  if (status === "cancelled") return "Sinh viên hủy";
+  if (status === "rejected") return "Quán từ chối";
   return orderStatusLabels[status];
 }
 
@@ -257,10 +260,11 @@ export default function SellerOrderDetailView({
   const StatusIcon =
     activeOrder.order_status === "pending"
       ? Clock3
-      : activeOrder.order_status === "rejected" ||
-          activeOrder.order_status === "cancelled"
-        ? XCircle
-        : CheckCircle2;
+      : activeOrder.order_status === "cancelled"
+        ? UserX
+        : activeOrder.order_status === "rejected"
+          ? XCircle
+          : CheckCircle2;
 
   function handleBack() {
     if (onBack) {

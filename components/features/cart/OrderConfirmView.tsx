@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import { formatMoney as money } from "@/lib/format";
 import { useCartSummary } from "@/lib/cart/useCartSummary";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
+import ShipperLoader from "@/components/ui/ShipperLoader";
 import {
   getCartItemTotal,
   getCartItemUnitPrice,
@@ -646,6 +647,9 @@ export default function OrderConfirmView() {
           </div>
         </section>
       </aside>
+      {isSubmitting && (
+        <ShipperLoader overlay label="Đang gửi đơn hàng tới quán…" />
+      )}
     </form>
   );
 }

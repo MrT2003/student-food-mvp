@@ -20,6 +20,7 @@ import {
   Search,
   SlidersHorizontal,
   User,
+  UserX,
   Utensils,
   Wallet,
   X,
@@ -32,6 +33,7 @@ import { useSellerOrders } from "@/lib/seller/useSellerOrders";
 import type { SellerManagedOrder } from "@/types/seller-orders.types";
 import type { SellerAccess } from "@/types/seller-access.types";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
+import ShipperLoader from "@/components/ui/ShipperLoader";
 import {
   filterSellerOrders,
   isInSellerTab,
@@ -114,9 +116,7 @@ export function getMobileOrderNoteBadge(order: {
   customer_notes: string | null;
 }): "Có tùy chọn món" | "Có ghi chú" | null {
   if (
-    order.order_items.some(
-      (item) => (item.selected_options?.length ?? 0) > 0,
-    )
+    order.order_items.some((item) => (item.selected_options?.length ?? 0) > 0)
   ) {
     return "Có tùy chọn món";
   }
@@ -492,17 +492,26 @@ export function createSellerMobileOrderFixtures(): SellerOrder[] {
   ];
 }
 
+function getSellerOrderStatusLabel(status: OrderStatus): string {
+  if (status === "pending") return "Chờ xác nhận";
+  if (status === "cancelled") return "Sinh viên hủy";
+  if (status === "rejected") return "Quán từ chối";
+  return orderStatusLabels[status];
+}
+
 function Badge({ status }: { status: OrderStatus }) {
   const Icon =
     status === "pending"
       ? Clock3
-      : status === "rejected" || status === "cancelled"
-        ? XCircle
-        : CheckCircle2;
+      : status === "cancelled"
+        ? UserX
+        : status === "rejected"
+          ? XCircle
+          : CheckCircle2;
   return (
     <span className={`${styles.badge} ${styles[status]}`}>
       <Icon size={16} />
-      {status === "pending" ? "Chờ xác nhận" : orderStatusLabels[status]}
+      {getSellerOrderStatusLabel(status)}
     </span>
   );
 }
@@ -549,21 +558,25 @@ const money = (value: number | null) =>
 
 export default function SellerOrdersView() {
   const { data, error, retry } = useSellerAccess();
-  if (!data?.restaurant)
+  if (!data?.restaurant) {
+    if (!error) {
+      return <ShipperLoader fullPage label="Đang tải cửa hàng…" />;
+    }
     return (
       <div className={styles.page}>
         <StudentHeader variant="seller" />
         <div className={styles.workspace}>
           <SellerSidebar active="orders" name="" />
           <main className={styles.content}>
-            <p role={error ? "alert" : "status"}>
-              {error || "Đang tải cửa hàng…"}
+            <p role="alert">
+              {error}
+              <button onClick={retry}>Thử lại</button>
             </p>
-            {error && <button onClick={retry}>Thử lại</button>}
           </main>
         </div>
       </div>
     );
+  }
   // Account/quán đổi: unmount toàn bộ danh sách, bill, request state và bộ lọc cũ.
   return (
     <SellerOrdersContent
@@ -670,14 +683,28 @@ export function SellerOrdersContent({
 
   const pendingCount =
     loading || error || orders === null
-      ? 0
-      : filtered.filter((o) => isInSellerTab(o.order_status, "pending")).length;
+      ? undefined
+      : orders.filter(
+          (o) =>
+            o.restaurant_id === restaurant.id &&
+            isInSellerTab(o.order_status, "pending"),
+        ).length;
 
   return (
     <div
       className={styles.page}
       data-mobile-detail-open={selected ? "true" : "false"}
     >
+      {(busyIds.length > 0 || loading || !today) && (
+        <ShipperLoader
+          overlay
+          label={
+            busyIds.length > 0
+              ? "Đang cập nhật trạng thái đơn hàng…"
+              : "Đang tải danh sách đơn hàng…"
+          }
+        />
+      )}
       <StudentHeader variant="seller" />
       <div
         className={styles.workspace}
@@ -805,11 +832,7 @@ export function SellerOrdersContent({
                 </p>
               )}
               <div className={styles.orderList}>
-                {loading || !today ? (
-                  <p role="status" className={styles.empty}>
-                    Đang tải đơn hàng…
-                  </p>
-                ) : error ? (
+                {loading || !today ? null : error ? (
                   <div className={styles.empty} role="alert">
                     <p>{error}</p>
                     <button
@@ -824,9 +847,7 @@ export function SellerOrdersContent({
                   <div className={styles.empty}>
                     <ClipboardList size={38} />
                     <h3>Không có đơn hàng</h3>
-                    <p>
-                      Thử đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái khác.
-                    </p>
+                    <p>Thử đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái khác.</p>
                   </div>
                 ) : (
                   pageOrders.map((order) => (
@@ -993,10 +1014,7 @@ export function SellerOrdersContent({
             >
               <div className={styles.billHeading}>
                 <h2>Chi tiết đơn hàng</h2>
-                <button
-                  onClick={closeBill}
-                  aria-label="Đóng chi tiết đơn hàng"
-                >
+                <button onClick={closeBill} aria-label="Đóng chi tiết đơn hàng">
                   <X />
                 </button>
               </div>
@@ -1012,9 +1030,7 @@ export function SellerOrdersContent({
                   <User />
                   Thông tin khách hàng
                 </h3>
-                <strong>
-                  {selected.customer.name ?? "Chưa có tên khách"}
-                </strong>
+                <strong>{selected.customer.name ?? "Chưa có tên khách"}</strong>
                 <p>
                   <Phone size={16} />
                   {selected.customer.phone ??
@@ -1203,9 +1219,15 @@ export function SellerOrdersContent({
                   >
                     <div className={styles.mobileCardHeader}>
                       <div className={styles.mobileCardCodeWrap}>
-                        <strong className={styles.mobileCardCode}>
-                          #{order.order_code ?? "Chưa có mã đơn"}
-                        </strong>
+                        <div className={styles.mobileCardTitleRow}>
+                          <strong className={styles.mobileCardCode}>
+                            #{order.order_code ?? "Chưa có mã đơn"}
+                          </strong>
+                          {(order.order_status === "cancelled" ||
+                            order.order_status === "rejected") && (
+                            <Badge status={order.order_status} />
+                          )}
+                        </div>
                         <p className={styles.mobileCardSub}>
                           <span>{formatMobileOrderTime(order.created_at)}</span>
                           <span aria-hidden="true"> · </span>
@@ -1270,7 +1292,9 @@ export function SellerOrdersContent({
                             strokeWidth={2}
                             aria-hidden="true"
                           />
-                          <span>{formatOrderPayment(order.payment_method)}</span>
+                          <span>
+                            {formatOrderPayment(order.payment_method)}
+                          </span>
                         </span>
                       </div>
 

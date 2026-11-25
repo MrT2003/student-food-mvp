@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Wallet } from "lucide-react";
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
 import Image from "@/components/media/AppImage";
+import { createClient } from "@/lib/supabase/client";
 import { useSellerAccess } from "./SellerAccessProvider";
 import {
   SellerHomeActiveIcon,
@@ -30,7 +32,72 @@ export default function SellerSidebar({
 }) {
   const { data } = useSellerAccess();
   const shop = data?.restaurant;
+  const shopId = shop?.id;
   const isStaff = data?.user.role === "staff";
+  const [fetchedPendingCount, setFetchedPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (!shopId || typeof pendingOrderCount === "number") return;
+
+    let active = true;
+    const supabase = createClient();
+
+    async function refreshPendingCount() {
+      const { count, error } = await supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("restaurant_id", shopId)
+        .eq("order_status", "pending");
+
+      if (active && !error && typeof count === "number") {
+        setFetchedPendingCount(count);
+      }
+    }
+
+    void refreshPendingCount();
+
+    const channel = supabase
+      .channel(`seller-pending-orders:${shopId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter: `restaurant_id=eq.${shopId}`,
+        },
+        () => {
+          void refreshPendingCount();
+        },
+      )
+      .subscribe();
+
+    const refreshIfVisible = () => {
+      if (document.visibilityState !== "hidden" && navigator.onLine !== false) {
+        void refreshPendingCount();
+      }
+    };
+
+    window.addEventListener("focus", refreshIfVisible);
+    window.addEventListener("online", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+
+    return () => {
+      active = false;
+      window.removeEventListener("focus", refreshIfVisible);
+      window.removeEventListener("online", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+      void supabase.removeChannel(channel);
+    };
+  }, [shopId, pendingOrderCount]);
+
+  const resolvedPendingCount =
+    typeof pendingOrderCount === "number"
+      ? pendingOrderCount
+      : shopId
+        ? fetchedPendingCount
+        : 0;
+
   const allowedTabs =
     Array.isArray(data?.allowed_tabs) && data.allowed_tabs.length > 0
       ? data.allowed_tabs
@@ -53,7 +120,16 @@ export default function SellerSidebar({
           </Link>}
           {canView("orders") && <Link href="/seller/orders" aria-current={active === "orders" ? "page" : undefined}>
             {active === "orders" ? <SellerOrderActiveIcon aria-hidden="true" /> : <SellerOrderInactiveIcon aria-hidden="true" />}
-            Đơn hàng
+            <span>Đơn hàng</span>
+            {resolvedPendingCount > 0 && (
+              <span
+                className={styles.navBadge}
+                data-testid="seller-orders-sidebar-badge"
+                aria-label={`${resolvedPendingCount} đơn chờ xác nhận`}
+              >
+                {resolvedPendingCount > 99 ? "99+" : resolvedPendingCount}
+              </span>
+            )}
           </Link>}
           {canView("menu") && <Link href="/seller/menu" aria-current={active === "menu" ? "page" : undefined}>
             {active === "menu" ? <SellerMenuActiveIcon aria-hidden="true" /> : <SellerMenuInactiveIcon aria-hidden="true" />}
@@ -71,7 +147,7 @@ export default function SellerSidebar({
         active={active}
         isStaff={isStaff}
         allowedTabs={allowedTabs}
-        pendingOrderCount={pendingOrderCount}
+        pendingOrderCount={resolvedPendingCount}
         menuLabel={menuLabel}
       />
     </>

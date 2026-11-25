@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import ShipperLoader from "@/components/ui/ShipperLoader";
 import { purchaseSyncUserId } from "@/lib/auth/purchase-access";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -69,7 +70,14 @@ export default function StudentStorageBoundary({ children }: { children: ReactNo
     };
   }, [ready, userId, role, syncFromDatabase]);
 
-  if (!ready) return <p role="status" style={{ padding: 24 }}>Đang khôi phục giỏ hàng và đơn hàng…</p>;
+  if (!ready) {
+    return (
+      <ShipperLoader
+        label="Đang khôi phục giỏ hàng và đơn hàng…"
+        fullPage
+      />
+    );
+  }
 
   return <>
     {warning && <p role="alert" style={{ padding: 12, margin: 0, background: "#fff3df", color: "#713f12" }}>{warning}</p>}

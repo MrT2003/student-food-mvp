@@ -2,5 +2,10 @@ import CatalogLoading from "@/components/features/home/CatalogLoading";
 
 // Next tạo Suspense boundary tự động, giữ layout/MenuBar khi page đang chờ server.
 export default function Loading() {
-  return <CatalogLoading />;
+  return (
+    <CatalogLoading
+      title="Đang tìm quán ngon quanh KTX"
+      subtitle="Đợi chút nhé, shipper đang lấy danh sách quán mở và thực đơn mới nhất…"
+    />
+  );
 }

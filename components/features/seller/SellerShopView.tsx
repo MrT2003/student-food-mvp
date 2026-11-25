@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
+import ShipperLoader from "@/components/ui/ShipperLoader";
 import SellerSidebar from "./SellerSidebar";
 import { useSellerAccess } from "./SellerAccessProvider";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -203,14 +204,18 @@ export default function SellerShopView() {
     );
   }
 
+  if (!error) {
+    return <ShipperLoader fullPage label="Đang tải thông tin cửa hàng…" />;
+  }
+
   return (
     <div className={`${shell.page} ${styles.page}`}>
       <StudentHeader variant="seller" />
       <div className={styles.workspace}>
         <SellerSidebar active="shop" name="" menuLabel="Thực đơn" />
         <main className={styles.card}>
-          {error || "Đang tải cửa hàng…"}
-          {error && <button onClick={retry}>Thử lại</button>}
+          {error}
+          <button onClick={retry}>Thử lại</button>
         </main>
       </div>
     </div>
@@ -454,7 +459,8 @@ export function ShopForm({
     setError("");
     try {
       const uploaded = await CloudinaryService.uploadImage(file, {
-        purpose: "restaurant", restaurantId: isBackendRestaurant(initial) ? initial.id : undefined,
+        purpose: "restaurant",
+        restaurantId: initial.id,
       });
       if (mounted.current && uploadRequestId.current === requestId) {
         setAvatar(uploaded.secureUrl);

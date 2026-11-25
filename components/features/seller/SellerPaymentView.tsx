@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
+import ShipperLoader from "@/components/ui/ShipperLoader";
 import SellerSidebar from "./SellerSidebar";
 import { useSellerAccess } from "./SellerAccessProvider";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -322,6 +323,9 @@ const blank = (): SellerBankCreate => ({
 
 export default function SellerPaymentView() {
   const { data, error, retry } = useSellerAccess();
+  if (!data?.restaurant && !error) {
+    return <ShipperLoader fullPage label="Đang tải thiết lập thanh toán…" />;
+  }
   return (
     <div className={styles.page}>
       <StudentHeader variant="seller" />
@@ -336,8 +340,8 @@ export default function SellerPaymentView() {
           />
         ) : (
           <main className={styles.card}>
-            {error || "Đang tải cửa hàng…"}
-            {error && <button onClick={retry}>Thử lại</button>}
+            {error}
+            <button onClick={retry}>Thử lại</button>
           </main>
         )}
       </div>

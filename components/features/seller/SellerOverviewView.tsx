@@ -27,6 +27,7 @@ import {
   Zap,
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
+import ShipperLoader from "@/components/ui/ShipperLoader";
 import SellerSidebar from "./SellerSidebar";
 import { useSellerAccess } from "./SellerAccessProvider";
 import SellerAccessProblem from "./SellerAccessProblem";
@@ -310,7 +311,9 @@ export default function SellerOverviewView() {
       href: "/seller/shop",
     },
   ].filter((item) => (allowedTabs as readonly string[]).includes(item.tab));
-  if (loading && !restaurant) return <p role="status">Đang tải cửa hàng…</p>;
+  if (loading && !restaurant) {
+    return <ShipperLoader fullPage label="Đang tải tổng quan cửa hàng…" />;
+  }
   if (!restaurant) return <SellerAccessProblem />;
 
   return (

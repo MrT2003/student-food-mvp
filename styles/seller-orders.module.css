@@ -121,6 +121,22 @@
   background: rgba(255,233,216,.65);
   font-weight: 700;
 }
+.navBadge {
+  margin-left: auto;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #ff4d12;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 .back {
   margin-top: auto;
   border-top: 1px solid #e8ecf2;
@@ -355,10 +371,17 @@
   color: #63718a;
   background: #f0f3f7;
 }
-.cancelled,
+.cancelled {
+  color: #b45309;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  font-weight: 600;
+}
 .rejected {
   color: #d84444;
   background: #ffeded;
+  border: 1px solid #ffd6d6;
+  font-weight: 600;
 }
 .orderBody {
   display: contents;
@@ -966,6 +989,16 @@
   }
   .mobileCardCodeWrap {
     min-width: 0;
+  }
+  .mobileCardTitleRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .mobileCardTitleRow .badge {
+    padding: 4px 8px;
+    font-size: 11.5px;
   }
   .mobileCardCode {
     display: block;
