@@ -454,7 +454,7 @@ export function ShopForm({
     setError("");
     try {
       const uploaded = await CloudinaryService.uploadImage(file, {
-        purpose: "restaurant", restaurantId: isBackendRestaurant(initial) ? initial.id : undefined,
+        purpose: "restaurant", restaurantId: initial.id,
       });
       if (mounted.current && uploadRequestId.current === requestId) {
         setAvatar(uploaded.secureUrl);
