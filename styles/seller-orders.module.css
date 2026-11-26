@@ -939,11 +939,11 @@
     font-weight: 600;
   }
   .mobileTabActive {
-    background: #fff0e6;
-    border-color: #ffd7c2;
-    color: #e63f11;
+    background: #fff3e9;
+    border-color: #ff5b28;
+    color: #f0440d;
     font-weight: 700;
-    box-shadow: inset 0 -2.5px 0 #f24822;
+    box-shadow: inset 0 -2px 0 #ff4d12;
   }
   .mobileTabActive .mobileTabCount {
     font-weight: 700;
@@ -1021,7 +1021,7 @@
     font-size: 18.5px;
     line-height: 1.2;
     font-weight: 800;
-    color: #f23d14;
+    color: #ff4d12;
     white-space: nowrap;
     flex-shrink: 0;
   }
@@ -1094,7 +1094,7 @@
     border: 0;
     padding: 0;
     background: transparent;
-    color: #f24822;
+    color: #ff4d12;
     font-size: 12.5px;
     font-weight: 600;
     white-space: nowrap;
@@ -1123,17 +1123,17 @@
     width: 100%;
   }
   .mobileRejectButton {
-    border: 1px solid #f25c33;
+    border: 1px solid #ff5b1f;
     background: #ffffff;
-    color: #e63f11;
+    color: #ff5b1f;
     font-weight: 600;
   }
   .mobileAcceptButton {
     border: 1px solid transparent;
-    background: linear-gradient(90deg, #ff7a1a 0%, #f23814 100%);
+    background: #ff5b1f;
     color: #ffffff;
     font-weight: 700;
-    box-shadow: 0 4px 12px rgba(242, 61, 20, 0.22);
+    box-shadow: 0 4px 12px rgba(255, 91, 31, 0.2);
   }
   .mobileEmpty {
     padding: 36px 16px;

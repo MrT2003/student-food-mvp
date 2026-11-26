@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   ChevronLeft,
+  ClipboardList,
   Clock3,
-  FileText,
   MapPin,
   Phone,
+  User,
   UserX,
   Utensils,
   Wallet,
@@ -18,6 +19,7 @@ import {
 import FoodThumbnail from "@/components/ui/FoodThumbnail";
 import { formatMoney, normalizeSearchText } from "@/lib/format";
 import { orderStatusLabels } from "@/lib/orders/order-detail";
+import { formatOrderDate, formatOrderPayment } from "@/lib/orders/order-mappers";
 import { demoSellerRestaurant } from "@/lib/mocks/seller-orders.mock";
 import { transitionSellerOrder, type SellerOrder } from "@/lib/seller/orders";
 import type { OrderStatus, PaymentMethod } from "@/types/order.types";
@@ -246,16 +248,7 @@ export default function SellerOrderDetailView({
     (sum, item) => sum + item.quantity,
     0,
   );
-  const shippingFee = Math.max(0, activeOrder.total - activeOrder.subtotal);
-  const addressInfo = formatSellerOrderDetailAddress(
-    activeOrder.delivery_address,
-  );
-  const paymentStatusLabel =
-    getSellerOrderDetailPaymentStatusLabel(activeOrder);
-  const isPaid = paymentStatusLabel === "Đã thanh toán";
-  const paymentMethodLabel = getSellerOrderDetailPaymentMethodLabel(
-    activeOrder.payment_method,
-  );
+  const paymentMethodLabel = formatOrderPayment(activeOrder.payment_method);
 
   const StatusIcon =
     activeOrder.order_status === "pending"
@@ -325,221 +318,204 @@ export default function SellerOrderDetailView({
         </header>
 
         <main className={styles.content}>
-          {/* Order Code & Status */}
-          <section className={styles.orderHero} aria-label="Thông tin mã đơn">
-            <div className={styles.orderHeroTop}>
-              <h2 className={styles.orderCode}>#{activeOrder.order_code}</h2>
-              <span
-                className={`${styles.statusBadge} ${styles[`status_${activeOrder.order_status}`]}`}
-              >
-                <StatusIcon size={16} strokeWidth={2.2} aria-hidden="true" />
-                <span>
-                  {getSellerOrderDetailStatusLabel(activeOrder.order_status)}
-                </span>
-              </span>
-            </div>
-            <p className={styles.placedAt}>
-              {formatSellerOrderDetailPlacedAt(activeOrder.created_at)}
-            </p>
-          </section>
-
-          {/* Card 1: Món đã đặt */}
-          <section className={styles.card} aria-label="Món đã đặt">
-            <div className={styles.cardHeader}>
-              <div className={styles.cardTitleGroup}>
-                <Utensils
-                  size={18}
-                  strokeWidth={2.3}
-                  className={styles.cardHeaderIcon}
-                  aria-hidden="true"
-                />
-                <h3 className={styles.cardTitle}>Món đã đặt</h3>
-              </div>
-              <span className={styles.itemCount}>{totalDishCount} món</span>
-            </div>
-
-            <div className={styles.dishList}>
-              {activeOrder.order_items.map((item) => {
-                const resolvedImg = getSellerOrderDetailItemImage(item);
-                const optionsText = formatSellerOrderDetailItemOptions(item);
-                const lineTotal = item.unit_price_snapshot * item.quantity;
-
-                return (
-                  <div key={item.id} className={styles.dishRow}>
-                    <div className={styles.dishThumbWrap}>
-                      {resolvedImg ? (
-                        <Image
-                          src={resolvedImg}
-                          alt={item.item_name_snapshot}
-                          width={58}
-                          height={58}
-                          unoptimized
-                          className={styles.dishThumb}
-                        />
-                      ) : (
-                        <FoodThumbnail
-                          kind={
-                            normalizeSearchText(
-                              item.item_name_snapshot,
-                            ).includes("tra")
-                              ? "drink"
-                              : "food"
-                          }
-                          className={styles.dishThumb}
-                        />
-                      )}
-                    </div>
-
-                    <div className={styles.dishInfo}>
-                      <strong className={styles.dishName}>
-                        {item.item_name_snapshot}
-                      </strong>
-                      {optionsText && (
-                        <p className={styles.dishOptions}>{optionsText}</p>
-                      )}
-                    </div>
-
-                    <span className={styles.dishQty}>×{item.quantity}</span>
-                    <strong className={styles.dishPrice}>
-                      {formatMoney(lineTotal)}
-                    </strong>
-                  </div>
-                );
-              })}
-            </div>
-
-            {activeOrder.customer_notes && (
-              <div className={styles.customerNoteBox}>
-                <FileText
-                  size={19}
-                  strokeWidth={2}
-                  className={styles.customerNoteIcon}
-                  aria-hidden="true"
-                />
-                <div className={styles.customerNoteContent}>
-                  <span className={styles.customerNoteLabel}>
-                    Ghi chú của khách
+          <div className={styles.billCard}>
+            {/* Mã đơn, ngày đặt & trạng thái (chuẩn Bill Web) */}
+            <section className={styles.orderHero} aria-label="Thông tin mã đơn">
+              <div className={styles.orderHeroTop}>
+                <h2 className={styles.orderCode}>#{activeOrder.order_code}</h2>
+                <span
+                  className={`${styles.statusBadge} ${styles[`status_${activeOrder.order_status}`]}`}
+                >
+                  <StatusIcon size={16} strokeWidth={2.2} aria-hidden="true" />
+                  <span>
+                    {getSellerOrderDetailStatusLabel(activeOrder.order_status)}
                   </span>
-                  <strong className={styles.customerNoteText}>
-                    {activeOrder.customer_notes}
-                  </strong>
-                </div>
+                </span>
               </div>
-            )}
-          </section>
+              <p className={styles.placedAt}>
+                Đặt lúc: {formatOrderDate(activeOrder.created_at)}
+              </p>
+            </section>
 
-          {/* Card 2: Khách hàng & nhận hàng */}
-          <section
-            className={styles.card}
-            aria-label="Khách hàng và nhận hàng"
-          >
-            <div className={styles.cardHeader}>
-              <div className={styles.cardTitleGroup}>
-                <MapPin
+            {/* 1. Thông tin khách hàng */}
+            <section className={styles.billSection} aria-label="Thông tin khách hàng">
+              <div className={styles.sectionHeader}>
+                <User
                   size={18}
-                  strokeWidth={2.3}
+                  strokeWidth={2}
                   className={styles.cardHeaderIcon}
                   aria-hidden="true"
                 />
-                <h3 className={styles.cardTitle}>
-                  Khách hàng &amp; nhận hàng
-                </h3>
+                <h3 className={styles.cardTitle}>Thông tin khách hàng</h3>
               </div>
-            </div>
 
-            <div className={styles.customerBlock}>
-              <strong className={styles.customerName}>
-                {activeOrder.customer.name}
-              </strong>
-              <div className={styles.customerPhoneRow}>
-                <span className={styles.customerPhone}>
-                  <Phone
-                    size={15}
-                    strokeWidth={2.2}
+              <div className={styles.customerBlock}>
+                <strong className={styles.customerName}>
+                  {activeOrder.customer.name}
+                </strong>
+                <div className={styles.customerPhoneRow}>
+                  <span className={styles.customerInfoLine}>
+                    <Phone
+                      size={16}
+                      strokeWidth={2}
+                      className={styles.customerMetaIcon}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      {activeOrder.customer.phone ??
+                        (activeOrder.order_status === "completed"
+                          ? "Đã ẩn số điện thoại"
+                          : "Chưa có số điện thoại")}
+                    </span>
+                  </span>
+
+                  {activeOrder.customer.phone && (
+                    <a
+                      href={`tel:${activeOrder.customer.phone.replace(/\s+/g, "")}`}
+                      className={styles.callCustomerButton}
+                      aria-label={`Gọi khách ${activeOrder.customer.name}`}
+                    >
+                      <Phone size={14} strokeWidth={2.2} aria-hidden="true" />
+                      <span>Gọi khách</span>
+                    </a>
+                  )}
+                </div>
+
+                <span className={styles.customerInfoLine}>
+                  <MapPin
+                    size={16}
+                    strokeWidth={2}
                     className={styles.customerMetaIcon}
                     aria-hidden="true"
                   />
                   <span>
-                    {activeOrder.customer.phone ?? "Đã ẩn số điện thoại"}
+                    {activeOrder.delivery_address ?? "Chưa có địa chỉ giao nhận"}
                   </span>
                 </span>
-
-                {activeOrder.customer.phone && (
-                  <a
-                    href={`tel:${activeOrder.customer.phone.replace(/\s+/g, "")}`}
-                    className={styles.callCustomerButton}
-                    aria-label={`Gọi khách ${activeOrder.customer.name}`}
-                  >
-                    <Phone size={14} strokeWidth={2.3} aria-hidden="true" />
-                    <span>Gọi khách</span>
-                  </a>
-                )}
               </div>
-            </div>
+            </section>
 
-            <div className={styles.deliveryBlock}>
-              <MapPin
-                size={16}
-                strokeWidth={2.2}
-                className={styles.deliveryPinIcon}
-                aria-hidden="true"
-              />
-              <div className={styles.deliveryTextWrap}>
-                <strong className={styles.deliveryPrimary}>
-                  {addressInfo.primary}
-                </strong>
-                <span className={styles.deliverySecondary}>
-                  {addressInfo.secondary}
-                </span>
-              </div>
-            </div>
-          </section>
-
-          {/* Card 3: Thanh toán */}
-          <section className={styles.card} aria-label="Thanh toán">
-            <div className={styles.cardHeader}>
-              <div className={styles.cardTitleGroup}>
+            {/* 2. Thông tin thanh toán */}
+            <section className={styles.billSection} aria-label="Thông tin thanh toán">
+              <div className={styles.sectionHeader}>
                 <Wallet
                   size={18}
-                  strokeWidth={2.2}
+                  strokeWidth={2}
                   className={styles.cardHeaderIcon}
                   aria-hidden="true"
                 />
-                <h3 className={styles.cardTitle}>Thanh toán</h3>
+                <h3 className={styles.cardTitle}>Thông tin thanh toán</h3>
               </div>
-              <span
-                className={`${styles.paymentStatusBadge} ${isPaid ? styles.paymentStatusPaid : ""}`}
-              >
-                {paymentStatusLabel}
-              </span>
-            </div>
+              <p className={styles.paymentMethodText}>{paymentMethodLabel}</p>
+            </section>
 
-            <div className={styles.paymentRows}>
-              <div className={styles.paymentRow}>
-                <span>Phương thức</span>
-                <strong>{paymentMethodLabel}</strong>
+            {/* 3. Danh sách món */}
+            <section className={styles.billSection} aria-label="Danh sách món">
+              <div className={styles.sectionHeaderBetween}>
+                <div className={styles.sectionHeader}>
+                  <Utensils
+                    size={18}
+                    strokeWidth={2}
+                    className={styles.cardHeaderIcon}
+                    aria-hidden="true"
+                  />
+                  <h3 className={styles.cardTitle}>Danh sách món</h3>
+                </div>
+                <span className={styles.itemCount}>{totalDishCount} món</span>
               </div>
+
+              <div className={styles.dishList}>
+                {activeOrder.order_items.map((item) => {
+                  const resolvedImg = getSellerOrderDetailItemImage(item);
+                  const optionsText = item.selected_options
+                    .map((opt) =>
+                      [opt.group_name, opt.option_name]
+                        .filter(Boolean)
+                        .join(": "),
+                    )
+                    .filter(Boolean)
+                    .join(", ");
+                  const unitPrice = item.unit_price_snapshot;
+
+                  return (
+                    <div key={item.id} className={styles.dishRow}>
+                      <div className={styles.dishThumbWrap}>
+                        {resolvedImg ? (
+                          <Image
+                            src={resolvedImg}
+                            alt={item.item_name_snapshot}
+                            width={50}
+                            height={50}
+                            unoptimized
+                            className={styles.dishThumb}
+                          />
+                        ) : (
+                          <FoodThumbnail
+                            kind={
+                              normalizeSearchText(
+                                item.item_name_snapshot,
+                              ).includes("tra")
+                                ? "drink"
+                                : "food"
+                            }
+                            className={styles.dishThumb}
+                          />
+                        )}
+                      </div>
+
+                      <div className={styles.dishInfo}>
+                        <strong className={styles.dishName}>
+                          {item.item_name_snapshot}
+                        </strong>
+                        {optionsText && (
+                          <p className={styles.dishOptions}>+ {optionsText}</p>
+                        )}
+                      </div>
+
+                      <span className={styles.dishQtyPill}>×{item.quantity}</span>
+                      <strong className={styles.dishPrice}>
+                        {formatMoney(unitPrice)}/phần
+                      </strong>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* 4. Ghi chú của khách hàng */}
+            <section className={styles.billSection} aria-label="Ghi chú của khách hàng">
+              <div className={styles.sectionHeader}>
+                <ClipboardList
+                  size={18}
+                  strokeWidth={2}
+                  className={styles.cardHeaderIcon}
+                  aria-hidden="true"
+                />
+                <h3 className={styles.cardTitle}>Ghi chú của khách hàng</h3>
+              </div>
+              <p className={styles.noteBox}>
+                {activeOrder.customer_notes?.trim() || "Không có ghi chú."}
+              </p>
+            </section>
+
+            {/* 5. Tạm tính & Tổng cộng */}
+            <section className={styles.totalsSection} aria-label="Tổng tiền">
               <div className={styles.paymentRow}>
                 <span>Tạm tính</span>
-                <strong>{formatMoney(activeOrder.subtotal)}</strong>
+                <span>{formatMoney(activeOrder.subtotal)}</span>
               </div>
-              <div className={styles.paymentRow}>
-                <span>Phí giao hàng</span>
-                <strong>{formatMoney(shippingFee)}</strong>
+              <div className={styles.paymentTotalRow}>
+                <strong className={styles.paymentTotalLabel}>Tổng cộng</strong>
+                <strong className={styles.paymentTotalValue}>
+                  {formatMoney(activeOrder.total)}
+                </strong>
               </div>
-            </div>
-
-            <div className={styles.paymentTotalRow}>
-              <strong className={styles.paymentTotalLabel}>Tổng cộng</strong>
-              <strong className={styles.paymentTotalValue}>
-                {formatMoney(activeOrder.total)}
-              </strong>
-            </div>
-          </section>
+            </section>
+          </div>
         </main>
       </div>
 
-      {/* Bottom Action Bar covering Navigation Bars */}
+      {/* Bottom Action Bar */}
       {activeOrder.order_status === "pending" && (
         <footer
           className={styles.bottomActionBar}
@@ -559,7 +535,7 @@ export default function SellerOrderDetailView({
               className={styles.acceptActionBtn}
               onClick={handleAccept}
             >
-              Chấp nhận đơn
+              Chấp nhận
             </button>
           </div>
         </footer>
@@ -577,7 +553,7 @@ export default function SellerOrderDetailView({
               className={styles.acceptActionBtn}
               onClick={handleComplete}
             >
-              Hoàn thành đơn
+              Hoàn thành
             </button>
           </div>
         </footer>

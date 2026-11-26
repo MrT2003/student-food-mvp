@@ -32,8 +32,23 @@ import SellerSidebar from "./SellerSidebar";
 import { useSellerAccess } from "./SellerAccessProvider";
 import SellerAccessProblem from "./SellerAccessProblem";
 import { openSellerRestaurant } from "@/lib/seller/open-client";
+import { readSellerOrders } from "@/lib/seller/orders-client";
+import { vietnamDay } from "@/lib/seller/orders";
+import { formatMoney } from "@/lib/format";
+import { formatOrderDate } from "@/lib/orders/order-mappers";
+import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/useAuthStore";
+import type { SellerManagedOrder } from "@/types/seller-orders.types";
 import styles from "@/styles/seller-overview.module.css";
+
+type StatsRange = "today" | "yesterday" | "7days" | "all";
+
+const OVERVIEW_RANGE_OPTIONS: readonly { value: StatsRange; label: string }[] = [
+  { value: "today", label: "Hôm nay" },
+  { value: "yesterday", label: "Hôm qua" },
+  { value: "7days", label: "7 ngày qua" },
+  { value: "all", label: "Tất cả" },
+];
 
 export type SellerChecklistItem = {
   id: string;
@@ -257,9 +272,136 @@ export default function SellerOverviewView() {
 
   const [notice, setNotice] = useState("");
   const [guideOpen, setGuideOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>(
-    sellerMobileDateOptions[0],
-  );
+  const [statsRange, setStatsRange] = useState<StatsRange>("today");
+  const [orders, setOrders] = useState<SellerManagedOrder[] | null>(null);
+  const [recentDays, setRecentDays] = useState<string[]>([]);
+  const actorId = data?.user.id;
+  const restaurantId = restaurant?.id;
+
+  useEffect(() => {
+    const computeRecentDays = () => {
+      const nowMs = Date.now();
+      setRecentDays(
+        Array.from({ length: 7 }, (_, i) =>
+          vietnamDay(new Date(nowMs - i * 86_400_000).toISOString()),
+        ),
+      );
+    };
+    computeRecentDays();
+    const timer = window.setInterval(computeRecentDays, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!actorId || !restaurantId) return;
+    let active = true;
+
+    async function loadOrders() {
+      try {
+        const list = await readSellerOrders(actorId!, restaurantId!);
+        if (active && useAuthStore.getState().user?.id === actorId) {
+          setOrders(list);
+        }
+      } catch {
+        // Giữ trạng thái hiện tại nếu tải thống kê tạm thời thất bại
+      }
+    }
+
+    void loadOrders();
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`seller-overview-orders:${restaurantId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => {
+          void loadOrders();
+        },
+      )
+      .subscribe();
+
+    const handleFocus = () => {
+      if (document.visibilityState !== "hidden" && navigator.onLine !== false) {
+        void loadOrders();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+
+    return () => {
+      active = false;
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+      void supabase.removeChannel(channel);
+    };
+  }, [actorId, restaurantId]);
+
+  const activeRangeLabel =
+    OVERVIEW_RANGE_OPTIONS.find((opt) => opt.value === statsRange)?.label ??
+    "Hôm nay";
+
+  const scopedOrders = (orders ?? []).filter((order) => {
+    if (statsRange === "all") return true;
+    const orderDay = vietnamDay(order.created_at);
+    if (statsRange === "today") return orderDay === recentDays[0];
+    if (statsRange === "yesterday") return orderDay === recentDays[1];
+    return recentDays.includes(orderDay);
+  });
+
+  const newOrdersCount = scopedOrders.filter(
+    (o) => o.order_status === "pending",
+  ).length;
+  const acceptedOrdersCount = scopedOrders.filter(
+    (o) => o.order_status === "accepted",
+  ).length;
+  const completedOrdersCount = scopedOrders.filter(
+    (o) => o.order_status === "completed",
+  ).length;
+  const completedRevenue = scopedOrders
+    .filter((o) => o.order_status === "completed")
+    .reduce((sum, o) => sum + (o.total ?? 0), 0);
+
+  const allPendingOrders = (orders ?? [])
+    .filter((o) => o.order_status === "pending")
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+  const recentPendingOrders = allPendingOrders.slice(0, 5);
+
+  const liveMobileTodayStats: readonly SellerTodayStatItem[] = [
+    {
+      id: "new-orders",
+      label: "Đơn mới",
+      value: orders === null ? "0" : String(newOrdersCount),
+      unit: "đơn hàng",
+      tone: "orange-doc",
+    },
+    {
+      id: "accepted-orders",
+      label: "Đã chấp nhận",
+      value: orders === null ? "0" : String(acceptedOrdersCount),
+      unit: "đơn hàng",
+      tone: "green-check",
+    },
+    {
+      id: "completed-orders",
+      label: "Hoàn thành",
+      value: orders === null ? "0" : String(completedOrdersCount),
+      unit: "đơn hàng",
+      tone: "gray-check",
+    },
+    {
+      id: "revenue",
+      label: "Doanh thu",
+      value: orders === null ? "0đ" : formatMoney(completedRevenue),
+      unit: activeRangeLabel.toLowerCase(),
+      tone: "orange-dollar",
+    },
+  ];
   const name = restaurant?.name || "";
   const savedPath = publicPath(restaurant?.slug);
   async function copyShopLink() {
@@ -476,20 +618,59 @@ export default function SellerOverviewView() {
                 <section>
                   <div className={styles.sectionTitle}>
                     <BarChart3 />
-                    <h3>Tổng quan hôm nay</h3>
-                    <small>Chưa có số liệu thống kê tại đây.</small>
+                    <h3>Tổng quan {activeRangeLabel.toLowerCase()}</h3>
+                    <small>
+                      {orders === null
+                        ? "Đang tải số liệu từ hệ thống..."
+                        : `${scopedOrders.length} đơn trong mục ${activeRangeLabel.toLowerCase()}`}
+                    </small>
+                    <select
+                      className={styles.rangeSelect}
+                      aria-label="Chọn khoảng thời gian thống kê"
+                      value={statsRange}
+                      onChange={(e) =>
+                        setStatsRange(e.target.value as StatsRange)
+                      }
+                    >
+                      {OVERVIEW_RANGE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className={styles.stats}>
                     {[
-                      { icon: ClipboardList, label: "Đơn mới", value: "—" },
+                      {
+                        icon: ClipboardList,
+                        label: "Đơn mới",
+                        value: orders === null ? "—" : String(newOrdersCount),
+                        unit: "đơn chờ xác nhận",
+                      },
                       {
                         icon: CheckCircle2,
                         label: "Đã chấp nhận",
-                        value: "—",
+                        value:
+                          orders === null ? "—" : String(acceptedOrdersCount),
+                        unit: "đơn đang xử lý",
                       },
-                      { icon: Check, label: "Hoàn thành", value: "—" },
-                      { icon: Wallet, label: "Doanh thu", value: "—" },
-                    ].map(({ icon: Icon, label, value }, index) => (
+                      {
+                        icon: Check,
+                        label: "Hoàn thành",
+                        value:
+                          orders === null ? "—" : String(completedOrdersCount),
+                        unit: "đơn đã giao",
+                      },
+                      {
+                        icon: Wallet,
+                        label: "Doanh thu",
+                        value:
+                          orders === null
+                            ? "—"
+                            : formatMoney(completedRevenue),
+                        unit: activeRangeLabel.toLowerCase(),
+                      },
+                    ].map(({ icon: Icon, label, value, unit }, index) => (
                       <article
                         key={label}
                         className={styles.stat}
@@ -501,7 +682,7 @@ export default function SellerOverviewView() {
                         <div>
                           <h4>{label}</h4>
                           <strong>{value}</strong>
-                          <small>Chưa có số liệu</small>
+                          <small>{unit}</small>
                         </div>
                       </article>
                     ))}
@@ -511,18 +692,63 @@ export default function SellerOverviewView() {
                   <div className={styles.sectionTitle}>
                     <ClipboardList />
                     <h3>Đơn hàng mới</h3>
-                    <small>Chưa tải danh sách đơn hàng tại đây.</small>
+                    <small>
+                      {orders === null
+                        ? "Đang tải danh sách đơn hàng..."
+                        : allPendingOrders.length > 0
+                          ? `${allPendingOrders.length} đơn đang chờ xác nhận`
+                          : "Hiện chưa có đơn hàng nào đang chờ xác nhận."}
+                    </small>
                     <Link href="/seller/orders">
                       Xem tất cả <ArrowRight size={16} />
                     </Link>
                   </div>
-                  <div className={styles.empty}>
-                    <ClipboardList size={40} />
-                    <div>
-                      <strong>Chưa có dữ liệu đơn hàng</strong>
-                      <p>Mở mục Đơn hàng để xem thêm.</p>
+                  {recentPendingOrders.length > 0 ? (
+                    <div className={styles.recentOrdersList}>
+                      {recentPendingOrders.map((order) => (
+                        <Link
+                          key={order.id}
+                          href="/seller/orders"
+                          className={styles.recentOrderCard}
+                        >
+                          <div className={styles.recentOrderMain}>
+                            <strong>
+                              #{order.order_code ?? "Chưa có mã"}
+                            </strong>
+                            <span>
+                              {order.customer.name ?? "Chưa có tên khách"} ·{" "}
+                              {order.order_items.reduce(
+                                (sum, item) => sum + item.quantity,
+                                0,
+                              )}{" "}
+                              món
+                            </span>
+                            <small>{formatOrderDate(order.created_at)}</small>
+                          </div>
+                          <div className={styles.recentOrderRight}>
+                            <strong className={styles.recentOrderTotal}>
+                              {formatMoney(order.total ?? 0)}
+                            </strong>
+                            <span className={styles.recentPendingBadge}>
+                              Chờ xác nhận
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <div className={styles.empty}>
+                      <ClipboardList size={40} />
+                      <div>
+                        <strong>
+                          {orders === null
+                            ? "Đang tải dữ liệu đơn hàng…"
+                            : "Chưa có đơn hàng chờ xác nhận"}
+                        </strong>
+                        <p>Mở mục Đơn hàng để xem toàn bộ lịch sử đơn.</p>
+                      </div>
+                    </div>
+                  )}
                 </section>
               </div>
               <aside className={styles.rail}>
@@ -748,13 +974,15 @@ export default function SellerOverviewView() {
                     aria-hidden="true"
                   />
                   <select
-                    aria-label="Chọn ngày thống kê"
-                    value={selectedDate}
-                    onChange={(event) => setSelectedDate(event.target.value)}
+                    aria-label="Chọn khoảng thời gian thống kê trên điện thoại"
+                    value={statsRange}
+                    onChange={(event) =>
+                      setStatsRange(event.target.value as StatsRange)
+                    }
                   >
-                    {sellerMobileDateOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {OVERVIEW_RANGE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
                       </option>
                     ))}
                   </select>
@@ -763,7 +991,7 @@ export default function SellerOverviewView() {
               </div>
 
               <div className={styles.mobileStatsGrid}>
-                {sellerMobileTodayStats.map((stat) => (
+                {liveMobileTodayStats.map((stat) => (
                   <article key={stat.id} className={styles.mobileStatCard}>
                     <MobileStatIcon tone={stat.tone} />
                     <div className={styles.mobileStatCopy}>
@@ -799,18 +1027,51 @@ export default function SellerOverviewView() {
                 </Link>
               </div>
 
-              <div className={styles.mobileEmptyOrdersCard}>
-                <span className={styles.mobileEmptyOrdersIcon} aria-hidden="true">
-                  <FileText size={22} strokeWidth={1.8} />
-                </span>
-                <div className={styles.mobileEmptyOrdersCopy}>
-                  <strong>Chưa có đơn hàng nào</strong>
-                  <p>
-                    Khi cửa hàng bắt đầu nhận đơn, các đơn hàng mới sẽ hiển thị
-                    tại đây.
-                  </p>
+              {recentPendingOrders.length > 0 ? (
+                <div className={styles.mobileRecentOrdersList}>
+                  {recentPendingOrders.map((order) => (
+                    <Link
+                      key={order.id}
+                      href="/seller/orders"
+                      className={styles.mobileRecentOrderCard}
+                    >
+                      <div className={styles.mobileRecentOrderLeft}>
+                        <strong>#{order.order_code ?? "Chưa có mã"}</strong>
+                        <span>
+                          {order.customer.name ?? "Chưa có tên khách"} ·{" "}
+                          {order.order_items.reduce(
+                            (sum, item) => sum + item.quantity,
+                            0,
+                          )}{" "}
+                          món
+                        </span>
+                        <small>{formatOrderDate(order.created_at)}</small>
+                      </div>
+                      <div className={styles.mobileRecentOrderRight}>
+                        <strong>{formatMoney(order.total ?? 0)}</strong>
+                        <span>Chờ xác nhận</span>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <div className={styles.mobileEmptyOrdersCard}>
+                  <span className={styles.mobileEmptyOrdersIcon} aria-hidden="true">
+                    <FileText size={22} strokeWidth={1.8} />
+                  </span>
+                  <div className={styles.mobileEmptyOrdersCopy}>
+                    <strong>
+                      {orders === null
+                        ? "Đang tải đơn hàng…"
+                        : "Chưa có đơn hàng nào"}
+                    </strong>
+                    <p>
+                      Khi cửa hàng bắt đầu nhận đơn, các đơn hàng mới sẽ hiển thị
+                      tại đây.
+                    </p>
+                  </div>
+                </div>
+              )}
             </section>
           </div>
         </main>

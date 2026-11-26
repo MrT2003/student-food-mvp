@@ -8,7 +8,6 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   Clock3,
   ClipboardList,
@@ -28,6 +27,7 @@ import {
 } from "lucide-react";
 import StudentHeader from "@/components/layout/StudentHeader";
 import SellerSidebar from "./SellerSidebar";
+import SellerOrderDetailView from "./SellerOrderDetailView";
 import { useSellerAccess } from "./SellerAccessProvider";
 import { useSellerOrders } from "@/lib/seller/useSellerOrders";
 import type { SellerManagedOrder } from "@/types/seller-orders.types";
@@ -60,9 +60,9 @@ export const sellerMobileOrderTabs: readonly {
   label: string;
 }[] = [
   { value: "pending", label: "Chờ xác nhận" },
-  { value: "accepted", label: "Đã nhận" },
+  { value: "accepted", label: "Đã chấp nhận" },
   { value: "completed", label: "Hoàn thành" },
-  { value: "cancelled", label: "Đã hủy" },
+  { value: "cancelled", label: "Đã hủy / từ chối" },
 ] as const;
 
 export const sellerMobileDateFilterOptions = [
@@ -555,6 +555,46 @@ function Item({ item }: { item: SellerManagedOrder["order_items"][number] }) {
 
 const money = (value: number | null) =>
   value === null ? "Chưa có số tiền" : formatMoney(value);
+
+function toSellerOrderDetail(order: SellerManagedOrder): SellerOrder {
+  return {
+    id: order.id,
+    restaurant_id: order.restaurant_id,
+    student_id: "",
+    session_checkout_id: "",
+    order_code: order.order_code ?? "Chưa có mã đơn",
+    order_status: order.order_status,
+    payment_method: order.payment_method,
+    payment_confirmed_at: null,
+    payment_confirmed_by: null,
+    subtotal: order.subtotal ?? 0,
+    total: order.total ?? 0,
+    delivery_address: order.delivery_address,
+    customer_notes: order.customer_notes,
+    created_at: order.created_at,
+    accepted_at: null,
+    completed_at: null,
+    customer: {
+      name: order.customer.name ?? "Chưa có tên khách",
+      phone: order.customer.phone,
+    },
+    order_items: order.order_items.map((item) => ({
+      id: item.id,
+      order_id: order.id,
+      menu_item_id: null,
+      item_name_snapshot: item.item_name_snapshot ?? "Chưa có tên món",
+      unit_price_snapshot: item.total_price ?? item.unit_price_snapshot ?? 0,
+      quantity: item.quantity,
+      image_url: item.image_url,
+      selected_options: (item.selected_options ?? []).map((opt, idx) => ({
+        option_id: `${item.id}-opt-${idx}`,
+        group_name: opt.group_name ?? "Tùy chọn",
+        option_name: opt.option_name ?? "",
+        additional_price: opt.additional_price ?? 0,
+      })),
+    })),
+  };
+}
 
 export default function SellerOrdersView() {
   const { data, error, retry } = useSellerAccess();
@@ -1125,45 +1165,78 @@ export function SellerOrdersContent({
             <p>Theo dõi và xử lý đơn của cửa hàng.</p>
           </header>
 
-          <div className={styles.mobileSearch}>
+          <label className={styles.mobileSearch}>
             <Search size={18} strokeWidth={2} aria-hidden="true" />
-            <span>{query || "Tìm mã đơn hoặc tên khách"}</span>
-          </div>
+            <input
+              type="search"
+              aria-label="Tìm mã đơn hoặc tên khách trên điện thoại"
+              placeholder="Tìm mã đơn hoặc tên khách"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSelectedId(null);
+              }}
+            />
+          </label>
 
           <div className={styles.mobileFilterRow}>
-            <div className={styles.mobileFilterSelect}>
+            <label className={styles.mobileFilterSelect}>
               <CalendarDays
                 size={17}
                 strokeWidth={2}
                 className={styles.mobileFilterIcon}
                 aria-hidden="true"
               />
-              <span>{period === "today" ? "Hôm nay" : "Tất cả ngày"}</span>
+              <select
+                aria-label="Thời gian đặt hàng trên điện thoại"
+                value={period}
+                onChange={(e) => {
+                  setPeriod(e.target.value);
+                  setSelectedId(null);
+                }}
+              >
+                {sellerMobileDateFilterOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
               <ChevronDown
                 size={16}
                 strokeWidth={2.2}
                 className={styles.mobileFilterChevron}
                 aria-hidden="true"
               />
-            </div>
+            </label>
 
-            <div className={styles.mobileFilterSelect}>
+            <label className={styles.mobileFilterSelect}>
               <ArrowUpDown
                 size={17}
                 strokeWidth={2}
                 className={styles.mobileFilterIcon}
                 aria-hidden="true"
               />
-              <span>
-                {sort === "newest" ? "Mới nhất trước" : "Cũ nhất trước"}
-              </span>
+              <select
+                aria-label="Sắp xếp đơn hàng trên điện thoại"
+                value={sort}
+                onChange={(e) => {
+                  setSort(e.target.value);
+                  setSelectedId(null);
+                }}
+              >
+                {sellerMobileSortOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
               <ChevronDown
                 size={16}
                 strokeWidth={2.2}
                 className={styles.mobileFilterChevron}
                 aria-hidden="true"
               />
-            </div>
+            </label>
           </div>
 
           <div
@@ -1307,25 +1380,20 @@ export function SellerOrdersContent({
                         />
                       </span>
                     </div>
-
-                    {selectedId === order.id && (
-                      <div className={styles.mobileInlineDetail}>
-                        <span
-                          className={styles.mobileDetailBack}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            closeBill();
-                          }}
-                        >
-                          <ChevronLeft size={16} aria-hidden="true" />
-                          <span>Thu gọn</span>
-                        </span>
-                      </div>
-                    )}
                   </div>
                 );
               })}
           </div>
+          {selected && (
+            <SellerOrderDetailView
+              overlay
+              order={toSellerOrderDetail(selected)}
+              onBack={closeBill}
+              onAccept={() => changeStatus(selected, "accept")}
+              onReject={() => changeStatus(selected, "reject")}
+              onComplete={() => changeStatus(selected, "complete")}
+            />
+          )}
         </div>
       </div>
     </div>

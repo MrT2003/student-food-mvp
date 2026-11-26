@@ -7,7 +7,7 @@
     radial-gradient(ellipse at 100% 6%, #ffefdd 0%, transparent 45%),
     radial-gradient(ellipse at 0% 90%, #ffefe0 0%, transparent 45%),
     #faf6f0;
-  color: #08184c;
+  color: #081447;
   font-family: var(--font-body);
   color-scheme: light;
   padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
@@ -63,7 +63,7 @@
   border: 0;
   border-radius: 10px;
   background: transparent;
-  color: #08184c;
+  color: #081447;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -84,7 +84,7 @@
   line-height: 1.25;
   font-weight: 800;
   letter-spacing: -0.3px;
-  color: #08184c;
+  color: #081447;
 }
 
 .topBarSpacer {
@@ -92,38 +92,45 @@
   height: 36px;
 }
 
-/* Main Content Area */
+/* Main Content Area (1 Bill Card giống chuẩn bản Web) */
 .content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px 18px;
+  padding: 14px 16px 20px;
   box-sizing: border-box;
+}
+
+.billCard {
+  background: #ffffff;
+  border: 1px solid #e9edf4;
+  border-radius: 14px;
+  box-shadow: 0 3px 14px rgba(115, 83, 51, 0.04);
+  overflow: hidden;
 }
 
 /* Order Code & Status Hero */
 .orderHero {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 2px 2px 4px;
+  gap: 5px;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid #edf0f5;
 }
 
 .orderHeroTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .orderCode {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 26px;
-  line-height: 1.15;
+  font-size: 22px;
+  line-height: 1.2;
   font-weight: 800;
-  letter-spacing: -0.6px;
-  color: #08184c;
+  letter-spacing: -0.4px;
+  color: #081447;
+  overflow-wrap: anywhere;
 }
 
 .placedAt {
@@ -131,16 +138,16 @@
   font-size: 13.5px;
   line-height: 1.4;
   font-weight: 500;
-  color: #54729b;
+  color: #6983af;
 }
 
 .statusBadge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 13px;
-  border-radius: 999px;
-  font-size: 13.5px;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 12.5px;
   line-height: 1.2;
   font-weight: 600;
   white-space: nowrap;
@@ -149,25 +156,17 @@
 
 .status_pending {
   background: #fff0e6;
-  border: 1px solid #ffe2cf;
-  color: #d94612;
-}
-
-.status_pending svg {
-  color: #ea4f17;
-  flex-shrink: 0;
+  color: #f65317;
 }
 
 .status_accepted {
   background: #eaf9ec;
-  border: 1px solid #ccebd1;
   color: #168747;
 }
 
 .status_completed {
   background: #f0f3f7;
-  border: 1px solid #dfe5ee;
-  color: #536480;
+  color: #63718a;
 }
 
 .status_cancelled {
@@ -182,33 +181,28 @@
   color: #d84444;
 }
 
-/* Section Card */
-.card {
-  background: #ffffff;
-  border: 1px solid #f0eae2;
-  border-radius: 16px;
-  box-shadow: 0 5px 18px rgba(15, 28, 63, 0.04);
-  overflow: hidden;
+/* Bill Sections */
+.billSection {
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf0f5;
 }
 
-.cardHeader {
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sectionHeaderBetween {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 13px 15px;
-  border-bottom: 1px solid #f1f4f8;
-}
-
-.cardTitleGroup {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
 }
 
 .cardHeaderIcon {
-  color: #f24822;
+  color: #5b76a0;
   flex-shrink: 0;
 }
 
@@ -217,54 +211,121 @@
   font-family: var(--font-display);
   font-size: 15.5px;
   line-height: 1.3;
-  font-weight: 800;
-  letter-spacing: -0.2px;
-  color: #08184c;
+  font-weight: 700;
+  color: #081447;
 }
 
 .itemCount {
-  font-size: 13.5px;
-  line-height: 1.3;
+  font-size: 13px;
   font-weight: 500;
-  color: #54729b;
+  color: #6983af;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
-/* Dish List inside Card 1 */
+/* Customer Section */
+.customerBlock {
+  margin-top: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.customerName {
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #081447;
+}
+
+.customerPhoneRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.customerInfoLine {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #6482ae;
+  overflow-wrap: anywhere;
+}
+
+.customerMetaIcon {
+  color: #5b76a0;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.callCustomerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 1px solid #dfe6f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #37598b;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.callCustomerButton:hover {
+  background: #f5f7fa;
+}
+
+.paymentMethodText {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.4;
+  color: #6482ae;
+}
+
+/* Dish List */
 .dishList {
   display: flex;
   flex-direction: column;
-  padding: 0 15px;
+  margin-top: 8px;
 }
 
 .dishRow {
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr) auto auto;
+  grid-template-columns: 50px minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f1f4f8;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f2f4f8;
 }
 
 .dishRow:last-child {
   border-bottom: 0;
+  padding-bottom: 2px;
 }
 
 .dishThumbWrap {
-  width: 58px;
-  height: 58px;
-  border-radius: 12px;
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
   overflow: hidden;
-  background: #f5ebe0;
+  background: #f4e4cd;
   flex-shrink: 0;
   display: grid;
   place-items: center;
 }
 
 .dishThumb {
-  width: 58px;
-  height: 58px;
+  width: 50px;
+  height: 50px;
   object-fit: cover;
   display: block;
 }
@@ -281,206 +342,53 @@
   font-size: 14.5px;
   line-height: 1.3;
   font-weight: 700;
-  color: #08184c;
+  color: #081447;
   overflow-wrap: anywhere;
 }
 
 .dishOptions {
   margin: 0;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.35;
-  font-weight: 500;
-  color: #5a779f;
+  color: #6b84ae;
   overflow-wrap: anywhere;
 }
 
-.dishQty {
-  font-size: 13.5px;
-  line-height: 1.3;
-  font-weight: 600;
-  color: #54729b;
-  padding-right: 6px;
+.dishQtyPill {
+  border-radius: 999px;
+  background: #f4f6fa;
+  padding: 3px 9px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #365789;
   white-space: nowrap;
 }
 
 .dishPrice {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.3;
-  font-weight: 800;
-  color: #08184c;
+  font-weight: 700;
+  color: #081447;
   text-align: right;
   white-space: nowrap;
 }
 
-/* Customer Note Box inside Card 1 */
-.customerNoteBox {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin: 4px 15px 15px;
-  padding: 10px 13px;
-  border-radius: 12px;
-  background: #fdf3ea;
-}
-
-.customerNoteIcon {
-  color: #f2581d;
-  flex-shrink: 0;
-}
-
-.customerNoteContent {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.customerNoteLabel {
-  font-size: 12px;
-  line-height: 1.3;
-  font-weight: 600;
-  color: #e25119;
-}
-
-.customerNoteText {
-  font-size: 14px;
-  line-height: 1.35;
-  font-weight: 700;
-  color: #091d52;
-  overflow-wrap: anywhere;
-}
-
-/* Card 2: Customer & Delivery Info */
-.customerBlock {
-  padding: 13px 15px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.customerName {
-  font-family: var(--font-display);
-  font-size: 16.5px;
-  line-height: 1.28;
-  font-weight: 800;
-  color: #08184c;
-}
-
-.customerPhoneRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.customerPhone {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  line-height: 1.35;
-  font-weight: 500;
-  color: #4f6f9b;
-}
-
-.customerMetaIcon {
-  color: #54729b;
-  flex-shrink: 0;
-}
-
-.callCustomerButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 6px 12px;
-  border: 1px solid #3f6fb6;
+/* Note Box matching Web .note */
+.noteBox {
+  margin: 10px 0 0;
   border-radius: 9px;
-  background: #ffffff;
-  color: #164996;
-  font-size: 13.5px;
-  line-height: 1.2;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: background-color 0.15s ease;
-}
-
-.callCustomerButton:hover {
-  background: #f2f7ff;
-}
-
-.callCustomerButton svg {
-  color: #164996;
-  flex-shrink: 0;
-}
-
-.deliveryBlock {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 0 15px;
-  padding: 12px 0 14px;
-  border-top: 1px solid #f1f4f8;
-}
-
-.deliveryPinIcon {
-  color: #486894;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.deliveryTextWrap {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.deliveryPrimary {
+  padding: 12px 14px;
+  background: #f5f7fa;
+  color: #52729e;
   font-size: 14px;
-  line-height: 1.35;
-  font-weight: 700;
-  color: #08184c;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
-.deliverySecondary {
-  font-size: 13px;
-  line-height: 1.35;
-  font-weight: 500;
-  color: #54729b;
-}
-
-/* Card 3: Payment */
-.paymentStatusBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 11px;
-  border-radius: 999px;
-  background: #fdecce;
-  color: #965210;
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.paymentStatusPaid {
-  background: #e7f8ed;
-  color: #157f43;
-}
-
-.paymentRows {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  padding: 12px 15px;
+/* Totals matching Web .totals */
+.totalsSection {
+  padding: 14px 16px 16px;
 }
 
 .paymentRow {
@@ -488,15 +396,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 13.5px;
-  line-height: 1.38;
-  color: #54729b;
-}
-
-.paymentRow strong {
-  font-weight: 500;
-  color: #3b5c8a;
-  text-align: right;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #6482ae;
 }
 
 .paymentTotalRow {
@@ -504,17 +406,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 0 15px;
-  padding: 12px 0 14px;
-  border-top: 1px solid #f1f4f8;
 }
 
 .paymentTotalLabel {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.25;
   font-weight: 800;
-  color: #08184c;
+  color: #081447;
 }
 
 .paymentTotalValue {
@@ -522,17 +421,17 @@
   font-size: 20px;
   line-height: 1.2;
   font-weight: 800;
-  color: #f02e05;
+  color: #ff4d12;
   white-space: nowrap;
 }
 
-/* Bottom Fixed Action Bar (Covers Navigation Bars) */
+/* Bottom Fixed Action Bar */
 .bottomActionBar {
   position: fixed;
   inset: auto 0 0;
   z-index: 90;
   background: #ffffff;
-  border-top: 1px solid #efeae2;
+  border-top: 1px solid #e9edf4;
   box-shadow: 0 -4px 20px rgba(8, 20, 71, 0.06);
   padding: 12px max(16px, env(safe-area-inset-right, 0px))
     calc(12px + env(safe-area-inset-bottom, 0px))
@@ -558,9 +457,9 @@
 
 .rejectActionBtn,
 .acceptActionBtn {
-  min-height: 46px;
+  min-height: 44px;
   padding: 10px 14px;
-  border-radius: 11px;
+  border-radius: 9px;
   font-family: var(--font-display);
   font-size: 15px;
   line-height: 1.2;
@@ -573,165 +472,59 @@
 }
 
 .rejectActionBtn {
-  border: 1px solid #f05a38;
+  border: 1px solid #ff5b1f;
   background: #ffffff;
-  color: #d92d18;
-  font-weight: 700;
+  color: #ff5b1f;
+  font-weight: 600;
 }
 
 .acceptActionBtn {
   border: 1px solid transparent;
-  background: linear-gradient(90deg, #ff7315 0%, #f23611 100%);
+  background: #ff5b1f;
   color: #ffffff;
   font-weight: 700;
-  box-shadow: 0 4px 14px rgba(242, 54, 17, 0.25);
+  box-shadow: 0 4px 12px rgba(255, 91, 31, 0.22);
 }
 
-/* Responsive Breakpoints: iPhone 16 Pro Max / Pixel 9/10 / Galaxy A55 (<= 440px) */
-@media (max-width: 440px) {
-  .content {
-    padding: 13px 14px 18px;
-  }
-  .bottomActionBar {
-    padding-inline: max(14px, env(safe-area-inset-left, 0px))
-      max(14px, env(safe-area-inset-right, 0px));
-  }
-}
-
-/* iPhone 16 / iPhone 16 Pro / Pixel 9 / Pixel 10 (<= 393px) */
 @media (max-width: 393px) {
   .content {
     padding: 12px 12px 16px;
-    gap: 11px;
   }
-  .orderCode {
-    font-size: 24px;
+  .orderHero,
+  .billSection {
+    padding: 13px 13px;
   }
-  .cardHeader {
-    padding: 12px 13px;
-  }
-  .dishList {
-    padding: 0 13px;
+  .totalsSection {
+    padding: 13px 13px 15px;
   }
   .dishRow {
-    grid-template-columns: 54px minmax(0, 1fr) auto auto;
-    gap: 10px;
+    grid-template-columns: 46px minmax(0, 1fr) auto auto;
+    gap: 8px;
   }
   .dishThumbWrap,
   .dishThumb {
-    width: 54px;
-    height: 54px;
-  }
-  .customerNoteBox {
-    margin: 4px 13px 13px;
-  }
-  .customerBlock {
-    padding: 12px 13px 11px;
-  }
-  .deliveryBlock,
-  .paymentTotalRow {
-    margin: 0 13px;
-  }
-  .paymentRows {
-    padding: 11px 13px;
-  }
-  .bottomActionBar {
-    padding-inline: max(12px, env(safe-area-inset-left, 0px))
-      max(12px, env(safe-area-inset-right, 0px));
-  }
-  .rejectActionBtn,
-  .acceptActionBtn {
-    min-height: 44px;
-    font-size: 14.5px;
+    width: 46px;
+    height: 46px;
   }
 }
 
-/* iPhone SE / Small Phones (<= 360px) */
 @media (max-width: 360px) {
-  .topBar {
-    min-height: 50px;
-    padding-inline: 8px;
-  }
-  .topBarTitle {
-    font-size: 16.5px;
-  }
-  .content {
-    padding: 10px 10px 14px;
-    gap: 10px;
-  }
   .orderCode {
-    font-size: 22px;
-  }
-  .placedAt {
-    font-size: 12.5px;
-  }
-  .statusBadge {
-    padding: 5px 10px;
-    font-size: 12.5px;
-  }
-  .cardHeader {
-    padding: 11px 12px;
-  }
-  .cardTitle {
-    font-size: 14.5px;
-  }
-  .dishList {
-    padding: 0 12px;
+    font-size: 19px;
   }
   .dishRow {
-    grid-template-columns: 48px minmax(0, 1fr) auto auto;
-    gap: 8px;
-    padding: 10px 0;
+    grid-template-columns: 42px minmax(0, 1fr) auto auto;
+    gap: 7px;
   }
   .dishThumbWrap,
   .dishThumb {
-    width: 48px;
-    height: 48px;
-    border-radius: 10px;
-  }
-  .dishName {
-    font-size: 13.5px;
-  }
-  .dishOptions {
-    font-size: 12px;
+    width: 42px;
+    height: 42px;
   }
   .dishPrice {
-    font-size: 14px;
-  }
-  .customerNoteBox {
-    margin: 4px 12px 12px;
-    padding: 9px 11px;
-  }
-  .customerBlock {
-    padding: 11px 12px 10px;
-  }
-  .customerName {
-    font-size: 15.5px;
-  }
-  .callCustomerButton {
-    padding: 5px 10px;
-    font-size: 12.5px;
-  }
-  .deliveryBlock,
-  .paymentTotalRow {
-    margin: 0 12px;
-  }
-  .paymentRows {
-    padding: 10px 12px;
+    font-size: 13px;
   }
   .paymentTotalValue {
-    font-size: 18.5px;
-  }
-  .bottomActionBar {
-    padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
-  }
-  .bottomActionInner {
-    gap: 8px;
-  }
-  .rejectActionBtn,
-  .acceptActionBtn {
-    min-height: 42px;
-    font-size: 13.5px;
-    padding: 8px 10px;
+    font-size: 18px;
   }
 }
