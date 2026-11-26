@@ -63,7 +63,7 @@ async function handleCallback(request: NextRequest) {
     }
     // Fixed diagnostic only: upstream errors can contain credentials or profile data.
     console.error("[zalo-callback] Authentication failed.");
-    return NextResponse.json({ error: "Không thể hoàn tất đăng nhập Zalo. Vui lòng thử lại." }, { status: 500 });
+    return NextResponse.json({ error: `Không thể hoàn tất đăng nhập Zalo. Vui lòng thử lại: ${message}` }, { status: 500 });
   }
 }
 

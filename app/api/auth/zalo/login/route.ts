@@ -13,3 +13,15 @@ export async function GET() {
     return NextResponse.json({ error: errorMsg }, { status: 503 });
   }
 }
+
+
+// export async function GET() {
+//   try {
+//     const authorizationUrl = await beginZaloFlow()
+//     console.debug("Zalo AuthorizationURL: ", authorizationUrl)
+//     return NextResponse.json({"authorizationURl": authorizationUrl})
+//   } catch (error: unknown) {
+//     const errorMsg = error instanceof Error ? error.message : "Chưa thể bắt đầu đăng nhập Zalo"
+//     return NextResponse.json({ error: errorMsg }, { status: 503 });
+//   }
+// }
