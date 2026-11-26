@@ -6,6 +6,7 @@ export class UploadError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SHA256_HEX = /^[0-9a-f]{64}$/i;
 const purposes = ["avatar", "restaurant", "restaurant_registration", "menu"];
 export function cloudinaryConfig() {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
@@ -42,12 +43,34 @@ export async function issueUpload(userId: string, input: Record<string, unknown>
   if (typeof input.purpose !== "string" || !purposes.includes(input.purpose)) throw new UploadError("Mục đích upload không hợp lệ.");
   if (!Number.isInteger(input.size) || Number(input.size) <= 0 || Number(input.size) > 5 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(String(input.mime))) throw new UploadError("Chỉ nhận JPG, PNG, WEBP tối đa 5MB.");
   const restaurantId = ["menu", "restaurant"].includes(input.purpose) && typeof input.restaurantId === "string" ? input.restaurantId : null;
+  const fileHash = typeof input.fileHash === "string" && SHA256_HEX.test(input.fileHash.trim()) ? input.fileHash.trim().toLowerCase() : null;
   await authorize(userId, input.purpose, restaurantId);
   const admin = createAdminClient();
+  if (fileHash) {
+    let dedupeQuery = admin
+      .from("cloudinary_uploads")
+      .select("id, metadata, verified_url")
+      .eq("user_id", userId)
+      .eq("purpose", input.purpose)
+      .eq("file_hash", fileHash)
+      .not("verified_url", "is", null)
+      .order("verified_at", { ascending: false })
+      .limit(1);
+    dedupeQuery = restaurantId
+      ? dedupeQuery.eq("restaurant_id", restaurantId)
+      : dedupeQuery.is("restaurant_id", null);
+    const existing = await dedupeQuery;
+    if (!existing.error && existing.data?.[0]?.metadata) {
+      return { reused: true, result: existing.data[0].metadata };
+    }
+  }
   const reserved = await admin.rpc("reserve_cloudinary_upload", { p_user_id: userId, p_purpose: input.purpose, p_restaurant_id: restaurantId });
   if (reserved.error) {
     if (reserved.error.message.includes("UPLOAD_RATE_LIMIT")) throw new UploadError("Đã đạt giới hạn 20 lượt/giờ hoặc 100 lượt/ngày. Vui lòng thử lại sau.", 429);
     throw new UploadError("Chưa cấp được quyền upload. Kiểm tra migration Cloudinary.", 503);
+  }
+  if (fileHash && reserved.data?.id) {
+    await admin.from("cloudinary_uploads").update({ file_hash: fileHash }).eq("id", reserved.data.id);
   }
   const params = { timestamp: String(Math.floor(Date.now() / 1000)), public_id: reserved.data.public_id as string,
     upload_preset: config.preset, overwrite: "false", allowed_formats: "jpg,png,webp" };
