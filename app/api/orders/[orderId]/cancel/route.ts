@@ -40,11 +40,27 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
   const { orderId } = await context.params;
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) return reply({ error: "Mã đơn không hợp lệ." }, 400);
   try {
+    let reason: string | null = null;
+    try {
+      const body = await request.json();
+      if (body && typeof body.reason === "string" && body.reason.trim()) {
+        reason = body.reason.trim().slice(0, 200);
+      }
+    } catch {
+      // Cho phép POST không kèm body để tương thích các nút hủy gọi trực tiếp.
+    }
     const client = await createClient();
     const { data: auth, error: authError } = await client.auth.getUser();
     if (authError || !auth.user) return reply({ error: "Vui lòng đăng nhập lại." }, 401);
     // Dùng session client để RPC lấy auth.uid(); không dùng quyền admin để hủy hộ.
-    const { data, error } = await client.rpc("cancel_pending_order", { p_order_id: orderId });
+    let { data, error } = reason
+      ? await client.rpc("cancel_pending_order", { p_order_id: orderId, p_cancel_reason: reason })
+      : await client.rpc("cancel_pending_order", { p_order_id: orderId });
+    if (reason && error && ["PGRST202", "42883"].includes(error.code ?? "")) {
+      const fallback = await client.rpc("cancel_pending_order", { p_order_id: orderId });
+      data = fallback.data;
+      error = fallback.error;
+    }
     if (error) {
       // Chỉ log mã kỹ thuật, không log session, token hoặc dữ liệu đơn hàng.
       console.error("[orders.cancel] RPC failed", { code: error.code });

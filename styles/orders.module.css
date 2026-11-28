@@ -2121,6 +2121,47 @@
   color: #081447;
 }
 
+.cancelModalReasonGroup {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.cancelModalReasonGroup label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #081447;
+}
+
+.cancelModalReasonGroup label span {
+  color: #e5401d;
+}
+
+.cancelModalSelect,
+.cancelModalTextarea {
+  width: 100%;
+  border: 1px solid #d7e0ec;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #081447;
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.cancelModalSelect:focus,
+.cancelModalTextarea:focus {
+  border-color: #f35329;
+}
+
+.cancelModalTextarea {
+  resize: vertical;
+  min-height: 66px;
+}
+
 .cancelModalActions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

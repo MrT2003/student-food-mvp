@@ -46,6 +46,15 @@ import styles from "@/styles/orders.module.css";
 
 export * from "./orders-mock-data";
 
+const CANCEL_REASON_OPTIONS = [
+  "Muốn đổi món / thêm món",
+  "Đặt nhầm địa chỉ hoặc thông tin",
+  "Đổi ý, không muốn đặt nữa",
+  "Chờ quán xác nhận quá lâu",
+] as const;
+
+const OTHER_CANCEL_REASON = "Lý do khác";
+
 function StatusIcon({ status }: { status: OrderStatus }) {
   if (status === "pending") {
     return <Clock3 size={19} aria-hidden="true" />;
@@ -286,6 +295,8 @@ export default function OrdersView({
   const [confirmCancelOrderId, setConfirmCancelOrderId] = useState<
     string | null
   >(null);
+  const [cancelReasonChoice, setCancelReasonChoice] = useState<string>("");
+  const [customCancelReason, setCustomCancelReason] = useState<string>("");
 
   // State bộ lọc dùng chung cho cả Desktop và Mobile
   const [status, setStatus] = useState<OrderStatusFilter>(
@@ -341,6 +352,12 @@ export default function OrdersView({
     );
   }, [activeOrders, confirmCancelOrderId]);
 
+  function closeCancelModal() {
+    setConfirmCancelOrderId(null);
+    setCancelReasonChoice("");
+    setCustomCancelReason("");
+  }
+
   useEffect(() => {
     if (!confirmCancelOrder) return;
     function handleKeyDown(event: KeyboardEvent) {
@@ -348,22 +365,30 @@ export default function OrdersView({
         event.key === "Escape" &&
         !cancellingIds.has(confirmCancelOrder!.id)
       ) {
-        setConfirmCancelOrderId(null);
+        closeCancelModal();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [confirmCancelOrder, cancellingIds]);
 
+  const resolvedCancelReason =
+    cancelReasonChoice === OTHER_CANCEL_REASON
+      ? customCancelReason.trim().slice(0, 200)
+      : cancelReasonChoice.trim();
+  const canConfirmCancel = resolvedCancelReason.length > 0;
+
   function handleRequestCancelOrder(orderId: string) {
     const target = activeOrders.find((entry) => entry.id === orderId);
     if (!target || target.status !== "pending") return;
     if (cancellingIds.has(orderId)) return;
+    setCancelReasonChoice("");
+    setCustomCancelReason("");
     setConfirmCancelOrderId(orderId);
   }
 
   async function handleConfirmCancelOrder() {
-    if (!confirmCancelOrder) return;
+    if (!confirmCancelOrder || !canConfirmCancel) return;
     const orderId = confirmCancelOrder.id;
     if (cancellingIds.has(orderId)) return;
 
@@ -375,8 +400,8 @@ export default function OrdersView({
         return next;
       });
       try {
-        const res = await cancelDatabaseOrder(orderId);
-        setConfirmCancelOrderId(null);
+        const res = await cancelDatabaseOrder(orderId, resolvedCancelReason);
+        closeCancelModal();
         if (res.ok) {
           setNotice(`Đã hủy đơn hàng #${confirmCancelOrder.orderCode}.`);
         } else {
@@ -393,7 +418,7 @@ export default function OrdersView({
     }
 
     const result = cancelPendingOrder(demoOrders, demoCounts, orderId);
-    setConfirmCancelOrderId(null);
+    closeCancelModal();
     if (result.cancelledOrder) {
       setDemoOrders(result.orders);
       setDemoCounts(result.counts);
@@ -546,7 +571,7 @@ export default function OrdersView({
             </div>
 
             <div className={styles.historyGrid}>
-              {visibleHistory.map((order) => (
+              {visibleHistory.slice(0, 3).map((order) => (
                 <DesktopHistoryOrderCard
                   key={order.id}
                   order={order}
@@ -641,7 +666,7 @@ export default function OrdersView({
 
             {visibleHistory.length > 0 ? (
               <div className={styles.mobileHistoryList}>
-                {visibleHistory.map((order) => (
+                {visibleHistory.slice(0, 3).map((order) => (
                   <HistoryOrderCard
                     key={order.id}
                     order={order}
@@ -674,7 +699,7 @@ export default function OrdersView({
           role="presentation"
           onClick={() => {
             if (!cancellingIds.has(confirmCancelOrder.id)) {
-              setConfirmCancelOrderId(null);
+              closeCancelModal();
             }
           }}
         >
@@ -701,7 +726,7 @@ export default function OrdersView({
                 className={styles.cancelModalCloseBtn}
                 aria-label="Đóng hộp thoại xác nhận hủy đơn"
                 disabled={cancellingIds.has(confirmCancelOrder.id)}
-                onClick={() => setConfirmCancelOrderId(null)}
+                onClick={closeCancelModal}
               >
                 <X size={21} strokeWidth={2} aria-hidden="true" />
               </button>
@@ -728,12 +753,49 @@ export default function OrdersView({
               </div>
             </div>
 
+            <div className={styles.cancelModalReasonGroup}>
+              <label htmlFor="cancel-order-reason-select">
+                Lý do hủy đơn <span>*</span>
+              </label>
+              <select
+                id="cancel-order-reason-select"
+                className={styles.cancelModalSelect}
+                value={cancelReasonChoice}
+                disabled={cancellingIds.has(confirmCancelOrder.id)}
+                onChange={(event) => setCancelReasonChoice(event.target.value)}
+              >
+                <option value="">-- Chọn lý do hủy đơn --</option>
+                {CANCEL_REASON_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+                <option value={OTHER_CANCEL_REASON}>
+                  {OTHER_CANCEL_REASON}
+                </option>
+              </select>
+
+              {cancelReasonChoice === OTHER_CANCEL_REASON && (
+                <textarea
+                  className={styles.cancelModalTextarea}
+                  rows={2}
+                  maxLength={200}
+                  placeholder="Nhập lý do hủy đơn (tối đa 200 ký tự)..."
+                  disabled={cancellingIds.has(confirmCancelOrder.id)}
+                  value={customCancelReason}
+                  onChange={(event) =>
+                    setCustomCancelReason(event.target.value)
+                  }
+                />
+              )}
+            </div>
+
             <div className={styles.cancelModalActions}>
               <button
                 type="button"
                 className={styles.cancelModalBackBtn}
                 disabled={cancellingIds.has(confirmCancelOrder.id)}
-                onClick={() => setConfirmCancelOrderId(null)}
+                onClick={closeCancelModal}
               >
                 Không, quay lại
               </button>
@@ -741,7 +803,9 @@ export default function OrdersView({
               <button
                 type="button"
                 className={styles.cancelModalConfirmBtn}
-                disabled={cancellingIds.has(confirmCancelOrder.id)}
+                disabled={
+                  cancellingIds.has(confirmCancelOrder.id) || !canConfirmCancel
+                }
                 onClick={() => void handleConfirmCancelOrder()}
               >
                 {cancellingIds.has(confirmCancelOrder.id)

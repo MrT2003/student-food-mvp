@@ -105,7 +105,7 @@ type StudentMockState = {
   reorderOrder: (orderId: string) => ActionResult;
   reorderDatabaseOrder: (orderId: string) => Promise<ActionResult>;
   cancelOrderRecord: (orderId: string) => ActionResult;
-  cancelDatabaseOrder: (orderId: string) => Promise<ActionResult>;
+  cancelDatabaseOrder: (orderId: string, reason?: string) => Promise<ActionResult>;
 
   updateCartItemQuantity: (id: string, quantity: number) => ActionResult;
   removeCartItem: (id: string) => ActionResult;
@@ -131,6 +131,94 @@ function validateQuantity(quantity: number) {
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
     throw new Error("Số lượng phải từ 1 đến 99.");
   }
+}
+
+const DELIVERY_STORAGE_PREFIX = "student-food:delivery:";
+const KNOWN_DELIVERY_LOCATIONS = new Set(["KTX A", "KTX B"]);
+
+function readSavedDelivery(
+  userId: string,
+): { location: string; address: string } | null {
+  if (typeof window === "undefined" || !userId || userId === MOCK_CUSTOMER.id) {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(DELIVERY_STORAGE_PREFIX + userId);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    const record = parsed as Record<string, unknown>;
+    if (
+      typeof record.location !== "string" ||
+      typeof record.address !== "string" ||
+      !record.location.trim()
+    ) {
+      return null;
+    }
+    return {
+      location: record.location,
+      address: record.address,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeSavedDelivery(
+  userId: string,
+  location: string,
+  address: string,
+): void {
+  if (typeof window === "undefined" || !userId || userId === MOCK_CUSTOMER.id) {
+    return;
+  }
+  try {
+    window.localStorage.setItem(
+      DELIVERY_STORAGE_PREFIX + userId,
+      JSON.stringify({ location, address }),
+    );
+  } catch {
+    // Ignore storage quota or private browsing errors.
+  }
+}
+
+function persistActiveDelivery(
+  cartStudentId: string,
+  location: string,
+  address: string,
+): void {
+  const activeUid =
+    cartStudentId !== MOCK_CUSTOMER.id
+      ? cartStudentId
+      : purchaseSyncUserId(useAuthStore.getState());
+  if (activeUid) {
+    writeSavedDelivery(activeUid, location, address);
+  }
+}
+
+function parseDeliveryAddress(
+  raw: string | null | undefined,
+  fallbackLocation: string,
+): { location: string; address: string } | null {
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  if (!trimmed) return null;
+
+  const sepIndex = trimmed.indexOf(", ");
+  if (sepIndex > 0) {
+    const candidateLocation = trimmed.slice(0, sepIndex).trim();
+    const restAddress = trimmed.slice(sepIndex + 2).trim();
+    if (KNOWN_DELIVERY_LOCATIONS.has(candidateLocation) && restAddress) {
+      return {
+        location: candidateLocation,
+        address: restAddress,
+      };
+    }
+  }
+
+  return {
+    location: fallbackLocation,
+    address: trimmed,
+  };
 }
 
 function mapRawOrderRow(raw: Record<string, unknown>): OrderDetail {
@@ -286,6 +374,8 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
       if (!uid || (userId !== undefined && userId !== uid)) return;
 
       const generation = purchaseGeneration;
+      const preSyncLocation = get().location;
+      const preSyncAddress = get().address;
       const isCurrent = () => {
         const current = useAuthStore.getState();
         return purchaseGeneration === generation && purchaseSyncUserId(current) === uid &&
@@ -345,11 +435,15 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
           ...(sameOwner ? state.orderRecords : {}),
         };
         let recoveredLastCheckout = sameOwner ? state.lastCheckout : null;
+        let latestOrderDeliveryAddress: string | null = null;
         if (Array.isArray(ordersResponse.data)) {
           for (const rawRow of ordersResponse.data) {
             const detail = mapRawOrderRow(rawRow as Record<string, unknown>);
             if (detail.id) {
               nextOrderRecords[detail.id] = detail;
+              if (!latestOrderDeliveryAddress && detail.delivery_address?.trim()) {
+                latestOrderDeliveryAddress = detail.delivery_address.trim();
+              }
               if (!recoveredLastCheckout && detail.session_checkout_id) {
                 recoveredLastCheckout = {
                   sessionId: detail.session_checkout_id,
@@ -361,6 +455,35 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
           }
         }
 
+        const userEditedDuringSync =
+          state.location !== preSyncLocation || state.address !== preSyncAddress;
+        let nextLocation = state.location;
+        let nextAddress = state.address;
+
+        if (sameOwner || userEditedDuringSync) {
+          if (userEditedDuringSync) {
+            writeSavedDelivery(uid, state.location, state.address);
+          }
+        } else {
+          const savedDelivery = readSavedDelivery(uid);
+          if (savedDelivery && savedDelivery.address.trim()) {
+            nextLocation = savedDelivery.location;
+            nextAddress = savedDelivery.address;
+          } else if (latestOrderDeliveryAddress) {
+            const parsedDelivery = parseDeliveryAddress(
+              latestOrderDeliveryAddress,
+              savedDelivery?.location ?? state.location,
+            );
+            if (parsedDelivery && parsedDelivery.address) {
+              nextLocation = parsedDelivery.location;
+              nextAddress = parsedDelivery.address;
+              writeSavedDelivery(uid, parsedDelivery.location, parsedDelivery.address);
+            }
+          } else if (savedDelivery?.location) {
+            nextLocation = savedDelivery.location;
+          }
+        }
+
         set({
           serverCart: cartResult,
           cart: nextCart,
@@ -368,6 +491,8 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
           preferences,
           orderRecords: nextOrderRecords,
           lastCheckout: recoveredLastCheckout,
+          location: nextLocation,
+          address: nextAddress,
         });
       } catch (error) {
         if (isCurrent()) console.error("[useStudentMockStore] syncFromDatabase failed:", error);
@@ -461,6 +586,8 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
           restaurantPreferences,
           expectedTotal: currentServerCart.subtotal,
         });
+
+        writeSavedDelivery(user.id, location, address);
 
         await get().syncFromDatabase(user.id);
 
@@ -736,7 +863,7 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
       }
     },
 
-    cancelDatabaseOrder: async (orderId) => {
+    cancelDatabaseOrder: async (orderId, reason) => {
       try {
         const state = get();
         if (!state.serverCart) {
@@ -749,7 +876,7 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
         if (order.order_status !== "pending") {
           throw new Error("Chỉ có thể hủy đơn hàng khi đang chờ xác nhận.");
         }
-        await OrderServices.cancelOrder(orderId);
+        await OrderServices.cancelOrder(orderId, reason);
         set((current) => {
           const target = current.orderRecords[orderId];
           if (!target) return current;
@@ -800,8 +927,14 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
       }
     },
 
-    setLocation: (location) => set({ location }),
-    setAddress: (address) => set({ address }),
+    setLocation: (location) => {
+      set({ location });
+      persistActiveDelivery(get().cart.student_id, location, get().address);
+    },
+    setAddress: (address) => {
+      set({ address });
+      persistActiveDelivery(get().cart.student_id, get().location, address);
+    },
 
     setPreference: (restaurantId, update) => {
       if (
@@ -865,6 +998,8 @@ export const useStudentMockStore = create<StudentMockState>((set, get) => {
         for (const order of output.created_orders) {
           orderRecords[order.id] = order;
         }
+
+        persistActiveDelivery(state.cart.student_id, location, address);
 
         // Một lần cập nhật: lưu toàn bộ đơn và xóa giỏ.
         // Nếu simulateCheckout lỗi, chưa đổi state.

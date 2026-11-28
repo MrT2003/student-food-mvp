@@ -571,6 +571,7 @@ function toSellerOrderDetail(order: SellerManagedOrder): SellerOrder {
     total: order.total ?? 0,
     delivery_address: order.delivery_address,
     customer_notes: order.customer_notes,
+    cancel_reason: order.cancel_reason ?? null,
     created_at: order.created_at,
     accepted_at: null,
     completed_at: null,
@@ -1115,6 +1116,16 @@ export function SellerOrdersContent({
                   {selected.customer_notes || "Không có ghi chú."}
                 </p>
               </section>
+              {selected.order_status === "cancelled" &&
+                selected.cancel_reason && (
+                  <section>
+                    <h3>
+                      <UserX />
+                      Lý do sinh viên hủy
+                    </h3>
+                    <p className={styles.note}>{selected.cancel_reason}</p>
+                  </section>
+                )}
               <section className={styles.totals}>
                 <p>
                   <span>Tạm tính</span>

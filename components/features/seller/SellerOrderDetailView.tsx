@@ -498,6 +498,25 @@ export default function SellerOrderDetailView({
               </p>
             </section>
 
+            {activeOrder.order_status === "cancelled" &&
+              activeOrder.cancel_reason && (
+                <section
+                  className={styles.billSection}
+                  aria-label="Lý do sinh viên hủy"
+                >
+                  <div className={styles.sectionHeader}>
+                    <UserX
+                      size={18}
+                      strokeWidth={2}
+                      className={styles.cardHeaderIcon}
+                      aria-hidden="true"
+                    />
+                    <h3 className={styles.cardTitle}>Lý do sinh viên hủy</h3>
+                  </div>
+                  <p className={styles.noteBox}>{activeOrder.cancel_reason}</p>
+                </section>
+              )}
+
             {/* 5. Tạm tính & Tổng cộng */}
             <section className={styles.totalsSection} aria-label="Tổng tiền">
               <div className={styles.paymentRow}>

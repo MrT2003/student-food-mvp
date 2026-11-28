@@ -2,7 +2,10 @@ import type { OrderDetail, OrderStatus } from "@/types/order.types";
 import { normalizeSearchText } from "@/lib/format";
 
 // API presentation join, not additional columns on orders.
-export type SellerOrder = OrderDetail & { customer: { name: string; phone: string | null } };
+export type SellerOrder = OrderDetail & {
+  customer: { name: string; phone: string | null };
+  cancel_reason?: string | null;
+};
 export type SellerOrderTab = "pending" | "accepted" | "completed" | "cancelled";
 export const sellerTabs: { value: SellerOrderTab; label: string }[] = [
   { value: "pending", label: "Chờ xác nhận" }, { value: "accepted", label: "Đã chấp nhận" },

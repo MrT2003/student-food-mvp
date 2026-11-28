@@ -12,17 +12,19 @@ function check(error: { code?: string } | null) {
   if (["42703", "42P01", "PGRST200", "PGRST201", "PGRST204"].includes(error.code ?? "")) throw new SellerOrdersError("ORDERS_SCHEMA_MISMATCH");
   throw new SellerOrdersError("ORDERS_READ_FAILED");
 }
-const fields = `id,restaurant_id,order_code,order_status,created_at,payment_method,subtotal,total,delivery_address,customer_notes,
+const buildFields = (withCancelReason: boolean) =>
+  `id,restaurant_id,order_code,order_status,created_at,payment_method,subtotal,total,delivery_address,customer_notes${withCancelReason ? ",cancel_reason" : ""},
   customer:users!orders_student_id_fkey(name,phone),
   restaurant:restaurants!orders_restaurant_id_fkey!inner(owner_id,owner:users!restaurants_owner_id_fkey!inner(role,status)),
   order_items(id,item_name_snapshot,unit_price_snapshot,total_price,quantity,selected_options,image_url)`;
 
-async function authorizedQuery(client: SupabaseClient, actor: string, restaurantId: unknown) {
+async function authorizedQuery(client: SupabaseClient, actor: string, restaurantId: unknown, withCancelReason = true) {
   if (!isOrderUuid(restaurantId)) throw new SellerOrdersError("VALIDATION_ERROR");
   const auth = await client.auth.getUser();
   if (auth.error || auth.data.user?.id !== actor) throw new SellerOrdersError("UNAUTHORIZED");
   const profile = await client.from("users").select("role,status,work_for_restaurant_id").eq("id", actor).maybeSingle();
   check(profile.error);
+  const fields = buildFields(withCancelReason);
   if (profile.data?.role === "staff" && profile.data.status === "active") {
     if (!profile.data.work_for_restaurant_id || profile.data.work_for_restaurant_id !== restaurantId) {
       throw new SellerOrdersError("ORDER_FORBIDDEN");
@@ -54,10 +56,15 @@ export const SellerOrderServices = {
   async list(client: SupabaseClient, actor: string, restaurantId: unknown): Promise<{ orders: SellerManagedOrder[] }> {
     try {
       const orders = new Map<string, SellerManagedOrder>();
+      let withCancelReason = true;
       // Full scoped dataset trước phân trang UI; không lấy số dòng trang làm tổng tab.
       for (let offset = 0; ; ) {
-        const { query } = await authorizedQuery(client, actor, restaurantId);
+        const { query } = await authorizedQuery(client, actor, restaurantId, withCancelReason);
         const { data, error } = await query.order("created_at", { ascending: false }).order("id", { ascending: false }).range(offset, offset + 99);
+        if (withCancelReason && error?.code === "42703") {
+          withCancelReason = false;
+          continue;
+        }
         check(error);
         if (!Array.isArray(data)) throw new SellerOrdersError("ORDERS_READ_FAILED");
         if (!data.length) break;
@@ -73,8 +80,12 @@ export const SellerOrderServices = {
   async detail(client: SupabaseClient, actor: string, restaurantId: unknown, orderId: unknown): Promise<{ order: SellerManagedOrder }> {
     if (!isOrderUuid(orderId)) throw new SellerOrdersError("VALIDATION_ERROR");
     try {
-      const { query } = await authorizedQuery(client, actor, restaurantId);
-      const { data, error } = await query.eq("id", orderId).maybeSingle();
+      let { query } = await authorizedQuery(client, actor, restaurantId, true);
+      let { data, error } = await query.eq("id", orderId).maybeSingle();
+      if (error?.code === "42703") {
+        ({ query } = await authorizedQuery(client, actor, restaurantId, false));
+        ({ data, error } = await query.eq("id", orderId).maybeSingle());
+      }
       check(error);
       if (!data) throw new SellerOrdersError("ORDER_NOT_FOUND");
       return { order: mapSellerOrder(data, restaurantId as string) };

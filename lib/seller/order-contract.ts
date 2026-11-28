@@ -31,6 +31,7 @@ export function mapSellerOrder(value: unknown, restaurantId: string): SellerMana
     order_status: value.order_status as SellerManagedOrder["order_status"], created_at: value.created_at,
     payment_method: value.payment_method, subtotal: amount(value.subtotal), total: amount(value.total),
     delivery_address: text(value.delivery_address), customer_notes: text(value.customer_notes),
+    cancel_reason: text(value.cancel_reason),
     customer: { name: text(customer?.name), phone: value.order_status === "completed" ? null : text(customer?.phone) },
     order_items: value.order_items.map(row => {
       if (!record(row) || !isOrderUuid(row.id) || !Number.isInteger(row.quantity) || Number(row.quantity) < 1) throw Error("INVALID_ORDER_DATA");

@@ -109,11 +109,12 @@ export const OrderServices = {
 		});
 	},
 
-	async cancelOrder(orderId: string): Promise<void> {
+	async cancelOrder(orderId: string, reason?: string): Promise<void> {
 		const trimmed = orderId?.trim();
 		if (!trimmed) {
 			throw new Error("Mã đơn hàng không hợp lệ.");
 		}
+		const normalizedReason = reason?.trim() ? reason.trim().slice(0, 200) : "";
 		const client = createClient();
 		const { data: { user }, error: authError } = await client.auth.getUser();
 		if (authError || !user) {
@@ -128,6 +129,8 @@ export const OrderServices = {
 				response = await fetch(`/api/orders/${encodeURIComponent(trimmed)}/cancel`, {
 					method: "POST",
 					credentials: "same-origin",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(normalizedReason ? { reason: normalizedReason } : {}),
 				});
 				payload = await response.json().catch(() => null);
 			} catch {
@@ -143,9 +146,20 @@ export const OrderServices = {
 			}
 		}
 
-		let { error } = await client.rpc("cancel_pending_order", {
-			p_order_id: trimmed,
-		});
+		let { error } = normalizedReason
+			? await client.rpc("cancel_pending_order", {
+				p_order_id: trimmed,
+				p_cancel_reason: normalizedReason,
+			})
+			: await client.rpc("cancel_pending_order", {
+				p_order_id: trimmed,
+			});
+		if (normalizedReason && error && (error.code === "PGRST202" || error.code === "42883")) {
+			const retry = await client.rpc("cancel_pending_order", {
+				p_order_id: trimmed,
+			});
+			error = retry.error;
+		}
 		if (error && (error.code === "PGRST202" || error.code === "42883")) {
 			const fallback = await client.rpc("cancel_order", {
 				p_order_id: trimmed,

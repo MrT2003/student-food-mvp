@@ -12,6 +12,7 @@ export type SellerManagedOrder = {
   total: number | null;
   delivery_address: string | null;
   customer_notes: string | null;
+  cancel_reason?: string | null;
   customer: { name: string | null; phone: string | null };
   order_items: {
     id: string;
